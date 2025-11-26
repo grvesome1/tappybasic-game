@@ -51,9 +51,25 @@
       }
     }
 
+    /* Mobile touch optimization */
+    @media (max-width: 500px) {
+      #game-container {
+        -webkit-tap-highlight-color: transparent;
+        -webkit-touch-callout: none;
+      }
+      button, .btn-restart {
+        min-height: 44px;
+        min-width: 44px;
+        font-size: 16px;
+      }
+    }
+
     #pixi-canvas {
       display: block;
       border-radius: 20px;
+      touch-action: none;
+      -webkit-user-select: none;
+      user-select: none;
     }
 
     /* Web3 UI panel styling */
@@ -713,7 +729,13 @@
     // Use a credit when starting a game. Returns true if credit consumed, otherwise false.
     window.useCredit = function () {
       if (!walletAddress) {
-        alert('Connect your wallet to play!');
+        // Don't trigger wallet connection on game start, just inform user
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        if (isMobile) {
+          alert('Please connect your wallet from the main menu first!');
+        } else {
+          alert('Connect your wallet to play!');
+        }
         return false;
       }
       if (window.localCredits <= 0) {
@@ -728,14 +750,18 @@
 
     // Connect wallet handler with mobile support
     async function connectWallet() {
+      console.log('=== CONNECT WALLET CALLED ===');
       // Mobile detection
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
       
       if (!window.ethereum) {
         if (isMobile) {
           // Deep link to MetaMask mobile app
-          const dappUrl = encodeURIComponent(window.location.href);
-          window.location.href = `https://metamask.app.link/dapp/${window.location.host}${window.location.pathname}`;
+          const currentUrl = window.location.href;
+          const deepLink = `https://metamask.app.link/dapp/${window.location.host}${window.location.pathname}${window.location.search}`;
+          console.log('Mobile wallet not detected, redirecting to:', deepLink);
+          alert('Opening MetaMask app...');
+          window.location.href = deepLink;
           return;
         } else {
           alert('MetaMask or compatible wallet is required. Please install MetaMask extension.');
@@ -3260,9 +3286,16 @@
       console.log('=== START GAME CALLED ===');
       console.log('Initial state - game.started:', game.started, 'game.over:', game.over);
 
+      // Prevent multiple rapid starts
+      if (game.started && !game.over) {
+        console.log('Game already in progress, ignoring start request');
+        return;
+      }
+
       // Consume a credit before starting
       if (typeof window.useCredit === 'function' && !window.useCredit()) {
         // If useCredit returns false, abort starting the game
+        console.log('Credit consumption failed, aborting start');
         return;
       }
 
@@ -3839,13 +3872,27 @@
       console.log('After startGame() - game.started:', game.started, 'game.over:', game.over);
     });
     dom.restartButton.addEventListener('click', () => {
+      console.log('=== RESTART BUTTON CLICKED ===');
+      
+      // Prevent double-clicking
+      if (dom.restartButton.disabled) {
+        console.log('Restart button disabled, ignoring click');\n        return;
+      }
+      
+      // Temporarily disable button to prevent rapid clicks
+      dom.restartButton.disabled = true;
+      setTimeout(() => {
+        dom.restartButton.disabled = false;
+      }, 1000);
+      
       if (audioContext.state !== 'running') {
         audioContext.resume().catch(e => console.warn('Audio resume failed:', e));
       }
-      console.log('=== RESTART BUTTON CLICKED ===');
+      
       // Ensure game over state is cleared first
       game.over = false;
       game.started = false;
+      
       // Restart triggers the same start sequence
       startGame();
     });
