@@ -1,0 +1,24 @@
+{
+  "name": "tappy-rocket-web3",
+  "version": "1.4.0",
+  "description": "$TBAG's Tappy Rocket - Web3 Game on Linea",
+  "author": "gruesøme",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "npx serve public",
+    "deploy": "vercel --prod",
+    "preview": "vercel dev"
+  },
+  "keywords": [
+    "web3",
+    "game",
+    "pixi.js",
+    "ethereum",
+    "linea",
+    "blockchain"
+  ],
+  "devDependencies": {
+    "serve": "^14.2.0"
+  }
+}

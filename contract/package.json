@@ -1,0 +1,19 @@
+{
+  "name": "contract",
+  "version": "1.0.0",
+  "description": "Minimal credit contract for Tappy Rocket game on Linea blockchain. Players purchase play credits with ETH at a fixed price.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-ethers": "^4.0.3",
+    "dotenv": "^17.2.3",
+    "ethers": "^6.15.0",
+    "hardhat": "^3.0.15"
+  }
+}

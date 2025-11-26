@@ -1,9 +1,40 @@
+# Dependencies
 node_modules/
-.next/
-.env.local
+
+# Environment variables
 .env
+.env.local
+.env.production
+
+# Vercel
 .vercel
-*.log
-.DS_Store
+
+# Build outputs
 dist/
 build/
+.next/
+out/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Old directories (backup)
+game-web3-1.4/
+new_contract/
+
+# Testing
+coverage/
+.nyc_output/
