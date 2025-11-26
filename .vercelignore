@@ -2,9 +2,6 @@ contract/
 node_modules/
 *.md
 .git/
-.gitignore
-package.json
-package-lock.json
-assets/
-index.html
-pixi.min.js
+game-web3-1.4/
+new_contract/
+vercel-deploy.json
