@@ -654,7 +654,7 @@
           <button id="gameoverMusicBtn" class="menu-audio-btn" title="Toggle Music">♫</button>
           <button id="gameoverSfxBtn" class="menu-audio-btn" title="Toggle Sound Effects">🔊</button>
         </div>
-        <button class="btn-restart" id="restartButton">Re-Launch Rocket</button>
+        <button class="btn-restart" id="restartButton" ontouchstart="this.classList.add('touched')" ontouchend="this.classList.remove('touched')">Re-Launch Rocket</button>
         <div class="hint-text">Press SPACE / TAP to thrust. Avoid the red candles.</div>
       </div>
     </div>
@@ -1467,46 +1467,16 @@
     // ==================== WEB AUDIO API ====================
     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
     
-    // Fix iOS/mobile audio - requires user interaction
-    let audioUnlocked = false;
-    function unlockAudio() {
-      if (audioUnlocked) return;
-      
-      console.log('Attempting audio unlock, current state:', audioContext.state);
-      
-      if (audioContext.state !== 'running') {
-        audioContext.resume().then(() => {
-          console.log('AudioContext resumed successfully');
-        }).catch(err => {
-          console.error('Failed to resume AudioContext:', err);
-        });
-      }
-      
-      // Unlock Web Audio by playing silent buffer
-      try {
-        const buffer = audioContext.createBuffer(1, 1, 22050);
-        const source = audioContext.createBufferSource();
-        source.buffer = buffer;
-        source.connect(audioContext.destination);
-        source.start(0);
-        audioUnlocked = true;
-        console.log('Audio unlocked for mobile');
-      } catch (err) {
-        console.error('Audio unlock failed:', err);
+    // Aggressive audio unlock - try on every user interaction
+    function forceAudioUnlock() {
+      if (audioContext.state === 'suspended' || audioContext.state !== 'running') {
+        audioContext.resume();
       }
     }
     
-    // Unlock on multiple events to ensure it works
-    document.addEventListener('touchstart', unlockAudio, { once: true });
-    document.addEventListener('touchend', unlockAudio, { once: true });
-    document.addEventListener('click', unlockAudio, { once: true });
-    
-    // Also try to unlock when buttons are clicked
-    window.addEventListener('DOMContentLoaded', () => {
-      const buttons = document.querySelectorAll('button');
-      buttons.forEach(btn => {
-        btn.addEventListener('click', unlockAudio, { once: true });
-      });
+    // Unlock everywhere
+    ['touchstart', 'touchend', 'mousedown', 'click', 'keydown'].forEach(event => {
+      document.addEventListener(event, forceAudioUnlock, { passive: true });
     });
     const sounds = {};
     let bgMusicSource = null;
@@ -3373,12 +3343,8 @@
     }
     
     function doStartGame() {
-      // Force audio unlock on game start
-      if (audioContext.state === 'suspended') {
-        audioContext.resume().then(() => {
-          console.log('Audio resumed on game start');
-        });
-      }
+      // Force audio
+      forceAudioUnlock();
       
       // Notify parent that game is starting
       window.parent.postMessage({ 
@@ -3958,14 +3924,20 @@
       startGame();
       console.log('After startGame() - game.started:', game.started, 'game.over:', game.over);
     });
-    dom.restartButton.addEventListener('click', () => {
-      console.log('=== RESTART BUTTON CLICKED ===');
-      
-      if (audioContext.state !== 'running') {
-        audioContext.resume().catch(e => console.warn('Audio resume failed:', e));
-      }
-      
-      // Restart without consuming another credit
+    // Restart button - use both click and touchend for reliability
+    dom.restartButton.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log('=== RESTART TOUCHEND ===');
+      forceAudioUnlock();
+      doStartGame();
+    }, { passive: false });
+    
+    dom.restartButton.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log('=== RESTART CLICK ===');
+      forceAudioUnlock();
       doStartGame();
     });
 
