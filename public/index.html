@@ -91,13 +91,14 @@
       color: #00ffff;
       font-family: 'Barlow', sans-serif;
       font-size: 14px;
-      z-index: 30;
-      transition: opacity 0.5s ease-in-out;
+      z-index: 5;
+      transition: opacity 0.5s ease-in-out, visibility 0.5s ease-in-out;
     }
 
     #web3-ui.hidden-gameplay {
       opacity: 0;
       pointer-events: none;
+      visibility: hidden;
     }
 
     #web3-ui button {
@@ -121,6 +122,20 @@
       overflow: hidden;
       text-overflow: ellipsis;
       max-width: 120px;
+      font-weight: 700;
+      text-shadow: 0 0 8px rgba(0, 255, 255, 0.8);
+    }
+
+    #credit-count {
+      background: rgba(0, 255, 0, 0.15);
+      padding: 4px 8px;
+      border-radius: 6px;
+      border: 1px solid rgba(0, 255, 0, 0.5);
+      color: #00ff00;
+      font-weight: 800;
+      text-shadow: 0 0 10px rgba(0, 255, 0, 0.8);
+      min-width: 80px;
+      text-align: center;
     }
 
     .hud {
@@ -549,9 +564,9 @@
 <body>
   <!-- Web3 UI Panel -->
   <div id="web3-ui">
-    <button id="connect-btn">Connect</button>
+    <button id="connect-btn">Connect Wallet</button>
     <span id="wallet-address"></span>
-    <span id="credit-count"></span>
+    <span id="credit-count">Credits: 0</span>
     <button id="purchase-btn">Buy Credit</button>
   </div>
 
@@ -1456,22 +1471,43 @@
     let audioUnlocked = false;
     function unlockAudio() {
       if (audioUnlocked) return;
+      
+      console.log('Attempting audio unlock, current state:', audioContext.state);
+      
       if (audioContext.state !== 'running') {
-        audioContext.resume();
+        audioContext.resume().then(() => {
+          console.log('AudioContext resumed successfully');
+        }).catch(err => {
+          console.error('Failed to resume AudioContext:', err);
+        });
       }
+      
       // Unlock Web Audio by playing silent buffer
-      const buffer = audioContext.createBuffer(1, 1, 22050);
-      const source = audioContext.createBufferSource();
-      source.buffer = buffer;
-      source.connect(audioContext.destination);
-      source.start(0);
-      audioUnlocked = true;
-      console.log('Audio unlocked for mobile');
+      try {
+        const buffer = audioContext.createBuffer(1, 1, 22050);
+        const source = audioContext.createBufferSource();
+        source.buffer = buffer;
+        source.connect(audioContext.destination);
+        source.start(0);
+        audioUnlocked = true;
+        console.log('Audio unlocked for mobile');
+      } catch (err) {
+        console.error('Audio unlock failed:', err);
+      }
     }
     
-    // Unlock on first touch
+    // Unlock on multiple events to ensure it works
     document.addEventListener('touchstart', unlockAudio, { once: true });
+    document.addEventListener('touchend', unlockAudio, { once: true });
     document.addEventListener('click', unlockAudio, { once: true });
+    
+    // Also try to unlock when buttons are clicked
+    window.addEventListener('DOMContentLoaded', () => {
+      const buttons = document.querySelectorAll('button');
+      buttons.forEach(btn => {
+        btn.addEventListener('click', unlockAudio, { once: true });
+      });
+    });
     const sounds = {};
     let bgMusicSource = null;
     let bgMusicGain = null;
@@ -3337,6 +3373,13 @@
     }
     
     function doStartGame() {
+      // Force audio unlock on game start
+      if (audioContext.state === 'suspended') {
+        audioContext.resume().then(() => {
+          console.log('Audio resumed on game start');
+        });
+      }
+      
       // Notify parent that game is starting
       window.parent.postMessage({ 
         type: 'GAME_STARTED',
