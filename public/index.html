@@ -700,11 +700,21 @@
       return true;
     };
 
-    // Connect wallet handler
+    // Connect wallet handler with mobile support
     async function connectWallet() {
+      // Mobile detection
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      
       if (!window.ethereum) {
-        alert('MetaMask or compatible wallet is required.');
-        return;
+        if (isMobile) {
+          // Deep link to MetaMask mobile app
+          const dappUrl = encodeURIComponent(window.location.href);
+          window.location.href = `https://metamask.app.link/dapp/${window.location.host}${window.location.pathname}`;
+          return;
+        } else {
+          alert('MetaMask or compatible wallet is required. Please install MetaMask extension.');
+          return;
+        }
       }
       try {
         provider = new ethers.BrowserProvider(window.ethereum);
@@ -712,6 +722,38 @@
         signer = await provider.getSigner();
         walletAddress = await signer.getAddress();
         contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+        
+        // Check if we're on the correct network (Linea Sepolia)
+        const network = await provider.getNetwork();
+        if (network.chainId !== 59141n) {
+          try {
+            await window.ethereum.request({
+              method: 'wallet_switchEthereumChain',
+              params: [{ chainId: '0xe705' }], // 59141 in hex
+            });
+          } catch (switchError) {
+            // If chain doesn't exist, add it
+            if (switchError.code === 4902) {
+              await window.ethereum.request({
+                method: 'wallet_addEthereumChain',
+                params: [{
+                  chainId: '0xe705',
+                  chainName: 'Linea Sepolia',
+                  nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+                  rpcUrls: ['https://rpc.sepolia.linea.build'],
+                  blockExplorerUrls: ['https://sepolia.lineascan.build'],
+                }],
+              });
+            } else {
+              throw switchError;
+            }
+          }
+          // Reconnect after network switch
+          provider = new ethers.BrowserProvider(window.ethereum);
+          signer = await provider.getSigner();
+          contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+        }
+        
         updateCreditDisplay();
         try {
           creditPriceWei = await contract.creditPriceETH();
@@ -742,20 +784,48 @@
         alert('Connect your wallet first.');
         return;
       }
+      
+      // Verify we're still connected and on correct network
+      if (!window.ethereum || !walletAddress) {
+        alert('Wallet disconnected. Please reconnect.');
+        await connectWallet();
+        return;
+      }
+      
       try {
         // Always use the fixed CREDIT_PRICE_WEI for purchasing credits.  This avoids
         // dynamic price calculations and oracle lookups.  See CREDIT_PRICE_WEI
         // definition above.
         const weiCost = CREDIT_PRICE_WEI;
-        const tx = await contract.purchaseCreditsWithETH(1, { value: weiCost });
-        await tx.wait();
-        window.localCredits += 1;
-        localStorage.setItem('tappyCredits', String(window.localCredits));
-        updateCreditDisplay();
-        alert('Credit purchased!');
+        
+        // Show user-friendly message
+        console.log('Initiating purchase transaction...');
+        
+        const tx = await contract.purchaseCreditsWithETH(1, { 
+          value: weiCost,
+          gasLimit: 100000n // Explicit gas limit for mobile compatibility
+        });
+        
+        console.log('Transaction sent, waiting for confirmation...');
+        const receipt = await tx.wait();
+        
+        if (receipt.status === 1) {
+          window.localCredits += 1;
+          localStorage.setItem('tappyCredits', String(window.localCredits));
+          updateCreditDisplay();
+          alert('Credit purchased successfully!');
+        } else {
+          throw new Error('Transaction failed');
+        }
       } catch (err) {
-        console.error(err);
-        alert('Purchase failed');
+        console.error('Purchase error:', err);
+        if (err.code === 4001) {
+          alert('Transaction cancelled by user');
+        } else if (err.code === -32603) {
+          alert('Transaction failed. Please check your balance and network connection.');
+        } else {
+          alert('Purchase failed: ' + (err.message || 'Unknown error'));
+        }
       }
     }
 
@@ -766,6 +836,32 @@
       if (connectBtn) connectBtn.addEventListener('click', connectWallet);
       if (purchaseBtn) purchaseBtn.addEventListener('click', purchaseCredit);
       updateCreditDisplay();
+      
+      // Handle wallet events for mobile reconnection
+      if (window.ethereum) {
+        window.ethereum.on('accountsChanged', (accounts) => {
+          if (accounts.length > 0) {
+            walletAddress = accounts[0];
+            updateCreditDisplay();
+          } else {
+            walletAddress = null;
+            updateCreditDisplay();
+          }
+        });
+        
+        window.ethereum.on('chainChanged', () => {
+          window.location.reload();
+        });
+        
+        // Auto-connect if already connected
+        window.ethereum.request({ method: 'eth_accounts' })
+          .then(accounts => {
+            if (accounts.length > 0) {
+              connectWallet();
+            }
+          })
+          .catch(console.error);
+      }
     });
     
     const game = {
