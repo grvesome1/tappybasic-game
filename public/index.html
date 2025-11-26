@@ -1465,12 +1465,31 @@
     }
 
     // ==================== WEB AUDIO API ====================
-    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    let audioContext;
+    try {
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      console.log('AudioContext created successfully');
+    } catch (err) {
+      console.error('Failed to create AudioContext:', err);
+      // Create a dummy audio context that won't crash
+      audioContext = {
+        state: 'running',
+        resume: () => Promise.resolve(),
+        createGain: () => ({ gain: { value: 0 }, connect: () => {} }),
+        createBufferSource: () => ({ buffer: null, loop: false, connect: () => {}, start: () => {} }),
+        destination: {},
+        decodeAudioData: () => Promise.reject('Audio not supported')
+      };
+    }
     
     // Aggressive audio unlock - try on every user interaction
     function forceAudioUnlock() {
-      if (audioContext.state === 'suspended' || audioContext.state !== 'running') {
-        audioContext.resume();
+      try {
+        if (audioContext.state === 'suspended' || audioContext.state !== 'running') {
+          audioContext.resume();
+        }
+      } catch (err) {
+        console.warn('Audio unlock failed:', err);
       }
     }
     
@@ -1498,29 +1517,39 @@
     function createBackgroundMusic() {
       if (bgMusicSource || !sounds.background) return;
       
-      // Ensure audio context is running
-      if (audioContext.state === 'suspended') {
-        audioContext.resume().then(() => {
+      try {
+        // Ensure audio context is running
+        if (audioContext.state === 'suspended') {
+          audioContext.resume().then(() => {
+            startMusicSource();
+          }).catch(err => {
+            console.warn('Audio context resume failed:', err);
+          });
+        } else {
           startMusicSource();
-        }).catch(err => {
-          console.warn('Audio context resume failed:', err);
-        });
-      } else {
-        startMusicSource();
-      }
-      
-      function startMusicSource() {
-        bgMusicGain = audioContext.createGain();
-        bgMusicGain.gain.value = game.musicMuted ? 0 : 0.2; // Respect music mute setting
-        bgMusicGain.connect(audioContext.destination);
+        }
         
-        bgMusicSource = audioContext.createBufferSource();
-        bgMusicSource.buffer = sounds.background;
-        bgMusicSource.loop = true;
-        bgMusicSource.connect(bgMusicGain);
-        bgMusicSource.start(0);
-        
-        console.log('Background music started from MP3');
+        function startMusicSource() {
+          try {
+            bgMusicGain = audioContext.createGain();
+            bgMusicGain.gain.value = game.musicMuted ? 0 : 0.2;
+            bgMusicGain.connect(audioContext.destination);
+            
+            bgMusicSource = audioContext.createBufferSource();
+            bgMusicSource.buffer = sounds.background;
+            bgMusicSource.loop = true;
+            bgMusicSource.connect(bgMusicGain);
+            bgMusicSource.start(0);
+            
+            console.log('Background music started from MP3');
+          } catch (err) {
+            console.error('Failed to start music source:', err);
+            bgMusicSource = null;
+            bgMusicGain = null;
+          }
+        }
+      } catch (err) {
+        console.error('Failed to create background music:', err);
       }
     }
     
@@ -3353,8 +3382,12 @@
       }, '*');
 
       // Start background music on first user interaction
-      if (!bgMusicSource && sounds.background) {
-        createBackgroundMusic();
+      try {
+        if (!bgMusicSource && sounds.background) {
+          createBackgroundMusic();
+        }
+      } catch (err) {
+        console.error('Failed to start background music:', err);
       }
 
       // Hide menus immediately
@@ -3930,7 +3963,7 @@
       e.stopPropagation();
       console.log('=== RESTART TOUCHEND ===');
       forceAudioUnlock();
-      doStartGame();
+      startGame(); // Changed to consume credit on restart
     }, { passive: false });
     
     dom.restartButton.addEventListener('click', (e) => {
@@ -3938,7 +3971,7 @@
       e.stopPropagation();
       console.log('=== RESTART CLICK ===');
       forceAudioUnlock();
-      doStartGame();
+      startGame(); // Changed to consume credit on restart
     });
 
     // Music mute button
