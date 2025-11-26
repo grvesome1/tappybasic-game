@@ -38,3 +38,5 @@ new_contract/
 # Testing
 coverage/
 .nyc_output/
+
+.vercel
