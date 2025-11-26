@@ -1,0 +1,10 @@
+contract/
+node_modules/
+*.md
+.git/
+.gitignore
+package.json
+package-lock.json
+assets/
+index.html
+pixi.min.js
