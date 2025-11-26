@@ -2916,6 +2916,7 @@
     }
 
     function initGame() {
+      console.log('=== INIT GAME CALLED ===');
       game.started = false;
       game.over = false;
       game.score = 0;
@@ -2939,6 +2940,14 @@
       game.logoShake = 0;
       game.slowWarpLevel = 0;
       game.slowFadeCounter = 0;
+      
+      // Stop any audio loops
+      if (game.invincibilityAudio) {
+        try {
+          game.invincibilityAudio.stop();
+        } catch (e) {}
+        game.invincibilityAudio = null;
+      }
       
       // Clear logo burst if active
       if (game.logo && game.logo.sprite) {
@@ -3833,6 +3842,10 @@
       if (audioContext.state !== 'running') {
         audioContext.resume().catch(e => console.warn('Audio resume failed:', e));
       }
+      console.log('=== RESTART BUTTON CLICKED ===');
+      // Ensure game over state is cleared first
+      game.over = false;
+      game.started = false;
       // Restart triggers the same start sequence
       startGame();
     });
