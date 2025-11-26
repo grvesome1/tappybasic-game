@@ -3332,6 +3332,11 @@
         return;
       }
 
+      // Actually start the game
+      doStartGame();
+    }
+    
+    function doStartGame() {
       // Notify parent that game is starting
       window.parent.postMessage({ 
         type: 'GAME_STARTED',
@@ -3917,8 +3922,8 @@
         audioContext.resume().catch(e => console.warn('Audio resume failed:', e));
       }
       
-      // Restart triggers the same start sequence
-      startGame();
+      // Restart without consuming another credit
+      doStartGame();
     });
 
     // Music mute button
