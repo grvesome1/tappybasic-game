@@ -28,17 +28,27 @@
     }
 
     #game-container {
-      position: relative;
-      width: 400px;
-      height: 600px;
-      margin: 0 auto;
+      position: fixed;
+      width: 100vw;
+      height: 100vh;
+      max-width: 500px;
+      max-height: 900px;
+      left: 50%;
       top: 50%;
-      transform: translateY(-50%);
+      transform: translate(-50%, -50%);
       background: radial-gradient(circle at top, #1a1a2e 0%, #000 60%);
-      border-radius: 20px;
+      border-radius: 0;
       box-shadow: 0 0 30px rgba(0, 255, 255, 0.4), 0 0 80px rgba(138, 43, 226, 0.6);
       overflow: hidden;
       font-family: 'Barlow', sans-serif;
+    }
+
+    @media (min-width: 500px) {
+      #game-container {
+        border-radius: 20px;
+        width: 400px;
+        height: 600px;
+      }
     }
 
     #pixi-canvas {
@@ -670,6 +680,22 @@
     const CREDIT_PRICE_WEI = 5000000000000n;
     window.localCredits = parseInt(localStorage.getItem('tappyCredits') || '0', 10);
 
+    // Sync credits from smart contract
+    async function syncCreditsFromContract() {
+      if (!contract || !walletAddress) return;
+      try {
+        const onChainCredits = await contract.credits(walletAddress);
+        const creditsNum = Number(onChainCredits);
+        if (creditsNum !== window.localCredits) {
+          window.localCredits = creditsNum;
+          localStorage.setItem('tappyCredits', String(window.localCredits));
+          console.log('Credits synced from contract:', creditsNum);
+        }
+      } catch (err) {
+        console.error('Failed to sync credits:', err);
+      }
+    }
+
     // Update credit display in the UI
     function updateCreditDisplay() {
       const addrSpan = document.getElementById('wallet-address');
@@ -760,6 +786,9 @@
         } catch (e) {
           console.warn('Could not fetch credit price', e);
         }
+        // Sync credits from contract
+        await syncCreditsFromContract();
+        updateCreditDisplay();
       } catch (err) {
         console.error(err);
         alert('Wallet connection failed');
@@ -810,10 +839,10 @@
         const receipt = await tx.wait();
         
         if (receipt.status === 1) {
-          window.localCredits += 1;
-          localStorage.setItem('tappyCredits', String(window.localCredits));
+          // Sync credits from contract after successful purchase
+          await syncCreditsFromContract();
           updateCreditDisplay();
-          alert('Credit purchased successfully!');
+          alert('Credit purchased successfully! You now have ' + window.localCredits + ' credits.');
         } else {
           throw new Error('Transaction failed');
         }
@@ -857,7 +886,9 @@
         window.ethereum.request({ method: 'eth_accounts' })
           .then(accounts => {
             if (accounts.length > 0) {
-              connectWallet();
+              connectWallet().then(() => {
+                syncCreditsFromContract();
+              });
             }
           })
           .catch(console.error);
