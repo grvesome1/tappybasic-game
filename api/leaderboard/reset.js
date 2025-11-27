@@ -1,13 +1,5 @@
 import { Redis } from '@upstash/redis';
-
-// Gracefully handle ethers import failure
-let ethers;
-try {
-  ethers = await import('ethers');
-} catch (err) {
-  console.error('Failed to import ethers:', err);
-  ethers = null;
-}
+import { ethers } from 'ethers';
 
 const ADMIN = '0x3100ff9597b87e791e5bb8c0d57c94336a432089'.toLowerCase();
 
@@ -23,12 +15,6 @@ export default async function handler(req, res) {
   try {
     if (req.method !== 'POST') {
       return res.status(405).json({ error: 'method-not-allowed' });
-    }
-
-    // Check if ethers is available
-    if (!ethers) {
-      console.error('Ethers library not available');
-      return res.status(500).json({ error: 'ethers-unavailable', details: 'Signature verification not available' });
     }
 
     const { sig } = req.body;
