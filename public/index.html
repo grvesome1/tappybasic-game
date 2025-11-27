@@ -795,6 +795,7 @@
     <span id="wallet-address"></span>
     <span id="credit-count">Credits: 0</span>
     <button id="purchase-btn">Buy Credit</button>
+    <button id="refresh-btn" style="display:none;">🔄 Refresh</button>
   </div>
 
   <div id="game-container">
@@ -1132,6 +1133,9 @@
         if (disconnectBtn) disconnectBtn.style.display = 'inline-block';
         if (purchaseBtn) purchaseBtn.disabled = false;
         
+        const refreshBtn = document.getElementById('refresh-btn');
+        if (refreshBtn) refreshBtn.style.display = 'inline-block';
+        
         updateCreditDisplay();
         
         // Show admin button if admin wallet
@@ -1146,6 +1150,39 @@
       }
     }
 
+    // Manual credit refresh function
+    async function refreshCredits() {
+      if (!contract || !walletAddress) {
+        alert('⚠️ Not connected to wallet');
+        return;
+      }
+      
+      const refreshBtn = document.getElementById('refresh-btn');
+      if (refreshBtn) refreshBtn.disabled = true;
+      
+      try {
+        alert('🔄 Syncing credits from blockchain...');
+        console.log('Manual refresh: querying contract.credits()', walletAddress);
+        
+        const creditsBN = await contract.credits(walletAddress);
+        const onChainCredits = Number(creditsBN);
+        
+        console.log('✅ On-chain credits:', onChainCredits);
+        alert(`✅ Blockchain says you have ${onChainCredits} credits`);
+        
+        window.localCredits = onChainCredits;
+        localStorage.setItem('tappyCredits', String(window.localCredits));
+        updateCreditDisplay();
+        
+        alert(`✅ Credits updated to ${window.localCredits}`);
+      } catch (err) {
+        console.error('❌ Refresh failed:', err);
+        alert(`❌ Refresh failed: ${err.message}`);
+      } finally {
+        if (refreshBtn) refreshBtn.disabled = false;
+      }
+    }
+    
     // Disconnect wallet handler
     function disconnectWallet() {
       console.log('=== DISCONNECTING WALLET ===');
@@ -1165,6 +1202,7 @@
       const connectBtn = document.getElementById('connect-btn');
       const disconnectBtn = document.getElementById('disconnect-btn');
       const purchaseBtn = document.getElementById('purchase-btn');
+      const refreshBtn = document.getElementById('refresh-btn');
       
       if (connectBtn) {
         connectBtn.style.display = 'inline-block';
@@ -1172,6 +1210,7 @@
       }
       if (disconnectBtn) disconnectBtn.style.display = 'none';
       if (purchaseBtn) purchaseBtn.disabled = true;
+      if (refreshBtn) refreshBtn.style.display = 'none';
       
       updateCreditDisplay();
       console.log('✅ Wallet disconnected, state cleared');
@@ -1279,6 +1318,7 @@
       const connectBtn = document.getElementById('connect-btn');
       const disconnectBtn = document.getElementById('disconnect-btn');
       const purchaseBtn = document.getElementById('purchase-btn');
+      const refreshBtn = document.getElementById('refresh-btn');
       
       // Add both click and touchstart handlers for mobile reliability
       if (connectBtn) {
@@ -1302,6 +1342,14 @@
         purchaseBtn.addEventListener('touchstart', (e) => {
           e.stopPropagation();
           purchaseCredit();
+        }, { passive: false });
+      }
+      
+      if (refreshBtn) {
+        refreshBtn.addEventListener('click', refreshCredits);
+        refreshBtn.addEventListener('touchstart', (e) => {
+          e.stopPropagation();
+          refreshCredits();
         }, { passive: false });
       }
       
