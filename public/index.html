@@ -976,12 +976,20 @@
 
     // Use a credit when starting a game. Returns true if credit consumed, otherwise false.
     window.useCredit = function () {
-      if (window.localCredits <= 0) {
+      if (!walletAddress) {
+        alert('Connect your wallet first.');
         return false;
       }
+      if (!Number.isFinite(window.localCredits)) {
+        window.localCredits = 0;
+      }
+      if (window.localCredits <= 0) {
+        alert('You need credits to play. Please buy a credit first.');
+        return false;
+      }
+
       window.localCredits -= 1;
       localStorage.setItem('tappyCredits', String(window.localCredits));
-      console.log('Credit used. Remaining:', window.localCredits);
       updateCreditDisplay();
       return true;
     };
@@ -1085,66 +1093,35 @@
 
     // Purchase one credit using ETH priced at USD_PRICE_PER_CREDIT
     async function purchaseCredit() {
-      if (!contract) {
+      if (!contract || !walletAddress) {
         alert('Connect your wallet first.');
         return;
       }
-      
-      // Verify we're still connected and on correct network
-      if (!window.ethereum || !walletAddress) {
-        alert('Wallet disconnected. Please reconnect.');
-        await connectWallet();
-        return;
-      }
-      
+
       const purchaseBtn = document.getElementById('purchase-btn');
-      
+      if (purchaseBtn && purchaseBtn.disabled) return;
+
       try {
-        // Disable button during transaction
         if (purchaseBtn) purchaseBtn.disabled = true;
-        
-        // Always use the fixed CREDIT_PRICE_WEI for purchasing credits.  This avoids
-        // dynamic price calculations and oracle lookups.  See CREDIT_PRICE_WEI
-        // definition above.
-        const weiCost = CREDIT_PRICE_WEI;
-        
-        // Show user-friendly message
-        console.log('Initiating purchase transaction...');
-        
-        const tx = await contract.purchaseCreditsWithETH(1, { 
-          value: weiCost,
-          gasLimit: 100000n // Explicit gas limit for mobile compatibility
-        });
-        
-        console.log('Transaction sent, waiting for confirmation...');
-        const receipt = await tx.wait();
-        
-        if (receipt.status === 1) {
-          // Increment credits locally after successful purchase
-          console.log('Purchase successful, incrementing credits...');
-          console.log('Credits before:', window.localCredits);
-          window.localCredits += 1;
-          localStorage.setItem('tappyCredits', window.localCredits.toString());
-          console.log('Credits after:', window.localCredits);
-          console.log('Saved to localStorage:', localStorage.getItem('tappyCredits'));
-          updateCreditDisplay();
-          alert('Credit purchased successfully! You now have ' + window.localCredits + ' credits.');
-        } else {
-          throw new Error('Transaction failed');
-        }
+
+        console.log('Purchasing 1 credit for', CREDIT_PRICE_WEI.toString(), 'wei');
+
+        const tx = await contract.purchaseCreditsWithETH(1, { value: CREDIT_PRICE_WEI });
+        await tx.wait();
+
+        // On success: increment localCredits and persist
+        window.localCredits = (window.localCredits || 0) + 1;
+        localStorage.setItem('tappyCredits', String(window.localCredits));
+        updateCreditDisplay();
+
+        alert('Credit purchased! You now have ' + window.localCredits + ' credit(s).');
       } catch (err) {
-        console.error('Purchase error:', err);
-        if (err.code === 4001) {
-          alert('Transaction cancelled by user');
-        } else if (err.code === -32603) {
-          alert('Transaction failed. Please check your balance and network connection.');
-        } else {
-          alert('Purchase failed: ' + (err.message || 'Unknown error'));
-        }
+        console.error('Purchase failed:', err);
+        alert('Purchase failed. Check your wallet/transaction.');
       } finally {
-        // Re-enable button
         if (purchaseBtn) purchaseBtn.disabled = false;
       }
+    }
     }
 
     // Bind button events once DOM is ready
@@ -3487,17 +3464,6 @@
       // User pressed cancel — DO NOTHING
       if (initials === null) return;
       
-      const message = `submit-score:${score}`;
-      let sig;
-      
-      try {
-        sig = await signer.signMessage(message);
-      } catch (err) {
-        // User rejected signature — DO NOTHING
-        console.log("Signature rejected");
-        return;
-      }
-      
       try {
         const res = await fetch("/api/leaderboard/submit", {
           method: "POST",
@@ -3505,8 +3471,7 @@
           body: JSON.stringify({
             wallet: walletAddress,
             score,
-            initials: initials || "",
-            sig
+            initials: initials || ""
           })
         });
         
@@ -3919,29 +3884,19 @@
 
     function startGame() {
       console.log('=== START GAME CALLED ===');
-      console.log('Initial state - game.started:', game.started, 'game.over:', game.over);
-      console.log('Wallet address:', walletAddress);
-      console.log('Credits:', window.localCredits);
 
-      // Check wallet connection first
       if (!walletAddress) {
-        console.log('BLOCKED: No wallet connected');
-        alert('Please connect your wallet first.');
+        alert('Connect your wallet first.');
         return;
       }
 
-      // Consume a credit before starting
-      console.log('Attempting to use credit...');
-      const creditUsed = typeof window.useCredit === 'function' ? window.useCredit() : false;
-      console.log('Credit used result:', creditUsed);
-      
-      if (!creditUsed) {
-        console.log('BLOCKED: No credits available');
-        alert('You need credits to play. Please purchase a credit first.');
-        return;
+      if (typeof window.useCredit === 'function') {
+        const ok = window.useCredit();
+        if (!ok) {
+          return;
+        }
       }
 
-      console.log('All checks passed, starting game...');
       // Actually start the game
       doStartGame();
     }
