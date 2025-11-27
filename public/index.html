@@ -3775,18 +3775,23 @@
         const data = await res.json();
         const list = document.getElementById("leaderboardList");
         
+        console.log('Leaderboard data:', data);
+        
         if (!data || data.length === 0) {
           list.innerHTML = '<li style="justify-content: center; opacity: 0.6;">No scores yet</li>';
           return;
         }
         
         list.innerHTML = data
-          .map((e, i) => `
-            <li>
-              <span>#${i + 1} ${e.initials ? e.initials : e.wallet.slice(0, 6)}</span>
-              <span>${e.score}/${e.tbags || 0}</span>
-            </li>
-          `)
+          .map((e, i) => {
+            console.log(`Entry ${i}:`, e);
+            return `
+              <li>
+                <span>#${i + 1} ${e.initials ? e.initials : e.wallet.slice(0, 6)}</span>
+                <span>${e.score}/${e.tbags || 0}</span>
+              </li>
+            `;
+          })
           .join("");
       } catch (error) {
         console.error("Error loading leaderboard:", error);
