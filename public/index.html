@@ -1231,13 +1231,13 @@
     // Auto-detect mobile once at startup
     const isMobile = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     
-    const MAX_BULLETS = isMobile ? 10 : 25;
-    const MAX_ROCKETS = isMobile ? 6 : 12;
-    const MAX_PARTICLES = isMobile ? 20 : 40;
-    const MAX_EXPLOSIONS = isMobile ? 3 : 6;
-    const MAX_SLOW_WAVES = isMobile ? 3 : 8;
-    const MAX_FLOATING_TEXTS = isMobile ? 8 : 20;
-    const MAX_MUZZLE_FLASHES = isMobile ? 4 : 10;
+    const MAX_BULLETS = isMobile ? 6 : 25;
+    const MAX_ROCKETS = isMobile ? 4 : 12;
+    const MAX_PARTICLES = isMobile ? 12 : 40;
+    const MAX_EXPLOSIONS = isMobile ? 2 : 6;
+    const MAX_SLOW_WAVES = isMobile ? 2 : 8;
+    const MAX_FLOATING_TEXTS = isMobile ? 5 : 20;
+    const MAX_MUZZLE_FLASHES = isMobile ? 2 : 10;
     const GUN_FIRE_INTERVAL = isMobile ? 15 : 10;
     const INVINC_FIRE_INTERVAL = isMobile ? 8 : 4;
     const POWERUP_COOLDOWN_FRAMES = 140;
@@ -1326,12 +1326,16 @@
       app.renderer.plugins.interaction.moveWhenInside = true;
     }
     
-    // Enable smooth textures globally
-    PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.LINEAR;
-    PIXI.settings.ROUND_PIXELS = !isMobile; // Disable pixel rounding on mobile
-
-    // Target 60 FPS for smooth gameplay
-    app.ticker.maxFPS = 60;
+    // Enable smooth textures globally (NEAREST for mobile performance)
+    if (isMobile) {
+      PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.NEAREST;
+      PIXI.settings.ROUND_PIXELS = true;
+      app.ticker.maxFPS = 45; // Limit mobile FPS
+    } else {
+      PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.LINEAR;
+      PIXI.settings.ROUND_PIXELS = false;
+      app.ticker.maxFPS = 60;
+    }
 
     document.getElementById('game-container').appendChild(app.view);
     app.view.id = 'pixi-canvas';
@@ -1383,8 +1387,8 @@
     const bgLayers = [];
     
     // Reduce layer counts on mobile
-    const CLOUD_COUNT = isMobile ? 8 : 15;
-    const MID_LAYER_COUNT = isMobile ? 6 : 12;
+    const CLOUD_COUNT = isMobile ? 5 : 15;
+    const MID_LAYER_COUNT = isMobile ? 4 : 12;
     
     // Layer 1: Deep space nebula clouds (slowest, darkest) - optimized
     for (let i = 0; i < CLOUD_COUNT; i++) {
@@ -1644,7 +1648,7 @@
     starGraphics.endFill();
     const starTexture = app.renderer.generateTexture(starGraphics);
     
-    const STAR_COUNT = isMobile ? 90 : 150;
+    const STAR_COUNT = isMobile ? 50 : 150;
     for (let i = 0; i < STAR_COUNT; i++) {
       const star = new PIXI.Sprite(starTexture);
       star.anchor.set(0.5);
@@ -1793,7 +1797,7 @@
           console.log('AudioContext created for desktop');
         } catch (err) {
           console.error('Failed to create AudioContext:', err);
-          if (isMobile) game.muted = true;
+          audioConfig.ready = false; // Disable audio if initialization fails
           audioContext = {
             state: 'running',
             resume: () => Promise.resolve(),
@@ -1811,32 +1815,42 @@
       console.log('Mobile detected: using HTML5 Audio');
       audioConfig.mode = AudioMode.HTML5;
 
-      audioConfig.tracks.music = new Audio('./assets/audio/background.mp3');
-      audioConfig.tracks.music.loop = true;
-      audioConfig.tracks.music.preload = 'none';
-      audioConfig.tracks.music.volume = 0.4;
+      try {
+        audioConfig.tracks.music = new Audio('./assets/audio/background.mp3');
+        audioConfig.tracks.music.loop = true;
+        audioConfig.tracks.music.preload = 'none';
+        audioConfig.tracks.music.volume = 0.4;
 
-      audioConfig.tracks.flap = new Audio('./assets/audio/flap.mp3');
-      audioConfig.tracks.flap.preload = 'none';
-      audioConfig.tracks.flap.volume = 0.5;
+        audioConfig.tracks.flap = new Audio('./assets/audio/flap.mp3');
+        audioConfig.tracks.flap.preload = 'none';
+        audioConfig.tracks.flap.volume = 0.5;
 
-      audioConfig.tracks.score = new Audio('./assets/audio/score.mp3');
-      audioConfig.tracks.score.preload = 'none';
-      audioConfig.tracks.score.volume = 0.6;
+        audioConfig.tracks.score = new Audio('./assets/audio/score.mp3');
+        audioConfig.tracks.score.preload = 'none';
+        audioConfig.tracks.score.volume = 0.6;
 
-      audioConfig.tracks.explosion = new Audio('./assets/audio/explosion.mp3');
-      audioConfig.tracks.explosion.preload = 'none';
-      audioConfig.tracks.explosion.volume = 0.7;
+        audioConfig.tracks.explosion = new Audio('./assets/audio/explosion.mp3');
+        audioConfig.tracks.explosion.preload = 'none';
+        audioConfig.tracks.explosion.volume = 0.7;
 
-      audioConfig.ready = true;
+        audioConfig.ready = true;
+      } catch (err) {
+        console.error('Failed to initialize mobile audio:', err);
+        audioConfig.ready = false; // Disable audio if initialization fails
+      }
 
       // Unlock on first touch/click
       const unlock = () => {
-        Object.values(audioConfig.tracks).forEach(a => {
-          if (!a) return;
-          a.muted = audioConfig.musicMuted && a === audioConfig.tracks.music;
-          try { a.play().then(() => a.pause()).catch(() => {}); } catch (_) {}
-        });
+        try {
+          Object.values(audioConfig.tracks).forEach(a => {
+            if (!a) return;
+            a.muted = audioConfig.musicMuted && a === audioConfig.tracks.music;
+            try { a.play().then(() => a.pause()).catch(() => {}); } catch (_) {}
+          });
+        } catch (err) {
+          console.error('Audio unlock failed:', err);
+          audioConfig.ready = false;
+        }
         window.removeEventListener('touchstart', unlock);
         window.removeEventListener('click', unlock);
       };
@@ -2777,7 +2791,8 @@
         
         // Sparks: twelve rotating points for more dramatic effect
         const sparkR = 18 * t;
-        for (let i = 0; i < 12; i++) {
+        const sparkCount = isMobile ? 6 : 12;
+        for (let i = 0; i < sparkCount; i++) {
           const angle = (this.age * 0.3) + (Math.PI * 2 / 12) * i;
           const sx = this.x + Math.cos(angle) * sparkR;
           const sy = this.y + Math.sin(angle) * sparkR;
@@ -2963,7 +2978,8 @@
       
       // Create explosion particles matching logo colors (purple #8A2BE2 and cyan #00FFFF)
       game.logoParticles = [];
-      for (let i = 0; i < 60; i++) {
+      const logoParticleCount = isMobile ? 20 : 60;
+      for (let i = 0; i < logoParticleCount; i++) {
         const ang = Math.random() * Math.PI * 2; // Random angle for full 360 coverage
         const speed = Math.random() * 9 + 3;
         const px = Math.cos(ang) * speed;
@@ -3201,9 +3217,9 @@
       
       // Mobile optimizations: reduce particle count and lifetimes
       if (isMobile) {
-        lifeMin *= 0.6;
-        lifeMax *= 0.6;
-        count = Math.min(count, 4);
+        lifeMin *= 0.4;
+        lifeMax *= 0.4;
+        count = Math.max(1, Math.ceil(count * 0.3)); // Reduce to 30% of original
       }
       
       for (let i = 0; i < count && particlePool.active.length < MAX_PARTICLES; i++) {
@@ -3340,24 +3356,26 @@
         const bottomY = (GAME_HEIGHT + pipe.bottom) / 2;
         
         // Spawn Cece particles (red/orange sparks) - 10 for top segment, 10 for bottom
-        for (let i = 0; i < 10; i++) {
+        const ceceParticleCount = isMobile ? 3 : 10;
+        for (let i = 0; i < ceceParticleCount; i++) {
           const particle = ceceParticlePool.get();
           particle.reset(centerX, topY);
           game.ceceParticles.push(particle);
         }
-        for (let i = 0; i < 10; i++) {
+        for (let i = 0; i < ceceParticleCount; i++) {
           const particle = ceceParticlePool.get();
           particle.reset(centerX, bottomY);
           game.ceceParticles.push(particle);
         }
         
         // Spawn Cece smoke (dark smoke puffs) - 10 for top, 10 for bottom
-        for (let i = 0; i < 10; i++) {
+        const ceceSmokeCount = isMobile ? 3 : 10;
+        for (let i = 0; i < ceceSmokeCount; i++) {
           const smoke = ceceSmokePool.get();
           smoke.reset(centerX, topY);
           game.ceceSmokes.push(smoke);
         }
-        for (let i = 0; i < 10; i++) {
+        for (let i = 0; i < ceceSmokeCount; i++) {
           const smoke = ceceSmokePool.get();
           smoke.reset(centerX, bottomY);
           game.ceceSmokes.push(smoke);
@@ -3368,9 +3386,12 @@
         game.flashColor = [255, 100, 0]; // Orange flash for Cece
       } else {
         // Regular explosions: outward burst with color gradient
-        createParticles(centerX, centerY, 10, 0xFF6600, { speedMin: 2, speedMax: 4 });
-        createParticles(centerX, centerY, 6, 0xFFAA00, { speedMin: 3, speedMax: 5 });
-        createParticles(centerX, centerY, 4, 0xFFFF00, { speedMin: 1, speedMax: 3, lifeMin: 15, lifeMax: 25 });
+        const expParticleCount1 = isMobile ? 3 : 10;
+        const expParticleCount2 = isMobile ? 2 : 6;
+        const expParticleCount3 = isMobile ? 1 : 4;
+        createParticles(centerX, centerY, expParticleCount1, 0xFF6600, { speedMin: 2, speedMax: 4 });
+        createParticles(centerX, centerY, expParticleCount2, 0xFFAA00, { speedMin: 3, speedMax: 5 });
+        createParticles(centerX, centerY, expParticleCount3, 0xFFFF00, { speedMin: 1, speedMax: 3, lifeMin: 15, lifeMax: 25 });
         game.shake = 5;
         game.flash = 50;
         game.flashColor = [255, 255, 255]; // White flash for regular explosions
@@ -3739,7 +3760,8 @@
         // Outer ring - 6 dots, spinning fast, closer to rocket
         const outerR = birdSize + 28;
         const outerAngle = frameCount * 0.03 * speedFactor; // Further reduced base speed
-        for (let i = 0; i < 6; i++) {
+        const outerDotCount = isMobile ? 4 : 6;
+        for (let i = 0; i < outerDotCount; i++) {
           const a = outerAngle + (i * Math.PI * 2 / 6);
           const ox = bx + Math.cos(a) * outerR;
           const oy = by + Math.sin(a) * outerR;
@@ -3751,7 +3773,8 @@
         // Middle ring - 4 dots, spinning medium speed opposite direction
         const midR = birdSize + 20;
         const midAngle = -frameCount * 0.0225 * speedFactor; // Further reduced base speed
-        for (let i = 0; i < 4; i++) {
+        const midDotCount = isMobile ? 2 : 4;
+        for (let i = 0; i < midDotCount; i++) {
           const a = midAngle + (i * Math.PI * 2 / 4);
           const ox = bx + Math.cos(a) * midR;
           const oy = by + Math.sin(a) * midR;
