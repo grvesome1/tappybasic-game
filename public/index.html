@@ -3427,19 +3427,29 @@
     async function submitScoreToLeaderboard(score) {
       if (!walletAddress) return;
       
+      const initials = prompt("Enter initials (optional, max 3 letters):");
+      
+      // User pressed cancel — DO NOTHING
+      if (initials === null) return;
+      
+      const message = `submit-score:${score}`;
+      let sig;
+      
       try {
-        const initials = prompt("Enter initials (optional, max 3 letters):") || "";
-        
-        const message = `submit-score:${score}`;
-        const sig = await signer.signMessage(message);
-        
+        sig = await signer.signMessage(message);
+      } catch (err) {
+        // User rejected signature — DO NOTHING
+        return;
+      }
+      
+      try {
         await fetch("/api/leaderboard/submit", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             wallet: walletAddress,
             score,
-            initials,
+            initials: initials || "",
             sig
           })
         });
