@@ -25,7 +25,7 @@ export default async function handler(req, res) {
     arr.sort((a, b) => b.score - a.score);
 
     console.log('Returning top', arr.length, 'scores');
-    return res.status(200).json(arr.slice(0, 4));
+    return res.status(200).json(arr.slice(0, 3));
   } catch (err) {
     console.error('LIST ERROR:', err);
     return res.status(500).json({
