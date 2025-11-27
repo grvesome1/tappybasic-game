@@ -3443,11 +3443,12 @@
         sig = await signer.signMessage(message);
       } catch (err) {
         // User rejected signature — DO NOTHING
+        console.log("Signature rejected");
         return;
       }
       
       try {
-        await fetch("/api/leaderboard/submit", {
+        const res = await fetch("/api/leaderboard/submit", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -3457,6 +3458,14 @@
             sig
           })
         });
+        
+        const data = await res.json();
+        
+        if (!res.ok || !data.ok) {
+          console.error("Score submission failed:", data);
+        } else {
+          console.log("Score submitted successfully");
+        }
       } catch (error) {
         console.error("Error submitting score:", error);
       }

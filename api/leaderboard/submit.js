@@ -8,50 +8,62 @@ const ABI = [
 ];
 
 export default async function handler(req, res) {
-  if (req.method !== "POST") return res.status(405).end();
-
-  const { wallet, score, initials, sig } = req.body;
-  if (!wallet || !sig || !score) {
-    return res.status(400).json({ error: "missing fields" });
-  }
-
-  // 1. Verify the wallet signature
-  const message = `submit-score:${score}`;
-  const signer = ethers.verifyMessage(message, sig);
-
-  if (signer.toLowerCase() !== wallet.toLowerCase()) {
-    return res.status(401).json({ error: "invalid signature" });
-  }
-
-  // 2. Score sanity check
-  if (score < 0 || score > 999999) {
-    return res.status(400).json({ error: "invalid score range" });
-  }
-
-  // 3. Verify they actually consumed a credit (credit should have decreased)
   try {
-    const provider = new ethers.JsonRpcProvider("https://rpc.sepolia.linea.build");
-    const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, provider);
-
-    const credits = await contract.credits(wallet);
-    if (credits < 0n) {
-      return res.status(400).json({ error: "invalid credit state" });
+    if (req.method !== "POST") {
+      return res.status(405).json({ error: "Method not allowed" });
     }
+
+    const { wallet, score, initials, sig } = req.body;
+    if (!wallet || !sig || score === undefined) {
+      return res.status(400).json({ error: "missing fields" });
+    }
+
+    // 1. Verify the wallet signature
+    const message = `submit-score:${score}`;
+    let signer;
+    try {
+      signer = ethers.verifyMessage(message, sig);
+    } catch (err) {
+      return res.status(401).json({ error: "invalid signature" });
+    }
+
+    if (signer.toLowerCase() !== wallet.toLowerCase()) {
+      return res.status(401).json({ error: "signature mismatch" });
+    }
+
+    // 2. Score sanity check
+    if (score < 0 || score > 999999) {
+      return res.status(400).json({ error: "invalid score range" });
+    }
+
+    // 3. Verify they actually consumed a credit (credit should have decreased)
+    try {
+      const provider = new ethers.JsonRpcProvider("https://rpc.sepolia.linea.build");
+      const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, provider);
+
+      const credits = await contract.credits(wallet);
+      if (credits < 0n) {
+        return res.status(400).json({ error: "invalid credit state" });
+      }
+    } catch (err) {
+      console.error("credit verify error:", err);
+    }
+
+    // 4. Save to Redis
+    const board = (await redis.get("leaderboard")) || [];
+
+    board.push({
+      wallet: wallet.toLowerCase(),
+      initials: initials?.slice(0, 3).toUpperCase() || "",
+      score,
+      ts: Date.now()
+    });
+
+    await redis.set("leaderboard", board);
+
+    return res.status(200).json({ ok: true });
   } catch (err) {
-    console.error("credit verify error:", err);
+    console.error("SUBMIT ERROR:", err);
+    return res.status(500).json({ error: "submit-failed", details: err.toString() });
   }
-
-  // 4. Save to Redis
-  const board = (await redis.get("leaderboard")) || [];
-
-  board.push({
-    wallet: wallet.toLowerCase(),
-    initials: initials?.slice(0, 3).toUpperCase() || "",
-    score,
-    ts: Date.now()
-  });
-
-  await redis.set("leaderboard", board);
-
-  return res.status(200).json({ ok: true });
 }
