@@ -4492,7 +4492,11 @@
         
         if (!res.ok) {
           console.error("Reset HTTP error", res.status);
-          alert("Error resetting leaderboard: HTTP " + res.status);
+          if (res.status === 500) {
+            alert("Leaderboard database not configured. Please set up Vercel KV in your dashboard.");
+          } else {
+            alert("Error resetting leaderboard: HTTP " + res.status);
+          }
           return;
         }
         
