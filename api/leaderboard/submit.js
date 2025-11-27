@@ -8,6 +8,12 @@ export default async function handler(req, res) {
   try {
     if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
+    console.log("ENV CHECK:", { 
+      hasUrl: !!process.env.KV_REST_API_URL, 
+      hasToken: !!process.env.KV_REST_API_TOKEN,
+      url: process.env.KV_REST_API_URL?.substring(0, 30) + "..." 
+    });
+
     const redis = new Redis({
       url: process.env.KV_REST_API_URL,
       token: process.env.KV_REST_API_TOKEN
