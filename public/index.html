@@ -1208,14 +1208,39 @@
       
       // Handle wallet events for mobile reconnection
       if (window.ethereum) {
-        window.ethereum.on('accountsChanged', (accounts) => {
+        window.ethereum.on('accountsChanged', async (accounts) => {
           if (accounts.length > 0) {
             walletAddress = accounts[0];
             localStorage.setItem('tappyWalletAddress', walletAddress);
+            
+            // Reconnect with new account
+            try {
+              provider = new ethers.BrowserProvider(window.ethereum);
+              signer = await provider.getSigner();
+              contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+              
+              // Sync credits from blockchain for new account
+              try {
+                console.log('Account changed, syncing credits for new account...');
+                const creditsBN = await contract.credits(walletAddress);
+                window.localCredits = Number(creditsBN);
+                localStorage.setItem('tappyCredits', String(window.localCredits));
+                console.log('Credits synced for new account:', window.localCredits);
+              } catch (err) {
+                console.warn('Could not sync credits for new account:', err);
+                window.localCredits = 0;
+                localStorage.setItem('tappyCredits', '0');
+              }
+            } catch (err) {
+              console.error('Error reconnecting with new account:', err);
+            }
+            
             updateCreditDisplay();
           } else {
             walletAddress = null;
             localStorage.removeItem('tappyWalletAddress');
+            window.localCredits = 0;
+            localStorage.setItem('tappyCredits', '0');
             updateCreditDisplay();
           }
         });
