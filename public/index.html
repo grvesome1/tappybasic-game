@@ -91,14 +91,21 @@
       color: #00ffff;
       font-family: 'Barlow', sans-serif;
       font-size: 14px;
-      z-index: 5;
-      transition: opacity 0.5s ease-in-out, visibility 0.5s ease-in-out;
+      z-index: 30;
+      /* smooth fade + prevent stray taps while hidden */
+      opacity: 1;
+      pointer-events: auto;
+      transition: opacity 220ms ease-in-out, transform 220ms ease-in-out;
+      will-change: opacity, transform;
     }
 
-    #web3-ui.hidden-gameplay {
-      opacity: 0;
-      pointer-events: none;
-      visibility: hidden;
+    /* Web3 panel - only fade on mobile */
+    @media (max-width: 500px) {
+      #web3-ui.hidden-in-game {
+        opacity: 0;
+        pointer-events: none;
+        transform: translateX(-50%) translateY(-10px);
+      }
     }
 
     #web3-ui button {
@@ -472,6 +479,93 @@
       opacity: 0.7;
     }
 
+    .leaderboard-panel {
+      margin-top: 15px;
+      padding: 10px;
+      background: rgba(0,0,0,0.35);
+      border: 1px solid rgba(0,255,255,0.3);
+      border-radius: 10px;
+    }
+
+    .leaderboard-title {
+      color: #00ffff;
+      font-size: 16px;
+      margin-bottom: 6px;
+      text-align: center;
+      font-weight: 700;
+    }
+
+    .leaderboard-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      max-height: 160px;
+      overflow-y: auto;
+    }
+
+    .leaderboard-list li {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px;
+      margin-bottom: 4px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 6px;
+      color: white;
+      font-size: 12px;
+    }
+
+    .admin-reset-btn {
+      margin-top: 10px;
+      padding: 6px 12px;
+      background: rgba(255, 0, 0, 0.2);
+      border: 1px solid rgba(255, 0, 0, 0.4);
+      border-radius: 8px;
+      color: #ff4444;
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .admin-reset-btn:hover {
+      background: rgba(255, 0, 0, 0.3);
+      border-color: rgba(255, 0, 0, 0.6);
+    }
+
+    /* Tutorial overlay - simple transparent click-to-close */
+    .tutorial-overlay {
+      position: absolute;
+      inset: 0;
+      background: transparent;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      pointer-events: auto;
+      cursor: pointer;
+    }
+
+    .tutorial-overlay.hidden {
+      display: none;
+    }
+
+    .tutorial-hint-text {
+      position: absolute;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'Barlow', sans-serif;
+      font-size: 14px;
+      color: #00ffff;
+      text-shadow: 0 0 10px rgba(0, 255, 255, 0.8);
+      opacity: 0.8;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.6; }
+      50% { opacity: 1; }
+    }
+
     .menu-button {
       padding: 15px 40px;
       font-size: 24px;
@@ -559,6 +653,108 @@
       opacity: 1;
       transform: translate(-50%, -50%) scale(1);
     }
+
+    /* First-run tutorial overlay */
+    .tutorial-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px;
+      background: radial-gradient(circle at 50% 15%, rgba(0, 255, 255, 0.08), transparent 55%),
+                  linear-gradient(to bottom, rgba(3, 12, 32, 0.8), rgba(0, 0, 0, 0.85));
+      color: #fff;
+      font-family: "Barlow", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      text-align: center;
+      z-index: 110;
+      opacity: 1;
+      pointer-events: auto;
+      transition: opacity 220ms ease-out;
+    }
+
+    .tutorial-overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .tutorial-content {
+      max-width: 360px;
+      width: 100%;
+      background: rgba(4, 16, 40, 0.9);
+      border-radius: 14px;
+      border: 1px solid rgba(0, 255, 255, 0.45);
+      box-shadow:
+        0 0 0 1px rgba(0, 0, 0, 0.65),
+        0 0 32px rgba(0, 255, 255, 0.45);
+      padding: 14px 16px 12px;
+      backdrop-filter: blur(10px);
+    }
+
+    .tutorial-title {
+      font-size: 18px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+      color: #e8f7ff;
+    }
+
+    .tutorial-body {
+      font-size: 13px;
+      line-height: 1.4;
+      opacity: 0.9;
+    }
+
+    .tutorial-body strong {
+      color: #4ef0ff;
+      font-weight: 600;
+    }
+
+    .tutorial-powerups {
+      margin-top: 12px;
+      text-align: left;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .powerup-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+      line-height: 1.3;
+      opacity: 0.95;
+    }
+
+    .powerup-icon {
+      width: 28px;
+      height: 28px;
+      flex-shrink: 0;
+      object-fit: contain;
+      filter: drop-shadow(0 0 4px rgba(0, 255, 255, 0.4));
+    }
+
+    .powerup-row strong {
+      color: #4ef0ff;
+      font-weight: 600;
+      display: inline;
+    }
+
+    .tutorial-hint {
+      margin-top: 10px;
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      opacity: 0.8;
+      animation: tutorialHintPulse 1.4s ease-in-out infinite;
+    }
+
+    @keyframes tutorialHintPulse {
+      0%   { opacity: 0.3; transform: translateY(0); }
+      50%  { opacity: 1;   transform: translateY(-2px); }
+      100% { opacity: 0.3; transform: translateY(0); }
+    }
   </style>
 </head>
 <body>
@@ -611,8 +807,42 @@
     <!-- Touch indicator for mobile feedback -->
     <div id="touchIndicator" class="touch-indicator"></div>
 
+    <!-- Transparent first-run tutorial overlay -->
+    <div id="tutorialOverlay" class="tutorial-overlay">
+      <div class="tutorial-content">
+        <div class="tutorial-title">$TBAG&rsquo;s Tappy Rocket</div>
+        <div class="tutorial-body">
+          Tap, click, or press <strong>SPACE / ↑</strong> to fire your thrusters.<br />
+          Dodge the <strong>red candles</strong>, grab <strong>powerups</strong>, and secure <strong>$TBAGs</strong>.
+        </div>
+        <div class="tutorial-powerups">
+          <div class="powerup-row">
+            <img src="./assets/images/slow.png" alt="Slow-Mo" class="powerup-icon" />
+            <span><strong>Slow-Mo:</strong> Brief slowdown + small permanent speed reduction</span>
+          </div>
+          <div class="powerup-row">
+            <img src="./assets/images/sherk.png" alt="More Score" class="powerup-icon" />
+            <span><strong>More Score:</strong> Temporarily increases all points by random factors</span>
+          </div>
+          <div class="powerup-row">
+            <img src="./assets/images/gun.png" alt="Gun" class="powerup-icon" />
+            <span><strong>Gun:</strong> Auto-fires bullets to destroy red candles</span>
+          </div>
+          <div class="powerup-row">
+            <img src="./assets/images/cece.png" alt="Cece Rockets" class="powerup-icon" />
+            <span><strong>Cece Rockets:</strong> Rapid RPG burst ahead</span>
+          </div>
+          <div class="powerup-row">
+            <img src="./assets/images/invincibility.png" alt="Invincibility" class="powerup-icon" />
+            <span><strong>Invincibility:</strong> Shield + destroys candles on contact</span>
+          </div>
+        </div>
+        <div class="tutorial-hint">Tap anywhere to continue</div>
+      </div>
+    </div>
+
     <!-- Start Menu -->
-    <div class="menu-overlay" id="startMenu">
+    <div class="menu-overlay hidden" id="startMenu">
       <div class="start-panel">
         <div class="start-title">$TBAG's Tappy Rocket</div>
         <div class="start-instructions">
@@ -654,6 +884,11 @@
           <button id="gameoverMusicBtn" class="menu-audio-btn" title="Toggle Music">♫</button>
           <button id="gameoverSfxBtn" class="menu-audio-btn" title="Toggle Sound Effects">🔊</button>
         </div>
+        <div class="leaderboard-panel">
+          <div class="leaderboard-title">Global Leaderboard</div>
+          <ul id="leaderboardList" class="leaderboard-list"></ul>
+        </div>
+        <button id="adminResetBtn" class="admin-reset-btn" style="display:none;">Reset Leaderboard</button>
         <button class="btn-restart" id="restartButton" ontouchstart="this.classList.add('touched')" ontouchend="this.classList.remove('touched')">Re-Launch Rocket</button>
         <div class="hint-text">Press SPACE / TAP to thrust. Avoid the red candles.</div>
       </div>
@@ -715,7 +950,9 @@
     // $0.01 when ETH ≈ $2,000 and ensures deterministic cost without depending on
     // CoinGecko or the contract’s creditPriceETH value.  See commit message for details.
     const CREDIT_PRICE_WEI = 5000000000000n;
-    window.localCredits = parseInt(localStorage.getItem('tappyCredits') || '0', 10);
+    // Always start with 0 credits on page load
+    window.localCredits = 0;
+    localStorage.setItem('tappyCredits', '0');
 
     // Sync credits from smart contract
     async function syncCreditsFromContract() {
@@ -750,17 +987,11 @@
     // Use a credit when starting a game. Returns true if credit consumed, otherwise false.
     window.useCredit = function () {
       if (!walletAddress) {
-        // Don't trigger wallet connection on game start, just inform user
-        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-        if (isMobile) {
-          alert('Please connect your wallet from the main menu first!');
-        } else {
-          alert('Connect your wallet to play!');
-        }
+        alert('You need credits to play. Please buy a credit first.');
         return false;
       }
       if (window.localCredits <= 0) {
-        alert('You have no credits. Please purchase more to play.');
+        alert('You need credits to play. Please buy a credit first.');
         return false;
       }
       window.localCredits -= 1;
@@ -833,8 +1064,13 @@
         } catch (e) {
           console.warn('Could not fetch credit price', e);
         }
-        // Sync credits from contract
-        await syncCreditsFromContract();
+        // Do NOT sync credits from contract on connect
+        
+        // Show admin button if admin wallet
+        if (walletAddress.toLowerCase() === "0x3100ff9597b87e791e5bb8c0d57c94336a432089") {
+          document.getElementById("adminResetBtn").style.display = "block";
+        }
+        
         updateCreditDisplay();
       } catch (err) {
         console.error(err);
@@ -868,7 +1104,12 @@
         return;
       }
       
+      const purchaseBtn = document.getElementById('purchase-btn');
+      
       try {
+        // Disable button during transaction
+        if (purchaseBtn) purchaseBtn.disabled = true;
+        
         // Always use the fixed CREDIT_PRICE_WEI for purchasing credits.  This avoids
         // dynamic price calculations and oracle lookups.  See CREDIT_PRICE_WEI
         // definition above.
@@ -886,8 +1127,10 @@
         const receipt = await tx.wait();
         
         if (receipt.status === 1) {
-          // Sync credits from contract after successful purchase
-          await syncCreditsFromContract();
+          // Increment credits locally after successful purchase
+          console.log('Purchase successful, incrementing credits...');
+          window.localCredits += 1;
+          localStorage.setItem('tappyCredits', window.localCredits.toString());
           updateCreditDisplay();
           alert('Credit purchased successfully! You now have ' + window.localCredits + ' credits.');
         } else {
@@ -902,6 +1145,9 @@
         } else {
           alert('Purchase failed: ' + (err.message || 'Unknown error'));
         }
+      } finally {
+        // Re-enable button
+        if (purchaseBtn) purchaseBtn.disabled = false;
       }
     }
 
@@ -999,15 +1245,18 @@
     };
 
     // Object pool and rendering limits
-    const MAX_BULLETS = 25;
-    const MAX_ROCKETS = 12;
-    const MAX_PARTICLES = 40;
-    const MAX_EXPLOSIONS = 6;
-    const MAX_SLOW_WAVES = 8;
-    const MAX_FLOATING_TEXTS = 20;
-    const MAX_MUZZLE_FLASHES = 10;
-    const GUN_FIRE_INTERVAL = 10;
-    const INVINC_FIRE_INTERVAL = 4;
+    // Auto-detect mobile once at startup
+    const isMobile = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
+    const MAX_BULLETS = isMobile ? 10 : 25;
+    const MAX_ROCKETS = isMobile ? 6 : 12;
+    const MAX_PARTICLES = isMobile ? 20 : 40;
+    const MAX_EXPLOSIONS = isMobile ? 3 : 6;
+    const MAX_SLOW_WAVES = isMobile ? 3 : 8;
+    const MAX_FLOATING_TEXTS = isMobile ? 8 : 20;
+    const MAX_MUZZLE_FLASHES = isMobile ? 4 : 10;
+    const GUN_FIRE_INTERVAL = isMobile ? 15 : 10;
+    const INVINC_FIRE_INTERVAL = isMobile ? 8 : 4;
     const POWERUP_COOLDOWN_FRAMES = 140;
 
     let gunTimer = 0;
@@ -1019,7 +1268,6 @@
     let pipeInterval = 90;
     let powerupTimer = 0;
     let frameCount = 0;
-    let isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
     // DOM elements
     const dom = {
@@ -1031,6 +1279,7 @@
       speedBarFill: document.getElementById('speedBarFill'),
       graffitiImage: document.getElementById('graffitiImage'),
       touchIndicator: document.getElementById('touchIndicator'),
+      tutorialOverlay: document.getElementById('tutorialOverlay'),
       startMenu: document.getElementById('startMenu'),
       gameOverMenu: document.getElementById('gameOverMenu'),
       restartButton: document.getElementById('restartButton'),
@@ -1040,22 +1289,65 @@
       finalTbagHighScoreDisplay: document.getElementById('finalTbagHighScoreDisplay')
     };
 
+    const TUTORIAL_KEY = 'tappyRocketTutorialSeen';
+
+    function showTutorialIfNeeded() {
+      if (!dom.tutorialOverlay) return;
+      // Always show tutorial on page load (removed localStorage check)
+      dom.tutorialOverlay.classList.remove('hidden');
+    }
+
+    function dismissTutorial() {
+      if (!dom.tutorialOverlay) return;
+      dom.tutorialOverlay.classList.add('hidden');
+      // Show start menu after tutorial is dismissed
+      if (dom.startMenu) {
+        dom.startMenu.classList.remove('hidden');
+      }
+      // Note: Not storing to localStorage, will show again on refresh
+    }
+
+    if (dom.tutorialOverlay) {
+      dom.tutorialOverlay.addEventListener('click', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        dismissTutorial();
+      });
+      dom.tutorialOverlay.addEventListener('touchstart', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        dismissTutorial();
+      }, { passive: false });
+    }
+
+    // Call once at startup
+    showTutorialIfNeeded();
+
     // ==================== PIXI.JS SETUP ====================
+    // Optimize renderer settings for mobile (reuse isMobile variable defined above)
+    
     const app = new PIXI.Application({
       width: GAME_WIDTH,
       height: GAME_HEIGHT,
       backgroundColor: 0x000000,
-      antialias: true,
-      resolution: window.devicePixelRatio || 1,
+      antialias: !isMobile, // Disable antialiasing on mobile for better performance
+      resolution: isMobile ? 1 : (window.devicePixelRatio || 1), // Force 1x resolution on mobile
       autoDensity: true,
-      powerPreference: 'high-performance'
+      powerPreference: isMobile ? 'default' : 'high-performance'
     });
+    
+    // Mobile-specific renderer optimizations
+    if (isMobile) {
+      app.renderer.resolution = Math.min(window.devicePixelRatio, 1.0);
+      PIXI.settings.ROUND_PIXELS = true;
+      app.renderer.plugins.interaction.moveWhenInside = true;
+    }
     
     // Enable smooth textures globally
     PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.LINEAR;
-    PIXI.settings.ROUND_PIXELS = false;
+    PIXI.settings.ROUND_PIXELS = !isMobile; // Disable pixel rounding on mobile
 
-    // Target 60 FPS for smooth gameplay (default, but explicit)
+    // Target 60 FPS for smooth gameplay
     app.ticker.maxFPS = 60;
 
     document.getElementById('game-container').appendChild(app.view);
@@ -1107,8 +1399,12 @@
     // Deep space gradient layers with organic nebula shapes
     const bgLayers = [];
     
-    // Layer 1: Deep space nebula clouds (slowest, darkest) - 15 clouds optimized
-    for (let i = 0; i < 15; i++) {
+    // Reduce layer counts on mobile
+    const CLOUD_COUNT = isMobile ? 8 : 15;
+    const MID_LAYER_COUNT = isMobile ? 6 : 12;
+    
+    // Layer 1: Deep space nebula clouds (slowest, darkest) - optimized
+    for (let i = 0; i < CLOUD_COUNT; i++) {
       const cloud = new PIXI.Graphics();
       const x = Math.random() * GAME_WIDTH * 2.5;
       const y = Math.random() * GAME_HEIGHT;
@@ -1187,14 +1483,18 @@
       cloud.baseScale = 1.0;
       cloud.scalePhase = Math.random() * Math.PI * 2;
       cloud.depthLayer = 1; // Farthest
-      cloud.filters = [new PIXI.BlurFilter(15 + Math.random() * 5)]; // 15-20 blur (reduced)
+      if (!isMobile) {
+        cloud.filters = [new PIXI.BlurFilter(15 + Math.random() * 5)];
+      } else {
+        cloud.filters = null;
+      }
       cloud.cacheAsBitmap = true; // PERFORMANCE: Cache as bitmap texture
       bgLayers.push(cloud);
       gameContainer.addChildAt(cloud, 0);
     }
     
-    // Layer 2: Mid-depth nebula gradients (medium speed) - 12 layers optimized
-    for (let i = 0; i < 12; i++) {
+    // Layer 2: Mid-depth nebula gradients (medium speed) - optimized
+    for (let i = 0; i < MID_LAYER_COUNT; i++) {
       const layer = new PIXI.Graphics();
       const x = Math.random() * GAME_WIDTH * 2.5;
       const y = Math.random() * GAME_HEIGHT;
@@ -1309,7 +1609,11 @@
       layer.baseScale = 1.0;
       layer.scalePhase = Math.random() * Math.PI * 2;
       layer.depthLayer = 2; // Mid-depth
-      layer.filters = [new PIXI.BlurFilter(20 + Math.random() * 8)];
+      if (!isMobile) {
+        layer.filters = [new PIXI.BlurFilter(20 + Math.random() * 8)];
+      } else {
+        layer.filters = null;
+      }
       bgLayers.push(layer);
       gameContainer.addChildAt(layer, Math.min(bgLayers.length - 1, gameContainer.children.length));
     }
@@ -1357,7 +1661,8 @@
     starGraphics.endFill();
     const starTexture = app.renderer.generateTexture(starGraphics);
     
-    for (let i = 0; i < 150; i++) {
+    const STAR_COUNT = isMobile ? 90 : 150;
+    for (let i = 0; i < STAR_COUNT; i++) {
       const star = new PIXI.Sprite(starTexture);
       star.anchor.set(0.5);
       // Wide brightness range: very faint (0.05) to very bright (1.0)
@@ -1396,6 +1701,9 @@
     }
     
     function updateBackgroundLayers() {
+      // Mobile: update every other frame to reduce CPU load
+      if (isMobile && frameCount % 2 !== 0) return;
+      
       const time = Date.now() * 0.0005;
       for (const layer of bgLayers) {
         layer.x -= layer.speed * (game.speed / game.baseSpeed);
@@ -1464,42 +1772,145 @@
       }
     }
 
-    // ==================== WEB AUDIO API ====================
+    // ==================== AUDIO MANAGER ====================
+    const AudioMode = {
+      NONE: 'none',
+      HTML5: 'html5',
+      WEBAUDIO: 'webaudio'
+    };
+
+    const audioConfig = {
+      mode: AudioMode.NONE,
+      ready: false,
+      sfxMuted: false,
+      musicMuted: false,
+      tracks: {
+        music: null,
+        flap: null,
+        score: null,
+        explosion: null,
+      },
+    };
+
+    // Legacy compatibility - keep these for desktop WebAudio path
     let audioContext;
-    try {
-      audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      console.log('AudioContext created successfully');
-    } catch (err) {
-      console.error('Failed to create AudioContext:', err);
-      // Create a dummy audio context that won't crash
-      audioContext = {
-        state: 'running',
-        resume: () => Promise.resolve(),
-        createGain: () => ({ gain: { value: 0 }, connect: () => {} }),
-        createBufferSource: () => ({ buffer: null, loop: false, connect: () => {}, start: () => {} }),
-        destination: {},
-        decodeAudioData: () => Promise.reject('Audio not supported')
+    let bgMusicSource = null;
+    let bgMusicGain = null;
+    const sounds = {};
+
+    // Call once on DOM ready
+    function initAudioLayer() {
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+      if (!isMobile) {
+        // Desktop: use existing WebAudio path
+        audioConfig.mode = AudioMode.WEBAUDIO;
+        try {
+          audioContext = new (window.AudioContext || window.webkitAudioContext)();
+          console.log('AudioContext created for desktop');
+        } catch (err) {
+          console.error('Failed to create AudioContext:', err);
+          if (isMobile) game.muted = true;
+          audioContext = {
+            state: 'running',
+            resume: () => Promise.resolve(),
+            createGain: () => ({ gain: { value: 0 }, connect: () => {} }),
+            createBufferSource: () => ({ buffer: null, loop: false, connect: () => {}, start: () => {} }),
+            destination: {},
+            decodeAudioData: () => Promise.reject('Audio not supported')
+          };
+        }
+        audioConfig.ready = true;
+        return;
+      }
+
+      // Mobile: lean HTML5 audio only, no fancy WebAudio
+      console.log('Mobile detected: using HTML5 Audio');
+      audioConfig.mode = AudioMode.HTML5;
+
+      audioConfig.tracks.music = new Audio('./assets/audio/background.mp3');
+      audioConfig.tracks.music.loop = true;
+      audioConfig.tracks.music.preload = 'none';
+      audioConfig.tracks.music.volume = 0.4;
+
+      audioConfig.tracks.flap = new Audio('./assets/audio/flap.mp3');
+      audioConfig.tracks.flap.preload = 'none';
+      audioConfig.tracks.flap.volume = 0.5;
+
+      audioConfig.tracks.score = new Audio('./assets/audio/score.mp3');
+      audioConfig.tracks.score.preload = 'none';
+      audioConfig.tracks.score.volume = 0.6;
+
+      audioConfig.tracks.explosion = new Audio('./assets/audio/explosion.mp3');
+      audioConfig.tracks.explosion.preload = 'none';
+      audioConfig.tracks.explosion.volume = 0.7;
+
+      audioConfig.ready = true;
+
+      // Unlock on first touch/click
+      const unlock = () => {
+        Object.values(audioConfig.tracks).forEach(a => {
+          if (!a) return;
+          a.muted = audioConfig.musicMuted && a === audioConfig.tracks.music;
+          try { a.play().then(() => a.pause()).catch(() => {}); } catch (_) {}
+        });
+        window.removeEventListener('touchstart', unlock);
+        window.removeEventListener('click', unlock);
       };
+      window.addEventListener('touchstart', unlock, { once: true });
+      window.addEventListener('click', unlock, { once: true });
     }
-    
+
+    function playSfx(name) {
+      if (!audioConfig.ready || audioConfig.sfxMuted) return;
+      if (audioConfig.mode !== AudioMode.HTML5) return; // desktop handled elsewhere
+
+      const base = audioConfig.tracks[name];
+      if (!base) return;
+
+      // Simple, low-overhead clone
+      const a = base.cloneNode();
+      a.volume = base.volume;
+      a.play().catch(() => {});
+    }
+
+    function setMusicMuted(muted) {
+      audioConfig.musicMuted = muted;
+      const m = audioConfig.tracks.music;
+      if (!m) return;
+      if (muted) m.pause();
+      else m.play().catch(() => {});
+    }
+
+    function setSfxMuted(muted) {
+      audioConfig.sfxMuted = muted;
+    }
+
     // Aggressive audio unlock - try on every user interaction
     function forceAudioUnlock() {
       try {
-        if (audioContext.state === 'suspended' || audioContext.state !== 'running') {
+        if (audioConfig.mode === AudioMode.WEBAUDIO && audioContext && audioContext.state !== 'running') {
           audioContext.resume();
         }
       } catch (err) {
         console.warn('Audio unlock failed:', err);
+        if (isMobile) game.muted = true;
       }
     }
     
-    // Unlock everywhere
+    // Unlock everywhere including mobile touchstart
     ['touchstart', 'touchend', 'mousedown', 'click', 'keydown'].forEach(event => {
       document.addEventListener(event, forceAudioUnlock, { passive: true });
     });
-    const sounds = {};
-    let bgMusicSource = null;
-    let bgMusicGain = null;
+    
+    // Mobile-specific audio unlock
+    document.addEventListener('touchstart', () => {
+      if (audioContext && audioContext.state !== 'running') {
+        audioContext.resume().catch(e => {
+          if (isMobile) game.muted = true;
+        });
+      }
+    }, { once: true });
 
     // Load and play background music from MP3
     // Background music: "background.mp3" made by Elisaveta Stoycheva
@@ -1517,8 +1928,14 @@
     function createBackgroundMusic() {
       if (bgMusicSource || !sounds.background) return;
       
+      // Skip background music entirely on mobile for performance
+      if (audioConfig.mode === AudioMode.HTML5) {
+        console.log('Background music DISABLED on mobile for performance');
+        return;
+      }
+      
       try {
-        // Ensure audio context is running
+        // Web Audio API for desktop only
         if (audioContext.state === 'suspended') {
           audioContext.resume().then(() => {
             startMusicSource();
@@ -1575,11 +1992,20 @@
         })
         .catch(err => console.warn(`Failed to load sound ${name}:`, err));
     }
-
+    
     function safePlay(name, volume = 1.0, rate = 1.0) {
-      if (!sounds[name] || game.muted) return;
+      if (game.muted) return;
+      
+      // Mobile HTML5 Audio path - use AudioManager
+      if (audioConfig.mode === AudioMode.HTML5) {
+        playSfx(name);
+        return;
+      }
 
+      // Desktop WebAudio path
       try {
+        if (!sounds[name]) return;
+        
         const source = audioContext.createBufferSource();
         source.buffer = sounds[name];
         source.playbackRate.value = rate;
@@ -1599,7 +2025,7 @@
           game.invincibilityAudio = source;
         }
       } catch (error) {
-        console.warn(`Failed to play sound ${name}:`, error);
+        // Silently fail on mobile
       }
     }
 
@@ -2671,6 +3097,9 @@
       const progressFactor = Math.min(game.score / 100, 1.0);
       let speedIncrease = SPEED_INCREMENT_MIN + (progressFactor * (SPEED_INCREMENT_MAX - SPEED_INCREMENT_MIN));
       
+      // Lower speed ramping on mobile to prevent frame drops
+      if (isMobile) speedIncrease *= 0.5;
+      
       // If destroyed a red candle, apply increased speed (75% instead of 50%)
       if (isDestroyed && isRedCandle) {
         speedIncrease *= 0.75;
@@ -2780,12 +3209,19 @@
     }
 
     function createParticles(x, y, count, color, options = {}) {
-      const speedMin = options.speedMin || 1;
-      const speedMax = options.speedMax || 3;
-      const lifeMin = options.lifeMin || 30;
-      const lifeMax = options.lifeMax || 50;
+      let speedMin = options.speedMin || 1;
+      let speedMax = options.speedMax || 3;
+      let lifeMin = options.lifeMin || 30;
+      let lifeMax = options.lifeMax || 50;
       const spread = options.spread || Math.PI * 2; // Full circle by default
       const direction = options.direction || 0; // Direction offset
+      
+      // Mobile optimizations: reduce particle count and lifetimes
+      if (isMobile) {
+        lifeMin *= 0.6;
+        lifeMax *= 0.6;
+        count = Math.min(count, 4);
+      }
       
       for (let i = 0; i < count && particlePool.active.length < MAX_PARTICLES; i++) {
         const angle = direction + (Math.random() - 0.5) * spread;
@@ -2999,14 +3435,67 @@
         }
       }, '*');
       
-      // Fade in web3 UI when game over
-      const web3UI = document.getElementById('web3-ui');
-      if (web3UI) {
-        web3UI.classList.remove('hidden-gameplay');
-      }
+      // Fade in web3 UI when game over (mobile only)
+      toggleWeb3DuringGameplay(false);
+      
+      // Submit score to leaderboard
+      submitScoreToLeaderboard(game.score);
+      
+      // Load and display leaderboard
+      loadLeaderboardIntoUI();
       
       dom.gameOverMenu.classList.remove('hidden');
       safePlay('hit', 0.5);
+    }
+
+    async function submitScoreToLeaderboard(score) {
+      if (!walletAddress) return;
+      
+      try {
+        const initials = prompt("Enter initials (optional, max 3 letters):") || "";
+        
+        const message = `submit-score:${score}`;
+        const sig = await signer.signMessage(message);
+        
+        await fetch("/api/leaderboard/submit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            wallet: walletAddress,
+            score,
+            initials,
+            sig
+          })
+        });
+      } catch (error) {
+        console.error("Error submitting score:", error);
+      }
+    }
+
+    async function loadLeaderboardIntoUI() {
+      try {
+        const res = await fetch("/api/leaderboard/list");
+        const data = await res.json();
+        const list = document.getElementById("leaderboardList");
+        
+        if (!data || data.length === 0) {
+          list.innerHTML = '<li style="justify-content: center; opacity: 0.6;">No scores yet</li>';
+          return;
+        }
+        
+        list.innerHTML = data
+          .map((e, i) => `
+            <li>
+              <span>#${i + 1} ${e.initials ? e.initials : e.wallet.slice(0, 6)}</span>
+              <span>${e.score}</span>
+            </li>
+          `)
+          .join("");
+      } catch (error) {
+        console.error("Error loading leaderboard:", error);
+        const list = document.getElementById("leaderboardList");
+        list.innerHTML = '<li style="justify-content: center; opacity: 0.6;">Error loading</li>';
+      }
     }
 
     function initGame() {
@@ -3116,10 +3605,23 @@
       // Clear floating texts
       floatingTexts.length = 0;
       
-      // Show web3 UI on start screen
-      const web3UI = document.getElementById('web3-ui');
-      if (web3UI) {
-        web3UI.classList.remove('hidden-gameplay');
+      // Show web3 UI on start screen (mobile only)
+      toggleWeb3DuringGameplay(false);
+    }
+
+    // ==================== WEB3 UI TOGGLE ====================
+    
+    function toggleWeb3DuringGameplay(isRunning) {
+      const isMobileView = window.innerWidth <= 500;
+      if (!isMobileView) return; // Only hide on mobile
+      
+      const web3 = document.getElementById('web3-ui');
+      if (!web3) return;
+      
+      if (isRunning) {
+        web3.classList.add('hidden-in-game');
+      } else {
+        web3.classList.remove('hidden-in-game');
       }
     }
 
@@ -3364,6 +3866,7 @@
       if (typeof window.useCredit === 'function' && !window.useCredit()) {
         // If useCredit returns false, abort starting the game
         console.log('Credit consumption failed, aborting start');
+        alert('You need credits to play! Please purchase credits using the "Buy Credit" button.');
         return;
       }
 
@@ -3396,11 +3899,8 @@
       dom.gameOverMenu.classList.add('hidden');
       console.log('Menus hidden - startMenu has hidden class:', dom.startMenu.classList.contains('hidden'));
       
-      // Fade out web3 UI during gameplay
-      const web3UI = document.getElementById('web3-ui');
-      if (web3UI) {
-        web3UI.classList.add('hidden-gameplay');
-      }
+      // Fade out web3 UI during gameplay (mobile only)
+      toggleWeb3DuringGameplay(true);
       
       // Reset game state first
       console.log('Calling initGame()...');
@@ -3917,6 +4417,11 @@
       }
       
       if (!game.started) {
+        // Check credits before allowing game start
+        if (!walletAddress || window.localCredits <= 0) {
+          alert('You need credits to play. Please buy a credit first.');
+          return;
+        }
         startGame();
       } else if (!game.over) {
         game.bird.flap();
@@ -3973,6 +4478,41 @@
       forceAudioUnlock();
       startGame(); // Changed to consume credit on restart
     });
+    
+    // Admin reset leaderboard button
+    const adminResetBtn = document.getElementById('adminResetBtn');
+    adminResetBtn.addEventListener('click', async () => {
+      if (!signer) {
+        alert("Please connect wallet first");
+        return;
+      }
+      
+      if (!confirm("Are you sure you want to reset the entire leaderboard?")) {
+        return;
+      }
+      
+      try {
+        const sig = await signer.signMessage("admin-reset");
+        
+        const res = await fetch("/api/leaderboard/reset", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sig })
+        });
+        
+        const data = await res.json();
+        
+        if (data.ok) {
+          alert("Leaderboard reset successfully.");
+          loadLeaderboardIntoUI();
+        } else {
+          alert("Failed to reset leaderboard: " + (data.error || "Unknown error"));
+        }
+      } catch (error) {
+        console.error("Error resetting leaderboard:", error);
+        alert("Error resetting leaderboard: " + error.message);
+      }
+    });
 
     // Music mute button
     const musicMuteButton = document.getElementById('musicMuteButton');
@@ -3980,7 +4520,9 @@
       e.stopPropagation();
       game.musicMuted = !game.musicMuted;
       
-      if (bgMusicGain) {
+      if (audioConfig.mode === AudioMode.HTML5) {
+        setMusicMuted(game.musicMuted);
+      } else if (bgMusicGain) {
         bgMusicGain.gain.value = game.musicMuted ? 0 : 0.2;
       }
       
@@ -3994,6 +4536,10 @@
       e.stopPropagation();
       game.muted = !game.muted;
       
+      if (audioConfig.mode === AudioMode.HTML5) {
+        setSfxMuted(game.muted);
+      }
+      
       sfxMuteButton.classList.toggle('muted', game.muted);
       console.log('Sound effects', game.muted ? 'muted' : 'unmuted');
     });
@@ -4006,11 +4552,14 @@
       e.stopPropagation();
       game.musicMuted = !game.musicMuted;
       
-      // If unmuting and music hasn't started, start it now
-      if (!game.musicMuted && !bgMusicSource && sounds.background) {
-        createBackgroundMusic();
-      } else if (bgMusicGain) {
-        bgMusicGain.gain.value = game.musicMuted ? 0 : 0.2;
+      if (audioConfig.mode === AudioMode.HTML5) {
+        setMusicMuted(game.musicMuted);
+      } else if (audioConfig.mode === AudioMode.WEBAUDIO) {
+        if (!game.musicMuted && !bgMusicSource && sounds.background) {
+          createBackgroundMusic();
+        } else if (bgMusicGain) {
+          bgMusicGain.gain.value = game.musicMuted ? 0 : 0.2;
+        }
       }
       
       startMusicBtn.classList.toggle('muted', game.musicMuted);
@@ -4021,6 +4570,11 @@
     startSfxBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       game.muted = !game.muted;
+      
+      if (audioConfig.mode === AudioMode.HTML5) {
+        setSfxMuted(game.muted);
+      }
+      
       startSfxBtn.classList.toggle('muted', game.muted);
       gameoverSfxBtn.classList.toggle('muted', game.muted);
       sfxMuteButton.classList.toggle('muted', game.muted);
@@ -4034,11 +4588,14 @@
       e.stopPropagation();
       game.musicMuted = !game.musicMuted;
       
-      // If unmuting and music hasn't started, start it now
-      if (!game.musicMuted && !bgMusicSource && sounds.background) {
-        createBackgroundMusic();
-      } else if (bgMusicGain) {
-        bgMusicGain.gain.value = game.musicMuted ? 0 : 0.2;
+      if (audioConfig.mode === AudioMode.HTML5) {
+        setMusicMuted(game.musicMuted);
+      } else if (audioConfig.mode === AudioMode.WEBAUDIO) {
+        if (!game.musicMuted && !bgMusicSource && sounds.background) {
+          createBackgroundMusic();
+        } else if (bgMusicGain) {
+          bgMusicGain.gain.value = game.musicMuted ? 0 : 0.2;
+        }
       }
       
       gameoverMusicBtn.classList.toggle('muted', game.musicMuted);
@@ -4049,6 +4606,11 @@
     gameoverSfxBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       game.muted = !game.muted;
+      
+      if (audioConfig.mode === AudioMode.HTML5) {
+        setSfxMuted(game.muted);
+      }
+      
       gameoverSfxBtn.classList.toggle('muted', game.muted);
       startSfxBtn.classList.toggle('muted', game.muted);
       sfxMuteButton.classList.toggle('muted', game.muted);
@@ -4099,6 +4661,7 @@
     }
 
     // Initialize game after assets load
+    initAudioLayer(); // Initialize audio system first
     loadAssets().then(() => {
       // Set bird texture after assets are loaded
       if (game.bird) {
