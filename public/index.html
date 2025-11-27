@@ -1005,21 +1005,39 @@
 
     // Use a credit when starting a game. Returns true if credit consumed, otherwise false.
     window.useCredit = function () {
+      console.log('=== USE CREDIT CALLED ===');
+      console.log('walletAddress:', walletAddress);
+      console.log('window.localCredits:', window.localCredits);
+      console.log('typeof window.localCredits:', typeof window.localCredits);
+      console.log('Number.isFinite(window.localCredits):', Number.isFinite(window.localCredits));
+      
       if (!walletAddress) {
         alert('Connect your wallet first.');
         return false;
       }
+      
+      // Force read from localStorage to ensure we have latest value
+      const savedCredits = localStorage.getItem('tappyCredits');
+      if (savedCredits) {
+        window.localCredits = parseInt(savedCredits, 10);
+        console.log('Reloaded credits from localStorage:', window.localCredits);
+      }
+      
       if (!Number.isFinite(window.localCredits)) {
+        console.warn('Credits not finite, defaulting to 0');
         window.localCredits = 0;
       }
+      
       if (window.localCredits <= 0) {
-        alert('You need credits to play. Please buy a credit first.');
+        alert(`You need credits to play. You have ${window.localCredits} credits. Please buy a credit first.`);
         return false;
       }
 
+      console.log('✅ Using 1 credit, current balance:', window.localCredits);
       window.localCredits -= 1;
       localStorage.setItem('tappyCredits', String(window.localCredits));
       updateCreditDisplay();
+      console.log('✅ Credit used, new balance:', window.localCredits);
       return true;
     };
 
