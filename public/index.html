@@ -3464,7 +3464,9 @@
         if (!res.ok || !data.ok) {
           console.error("Score submission failed:", data);
         } else {
-          console.log("Score submitted successfully");
+          console.log("Score submitted successfully, total scores:", data.count);
+          // Reload leaderboard to show new score
+          await loadLeaderboardIntoUI();
         }
       } catch (error) {
         console.error("Error submitting score:", error);
