@@ -954,22 +954,6 @@
     window.localCredits = 0;
     localStorage.setItem('tappyCredits', '0');
 
-    // Sync credits from smart contract
-    async function syncCreditsFromContract() {
-      if (!contract || !walletAddress) return;
-      try {
-        const onChainCredits = await contract.credits(walletAddress);
-        const creditsNum = Number(onChainCredits);
-        if (creditsNum !== window.localCredits) {
-          window.localCredits = creditsNum;
-          localStorage.setItem('tappyCredits', String(window.localCredits));
-          console.log('Credits synced from contract:', creditsNum);
-        }
-      } catch (err) {
-        console.error('Failed to sync credits:', err);
-      }
-    }
-
     // Update credit display in the UI
     function updateCreditDisplay() {
       const addrSpan = document.getElementById('wallet-address');
@@ -986,12 +970,7 @@
 
     // Use a credit when starting a game. Returns true if credit consumed, otherwise false.
     window.useCredit = function () {
-      if (!walletAddress) {
-        alert('You need credits to play. Please buy a credit first.');
-        return false;
-      }
       if (window.localCredits <= 0) {
-        alert('You need credits to play. Please buy a credit first.');
         return false;
       }
       window.localCredits -= 1;
@@ -3435,9 +3414,6 @@
         }
       }, '*');
       
-      // Fade in web3 UI when game over (mobile only)
-      toggleWeb3DuringGameplay(false);
-      
       // Submit score to leaderboard
       submitScoreToLeaderboard(game.score);
       
@@ -3604,9 +3580,6 @@
       
       // Clear floating texts
       floatingTexts.length = 0;
-      
-      // Show web3 UI on start screen (mobile only)
-      toggleWeb3DuringGameplay(false);
     }
 
     // ==================== WEB3 UI TOGGLE ====================
@@ -3898,9 +3871,6 @@
       dom.startMenu.classList.add('hidden');
       dom.gameOverMenu.classList.add('hidden');
       console.log('Menus hidden - startMenu has hidden class:', dom.startMenu.classList.contains('hidden'));
-      
-      // Fade out web3 UI during gameplay (mobile only)
-      toggleWeb3DuringGameplay(true);
       
       // Reset game state first
       console.log('Calling initGame()...');
@@ -4411,17 +4381,17 @@
     }
     
     function handleInput() {
+      // Silently block all gameplay if no credits
+      if (window.localCredits <= 0) {
+        return;
+      }
+      
       // Resume audio context only if not already running
       if (audioContext.state !== 'running') {
         audioContext.resume().catch(e => console.warn('Audio resume failed:', e));
       }
       
       if (!game.started) {
-        // Check credits before allowing game start
-        if (!walletAddress || window.localCredits <= 0) {
-          alert('You need credits to play. Please buy a credit first.');
-          return;
-        }
         startGame();
       } else if (!game.over) {
         game.bird.flap();
