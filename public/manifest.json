@@ -3,10 +3,12 @@
   "short_name": "Tappy Rocket",
   "description": "Play to earn $TBAG tokens in this addictive Web3 rocket game on Linea",
   "start_url": "/",
+  "scope": "/",
   "display": "fullscreen",
   "background_color": "#000000",
   "theme_color": "#00ffff",
   "orientation": "portrait",
+  "categories": ["games", "entertainment"],
   "icons": [
     {
       "src": "/icon-192.png",

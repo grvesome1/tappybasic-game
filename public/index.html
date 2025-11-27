@@ -938,6 +938,13 @@
   </div>
 
   <script>
+    // ==================== DEBUG FLAG ====================
+    // Debug mode: enabled in development, disabled in production
+    const DEBUG = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const debugLog = (...args) => DEBUG && console.log(...args);
+    const debugWarn = (...args) => DEBUG && console.warn(...args);
+    // Keep console.error for production error tracking
+
     // ==================== GAME STATE ====================
     const GAME_WIDTH = 400;
     const GAME_HEIGHT = 600;
@@ -1036,11 +1043,11 @@
 
     // Use a credit when starting a game. Returns true if credit consumed, otherwise false.
     window.useCredit = function () {
-      console.log('=== USE CREDIT CALLED ===');
-      console.log('walletAddress:', walletAddress);
-      console.log('window.localCredits:', window.localCredits);
-      console.log('typeof window.localCredits:', typeof window.localCredits);
-      console.log('Number.isFinite(window.localCredits):', Number.isFinite(window.localCredits));
+      debugLog('=== USE CREDIT CALLED ===');
+      debugLog('walletAddress:', walletAddress);
+      debugLog('window.localCredits:', window.localCredits);
+      debugLog('typeof window.localCredits:', typeof window.localCredits);
+      debugLog('Number.isFinite(window.localCredits):', Number.isFinite(window.localCredits));
       
       if (!walletAddress) {
         alert('Connect your wallet first.');
@@ -1051,7 +1058,7 @@
       const savedCredits = localStorage.getItem('tappyCredits');
       if (savedCredits) {
         window.localCredits = parseInt(savedCredits, 10);
-        console.log('Reloaded credits from localStorage:', window.localCredits);
+        debugLog('Reloaded credits from localStorage:', window.localCredits);
       }
       
       if (!Number.isFinite(window.localCredits)) {
@@ -1074,10 +1081,10 @@
 
     // Connect wallet handler with mobile support
     async function connectWallet() {
-      console.log('=== MOBILE WALLET CONNECT START ===');
+      debugLog('=== MOBILE WALLET CONNECT START ===');
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      console.log('Mobile device:', isMobile);
-      console.log('window.ethereum present:', !!window.ethereum);
+      debugLog('Mobile device:', isMobile);
+      debugLog('window.ethereum present:', !!window.ethereum);
       
       const connectBtn = document.getElementById('connect-btn');
       const disconnectBtn = document.getElementById('disconnect-btn');
@@ -1086,7 +1093,7 @@
       if (!window.ethereum) {
         if (isMobile) {
           const deepLink = `https://metamask.app.link/dapp/${window.location.host}${window.location.pathname}${window.location.search}`;
-          console.log('No wallet detected, opening MetaMask:', deepLink);
+          debugLog('No wallet detected, opening MetaMask:', deepLink);
           alert('Opening MetaMask mobile app...');
           window.location.href = deepLink;
           return;
@@ -1099,10 +1106,10 @@
       try {
         if (connectBtn) connectBtn.disabled = true;
         
-        console.log('[1/5] Initializing provider...');
+        debugLog('[1/5] Initializing provider...');
         provider = new ethers.BrowserProvider(window.ethereum);
         
-        console.log('[2/5] Requesting account access...');
+        debugLog('[2/5] Requesting account access...');
         const accounts = await provider.send('eth_requestAccounts', []);
         console.log('Accounts returned:', accounts);
         
@@ -1146,11 +1153,11 @@
           console.log('Network switched, wallet reconnected:', walletAddress);
         }
         
-        console.log('[4/5] Creating contract instance...');
+        debugLog('[4/5] Creating contract instance...');
         contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
         
         // Sync credits from blockchain with centralized function
-        console.log('[5/5] Syncing credits from blockchain...');
+        debugLog('[5/5] Syncing credits from blockchain...');
         let syncSuccess = false;
         let retries = 3;
         
@@ -1159,7 +1166,7 @@
           if (!syncSuccess) {
             retries--;
             if (retries > 0) {
-              console.log(`Sync failed, retrying... (${retries} left)`);
+              debugLog(`Sync failed, retrying... (${retries} left)`);
               await new Promise(resolve => setTimeout(resolve, 1000));
             }
           }
@@ -1189,7 +1196,7 @@
           document.getElementById("adminResetBtn").style.display = "block";
         }
         
-        console.log('=== MOBILE WALLET CONNECT SUCCESS ===');
+        debugLog('=== MOBILE WALLET CONNECT SUCCESS ===');
       } catch (err) {
         console.error(err);
         alert('Wallet connection failed');
@@ -1222,7 +1229,7 @@
     
     // Disconnect wallet handler
     function disconnectWallet() {
-      console.log('=== DISCONNECTING WALLET ===');
+      debugLog('=== DISCONNECTING WALLET ===');
       
       // Clear all state
       walletAddress = null;
@@ -1250,7 +1257,7 @@
       if (refreshBtn) refreshBtn.style.display = 'none';
       
       updateCreditDisplay();
-      console.log('✅ Wallet disconnected, state cleared');
+      debugLog('✅ Wallet disconnected, state cleared');
     }
 
     // Helper to fetch current ETH price in USD from CoinGecko
@@ -1295,7 +1302,8 @@
         
         if (receipt.status === 1) {
           // Force blockchain resync with retry logic
-          console.log('[3/3] Resyncing credits from blockchain...');
+          debugLog('[3/3] Resyncing credits from blockchain...');
+          purchaseBtn.textContent = '⏳ Syncing...';
           let synced = false;
           let attempts = 5;
           
@@ -1307,12 +1315,12 @@
             
             if (!synced) {
               attempts--;
-              console.log(`Sync failed, retrying... (${attempts} left)`);
+              debugLog(`Sync failed, retrying... (${attempts} left)`);
             } else if (window.localCredits <= 0) {
               // Synced but no credits yet, keep trying
               synced = false;
               attempts--;
-              console.log(`Credits not updated yet, retrying... (${attempts} left)`);
+              debugLog(`Credits not updated yet, retrying... (${attempts} left)`);
             }
           }
           
@@ -1324,7 +1332,7 @@
           }
           
           alert('✅ Credit purchased! You now have ' + window.localCredits + ' credit(s).');
-          console.log('=== PURCHASE SUCCESS ===');
+          debugLog('=== PURCHASE SUCCESS ===');
         } else {
           console.error('❌ Transaction failed, status:', receipt.status);
           alert('Transaction failed. Please try again.');
@@ -1408,7 +1416,7 @@
                 synced = await syncCredits();
                 if (!synced && retries > 0) {
                   retries--;
-                  console.log(`Sync failed, retrying... (${retries} left)`);
+                  debugLog(`Sync failed, retrying... (${retries} left)`);
                   await new Promise(resolve => setTimeout(resolve, 1000));
                 }
               }
@@ -1425,7 +1433,7 @@
               disconnectWallet();
             }
           } else {
-            console.log('No accounts, disconnecting...');
+            debugLog('No accounts, disconnecting...');
             disconnectWallet();
           }
         });
@@ -1444,7 +1452,7 @@
     // Resync credits when tab regains focus (critical for mobile wallet returns)
     window.addEventListener('focus', () => {
       if (contract && walletAddress) {
-        console.log('🔄 Tab focused, resyncing credits...');
+        debugLog('🔄 Tab focused, resyncing credits...');
         syncCredits();
       }
     });
@@ -3775,23 +3783,18 @@
         const data = await res.json();
         const list = document.getElementById("leaderboardList");
         
-        console.log('Leaderboard data:', data);
-        
         if (!data || data.length === 0) {
           list.innerHTML = '<li style="justify-content: center; opacity: 0.6;">No scores yet</li>';
           return;
         }
         
         list.innerHTML = data
-          .map((e, i) => {
-            console.log(`Entry ${i}:`, e);
-            return `
-              <li>
-                <span>#${i + 1} ${e.initials ? e.initials : e.wallet.slice(0, 6)}</span>
-                <span>${e.score}/${e.tbags || 0}</span>
-              </li>
-            `;
-          })
+          .map((e, i) => `
+            <li>
+              <span>#${i + 1} ${e.initials ? e.initials : e.wallet.slice(0, 6)}</span>
+              <span>${e.score}/${e.tbags || 0}</span>
+            </li>
+          `)
           .join("");
       } catch (error) {
         console.error("Error loading leaderboard:", error);
@@ -4160,7 +4163,7 @@
     }
 
     function startGame() {
-      console.log('=== START GAME CALLED ===');
+      debugLog('=== START GAME CALLED ===');
 
       if (!walletAddress) {
         alert('Connect your wallet first.');
@@ -4198,7 +4201,7 @@
       }
 
       // Hide menus immediately
-      console.log('Hiding menus...');
+      debugLog('Hiding menus...');
       dom.startMenu.classList.add('hidden');
       dom.gameOverMenu.classList.add('hidden');
       console.log('Menus hidden - startMenu has hidden class:', dom.startMenu.classList.contains('hidden'));
@@ -5013,12 +5016,27 @@
       notifyGameReady();
     });
     
-    // Register Service Worker for PWA
+    // Register Service Worker for PWA with update notification
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js')
-          .then(reg => console.log('Service Worker registered:', reg))
-          .catch(err => console.log('Service Worker registration failed:', err));
+          .then(reg => {
+            debugLog('Service Worker registered:', reg);
+            
+            // Check for updates
+            reg.addEventListener('updatefound', () => {
+              const newWorker = reg.installing;
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  // New version available!
+                  if (confirm('🎮 New game version available! Reload to update?')) {
+                    window.location.reload();
+                  }
+                }
+              });
+            });
+          })
+          .catch(err => console.error('Service Worker registration failed:', err));
       });
     }
   </script>
