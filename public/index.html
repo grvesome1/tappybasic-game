@@ -967,9 +967,8 @@
     let provider;
     let signer;
     let contract;
-    // Load wallet address from localStorage for persistence across page reloads
-    let walletAddress = localStorage.getItem('tappyWalletAddress') || null;
-    console.log('Loaded wallet from localStorage:', walletAddress);
+    // Don't auto-load wallet from localStorage - require manual connection
+    let walletAddress = null;
     let creditPriceWei;
     const USD_PRICE_PER_CREDIT = 0.01; // Cost per credit in USD (1 cent)
     // Use a fixed credit price of 5,000,000,000,000 wei (0.000005 ETH) instead of dynamically
