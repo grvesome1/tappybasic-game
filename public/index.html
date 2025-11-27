@@ -4391,17 +4391,16 @@
     }
     
     function handleInput() {
-      // Silently block all gameplay if no credits
-      if (window.localCredits <= 0) {
-        return;
-      }
-      
       // Resume audio context only if not already running
       if (audioContext.state !== 'running') {
         audioContext.resume().catch(e => console.warn('Audio resume failed:', e));
       }
       
       if (!game.started) {
+        // Silently block game start if no credits
+        if (window.localCredits <= 0) {
+          return;
+        }
         startGame();
       } else if (!game.over) {
         game.bird.flap();
