@@ -3714,7 +3714,7 @@
       }, '*');
       
       // Submit score to leaderboard
-      submitScoreToLeaderboard(game.score);
+      submitScoreToLeaderboard(game.score, game.tbags);
       
       // Load and display leaderboard
       loadLeaderboardIntoUI();
@@ -3723,7 +3723,7 @@
       safePlay('hit', 0.5);
     }
 
-    async function submitScoreToLeaderboard(score) {
+    async function submitScoreToLeaderboard(score, tbags) {
       if (!walletAddress) return;
       
       const initials = prompt("Enter initials (optional, max 3 letters):");
@@ -3738,6 +3738,7 @@
           body: JSON.stringify({
             wallet: walletAddress,
             score,
+            tbags: tbags || 0,
             initials: initials || ""
           })
         });
@@ -3779,7 +3780,7 @@
           .map((e, i) => `
             <li>
               <span>#${i + 1} ${e.initials ? e.initials : e.wallet.slice(0, 6)}</span>
-              <span>${e.score}</span>
+              <span>${e.score} 🚀 ${e.tbags || 0} 💰</span>
             </li>
           `)
           .join("");

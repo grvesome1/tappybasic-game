@@ -22,7 +22,7 @@ export default async function handler(req, res) {
 
     const redis = new Redis({ url, token });
 
-    const { wallet, score, initials } = req.body || {};
+    const { wallet, score, initials, tbags } = req.body || {};
 
     if (!wallet || typeof score !== 'number') {
       return res.status(400).json({ error: 'missing-fields' });
@@ -45,6 +45,7 @@ export default async function handler(req, res) {
       wallet: wallet.toLowerCase(),
       initials: safeInitials,
       score,
+      tbags: typeof tbags === 'number' ? tbags : 0,
       ts: Date.now(),
     });
 
