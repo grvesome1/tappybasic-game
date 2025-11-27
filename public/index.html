@@ -90,16 +90,18 @@
       width: 90%;
       max-width: 420px;
       display: flex;
-      justify-content: space-around;
+      flex-wrap: wrap;
+      gap: 6px;
+      justify-content: center;
       align-items: center;
-      padding: 6px 8px;
+      padding: 8px;
       background: rgba(0, 0, 0, 0.6);
       border: 1px solid rgba(0, 255, 255, 0.3);
       border-radius: 10px;
       box-shadow: 0 0 10px rgba(0, 255, 255, 0.4);
       color: #00ffff;
       font-family: 'Barlow', sans-serif;
-      font-size: 14px;
+      font-size: 13px;
       z-index: 30;
       /* smooth fade + prevent stray taps while hidden */
       opacity: 1;
@@ -121,10 +123,12 @@
       background: rgba(0, 255, 255, 0.2);
       border: 1px solid #00ffff;
       color: #00ffff;
-      padding: 4px 8px;
+      padding: 4px 10px;
       border-radius: 6px;
       cursor: pointer;
       font-weight: 700;
+      font-size: 12px;
+      white-space: nowrap;
       transition: all 0.15s;
     }
 
@@ -799,7 +803,7 @@
     <button id="connect-btn">Connect Wallet</button>
     <button id="disconnect-btn" style="display:none;">Disconnect</button>
     <span id="wallet-address"></span>
-    <span id="credit-count">Credits: 0</span>
+    <span id="credit-count">🎮 0</span>
     <button id="purchase-btn">Buy Credit</button>
     <button id="refresh-btn" style="display:none;">🔄 Refresh</button>
   </div>
@@ -1027,7 +1031,7 @@
       } else {
         addrSpan.textContent = '';
       }
-      creditSpan.textContent = 'Credits: ' + window.localCredits;
+      creditSpan.textContent = '🎮 ' + window.localCredits;
     }
 
     // Use a credit when starting a game. Returns true if credit consumed, otherwise false.
