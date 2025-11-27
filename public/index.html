@@ -945,7 +945,9 @@
     let provider;
     let signer;
     let contract;
-    let walletAddress = null;
+    // Load wallet address from localStorage for persistence across page reloads
+    let walletAddress = localStorage.getItem('tappyWalletAddress') || null;
+    console.log('Loaded wallet from localStorage:', walletAddress);
     let creditPriceWei;
     const USD_PRICE_PER_CREDIT = 0.01; // Cost per credit in USD (1 cent)
     // Use a fixed credit price of 5,000,000,000,000 wei (0.000005 ETH) instead of dynamically
@@ -1015,6 +1017,7 @@
         signer = await provider.getSigner();
         walletAddress = await signer.getAddress();
         console.log('Wallet connected:', walletAddress);
+        localStorage.setItem('tappyWalletAddress', walletAddress);
         contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
         
         // Check if we're on the correct network (Linea Sepolia)
@@ -1173,9 +1176,11 @@
         window.ethereum.on('accountsChanged', (accounts) => {
           if (accounts.length > 0) {
             walletAddress = accounts[0];
+            localStorage.setItem('tappyWalletAddress', walletAddress);
             updateCreditDisplay();
           } else {
             walletAddress = null;
+            localStorage.removeItem('tappyWalletAddress');
             updateCreditDisplay();
           }
         });
@@ -1188,9 +1193,8 @@
         window.ethereum.request({ method: 'eth_accounts' })
           .then(accounts => {
             if (accounts.length > 0) {
-              connectWallet().then(() => {
-                syncCreditsFromContract();
-              });
+              console.log('Auto-connecting wallet on load...');
+              connectWallet();
             }
           })
           .catch(console.error);
