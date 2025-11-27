@@ -50,16 +50,21 @@ export default async function handler(req, res) {
     }
 
     // 4. Save to Redis
-    const board = (await redis.get("leaderboard")) || [];
+    try {
+      const board = (await redis.get("leaderboard")) || [];
 
-    board.push({
-      wallet: wallet.toLowerCase(),
-      initials: initials?.slice(0, 3).toUpperCase() || "",
-      score,
-      ts: Date.now()
-    });
+      board.push({
+        wallet: wallet.toLowerCase(),
+        initials: initials?.slice(0, 3).toUpperCase() || "",
+        score,
+        ts: Date.now()
+      });
 
-    await redis.set("leaderboard", board);
+      await redis.set("leaderboard", board);
+    } catch (redisErr) {
+      console.error("Redis error:", redisErr);
+      return res.status(500).json({ error: "database-error", details: redisErr.toString() });
+    }
 
     return res.status(200).json({ ok: true });
   } catch (err) {
