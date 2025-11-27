@@ -1,7 +1,10 @@
 import { Redis } from '@upstash/redis';
 import { ethers } from 'ethers';
 
-const redis = Redis.fromEnv();
+const redis = new Redis({
+  url: process.env.KV_REST_API_URL,
+  token: process.env.KV_REST_API_TOKEN
+});
 const CONTRACT_ADDRESS = "0xB670AB661c91081A44DEE43D9f0c79CEa5930dDf";
 const ABI = ["function credits(address) view returns(uint256)"];
 

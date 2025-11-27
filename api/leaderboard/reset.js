@@ -1,7 +1,10 @@
 import { Redis } from '@upstash/redis';
 import { ethers } from 'ethers';
 
-const redis = Redis.fromEnv();
+const redis = new Redis({
+  url: process.env.KV_REST_API_URL,
+  token: process.env.KV_REST_API_TOKEN
+});
 const ADMIN = "0x3100ff9597b87e791e5bb8c0d57c94336a432089".toLowerCase();
 
 export default async function handler(req, res) {
