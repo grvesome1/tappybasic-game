@@ -975,6 +975,7 @@
       }
       window.localCredits -= 1;
       localStorage.setItem('tappyCredits', String(window.localCredits));
+      console.log('Credit used. Remaining:', window.localCredits);
       updateCreditDisplay();
       return true;
     };
@@ -3847,9 +3848,8 @@
 
       // Consume a credit before starting
       if (typeof window.useCredit === 'function' && !window.useCredit()) {
-        // If useCredit returns false, abort starting the game
+        // If useCredit returns false, silently abort starting the game
         console.log('Credit consumption failed, aborting start');
-        alert('You need credits to play! Please purchase credits using the "Buy Credit" button.');
         return;
       }
 
