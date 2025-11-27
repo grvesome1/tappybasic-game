@@ -3857,10 +3857,15 @@
       console.log('=== START GAME CALLED ===');
       console.log('Initial state - game.started:', game.started, 'game.over:', game.over);
 
+      // Check wallet connection first
+      if (!walletAddress) {
+        alert('Please connect your wallet first.');
+        return;
+      }
+
       // Consume a credit before starting
       if (typeof window.useCredit === 'function' && !window.useCredit()) {
-        // If useCredit returns false, silently abort starting the game
-        console.log('Credit consumption failed, aborting start');
+        alert('You need credits to play. Please purchase a credit first.');
         return;
       }
 
@@ -4408,10 +4413,6 @@
       }
       
       if (!game.started) {
-        // Silently block game start if no credits
-        if (window.localCredits <= 0) {
-          return;
-        }
         startGame();
       } else if (!game.over) {
         game.bird.flap();
@@ -4523,8 +4524,13 @@
       
       if (audioConfig.mode === AudioMode.HTML5) {
         setMusicMuted(game.musicMuted);
-      } else if (bgMusicGain) {
-        bgMusicGain.gain.value = game.musicMuted ? 0 : 0.2;
+      } else if (audioConfig.mode === AudioMode.WEBAUDIO) {
+        if (bgMusicGain) {
+          bgMusicGain.gain.value = game.musicMuted ? 0 : 0.2;
+        }
+        if (!game.musicMuted && !bgMusicSource && sounds.background) {
+          createBackgroundMusic();
+        }
       }
       
       musicMuteButton.classList.toggle('muted', game.musicMuted);
