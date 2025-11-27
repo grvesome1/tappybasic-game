@@ -1,9 +1,18 @@
-﻿<html lang="en">
+<html lang="en">
 <head>
   <!-- built by gruesÃ¸me - Pixi.js Migration -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>$TBAG's Tappy Rocket â€“ Pixi.js Edition</title>
+  <title>$TBAG's Tappy Rocket - Pixi.js Edition</title>
+
+  <!-- PWA Configuration -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#000000">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Tappy Rocket">
+  <link rel="apple-touch-icon" href="/icon-192.png">
+  <meta name="description" content="'s Tappy Rocket - Play to earn  tokens in this addictive Web3 rocket game on Linea">
 
   <!-- Pixi.js v7 - WebGL renderer with excellent performance -->
   <script src="https://cdn.jsdelivr.net/npm/pixi.js@7.3.2/dist/pixi.min.js"></script>
@@ -4913,6 +4922,15 @@
       // Notify parent frame even on error
       notifyGameReady();
     });
+    
+    // Register Service Worker for PWA
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(reg => console.log('Service Worker registered:', reg))
+          .catch(err => console.log('Service Worker registration failed:', err));
+      });
+    }
   </script>
 </body>
 </html>
