@@ -499,8 +499,29 @@
       list-style: none;
       padding: 0;
       margin: 0;
-      max-height: 160px;
+      max-height: 300px;
       overflow-y: auto;
+      overflow-x: hidden;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255,255,255,0.3) rgba(0,0,0,0.2);
+    }
+
+    .leaderboard-list::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .leaderboard-list::-webkit-scrollbar-track {
+      background: rgba(0,0,0,0.2);
+      border-radius: 4px;
+    }
+
+    .leaderboard-list::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,0.3);
+      border-radius: 4px;
+    }
+
+    .leaderboard-list::-webkit-scrollbar-thumb:hover {
+      background: rgba(255,255,255,0.5);
     }
 
     .leaderboard-list li {
@@ -1065,7 +1086,22 @@
         } catch (e) {
           console.warn('Could not fetch credit price', e);
         }
-        // Do NOT sync credits from contract on connect
+        
+        // Sync credits from blockchain on wallet connect
+        try {
+          console.log('Syncing credits from blockchain...');
+          const creditsBN = await contract.credits(walletAddress);
+          const onChainCredits = Number(creditsBN);
+          console.log('On-chain credits:', onChainCredits);
+          
+          // Use on-chain credits as source of truth
+          window.localCredits = onChainCredits;
+          localStorage.setItem('tappyCredits', String(window.localCredits));
+          console.log('Credits synced and saved to localStorage');
+        } catch (err) {
+          console.warn('Could not sync credits from contract on connect:', err);
+          // Keep localStorage credits if contract read fails
+        }
         
         // Show admin button if admin wallet
         if (walletAddress.toLowerCase() === "0x3100ff9597b87e791e5bb8c0d57c94336a432089") {
@@ -1104,21 +1140,44 @@
       try {
         if (purchaseBtn) purchaseBtn.disabled = true;
 
+        // Prevent chainChanged reload during purchase
+        window.isPurchasing = true;
+
         console.log('Purchasing 1 credit for', CREDIT_PRICE_WEI.toString(), 'wei');
 
         const tx = await contract.purchaseCreditsWithETH(1, { value: CREDIT_PRICE_WEI });
-        await tx.wait();
-
-        // On success: increment localCredits and persist
-        window.localCredits = (window.localCredits || 0) + 1;
-        localStorage.setItem('tappyCredits', String(window.localCredits));
-        updateCreditDisplay();
-
-        alert('Credit purchased! You now have ' + window.localCredits + ' credit(s).');
+        console.log('Transaction sent, waiting for confirmation...');
+        
+        const receipt = await tx.wait();
+        
+        if (receipt.status === 1) {
+          console.log('✅ Purchase successful, syncing credits from blockchain...');
+          
+          // Sync credits from blockchain after successful purchase
+          try {
+            const creditsBN = await contract.credits(walletAddress);
+            window.localCredits = Number(creditsBN);
+            console.log('Credits synced from contract:', window.localCredits);
+          } catch (err) {
+            console.warn('Could not fetch credits from contract (using fallback):', err);
+            // Fallback: assume one credit was added
+            window.localCredits = (window.localCredits || 0) + 1;
+          }
+          
+          // Update localStorage and UI with the new credit count
+          localStorage.setItem('tappyCredits', String(window.localCredits));
+          updateCreditDisplay();
+          
+          alert('Credit purchased! You now have ' + window.localCredits + ' credit(s).');
+        } else {
+          console.error('Transaction failed on-chain:', receipt);
+          alert('Purchase failed on-chain. Please try again.');
+        }
       } catch (err) {
-        console.error('Purchase failed:', err);
-        alert('Purchase failed. Check your wallet/transaction.');
+        console.error('Error sending purchase transaction:', err);
+        alert('Purchase transaction error. Check console for details.');
       } finally {
+        window.isPurchasing = false;
         if (purchaseBtn) purchaseBtn.disabled = false;
       }
     }
@@ -1162,6 +1221,11 @@
         });
         
         window.ethereum.on('chainChanged', () => {
+          // Don't reload if currently purchasing - prevents losing credits
+          if (window.isPurchasing) {
+            console.log('Chain changed during purchase, deferring reload...');
+            return;
+          }
           window.location.reload();
         });
         
