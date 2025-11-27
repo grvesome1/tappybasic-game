@@ -1,6 +1,7 @@
-import { kv } from '@vercel/kv';
+import { Redis } from '@upstash/redis';
 import { ethers } from 'ethers';
 
+const redis = Redis.fromEnv();
 const ADMIN = "0x3100ff9597b87e791e5bb8c0d57c94336a432089".toLowerCase();
 
 export default async function handler(req, res) {
@@ -25,7 +26,7 @@ export default async function handler(req, res) {
       return res.status(403).json({ error: "Not admin" });
     }
 
-    await kv.set("leaderboard", []);
+    await redis.set("leaderboard", []);
     return res.status(200).json({ ok: true });
   }
   catch (err) {

@@ -1,6 +1,7 @@
-import { kv } from '@vercel/kv';
+import { Redis } from '@upstash/redis';
 import { ethers } from 'ethers';
 
+const redis = Redis.fromEnv();
 const CONTRACT_ADDRESS = "0xB670AB661c91081A44DEE43D9f0c79CEa5930dDf";
 const ABI = [
   "function credits(address) view returns(uint256)"
@@ -40,8 +41,8 @@ export default async function handler(req, res) {
     console.error("credit verify error:", err);
   }
 
-  // 4. Save to KV
-  const board = (await kv.get("leaderboard")) || [];
+  // 4. Save to Redis
+  const board = (await redis.get("leaderboard")) || [];
 
   board.push({
     wallet: wallet.toLowerCase(),
@@ -50,7 +51,7 @@ export default async function handler(req, res) {
     ts: Date.now()
   });
 
-  await kv.set("leaderboard", board);
+  await redis.set("leaderboard", board);
 
   return res.status(200).json({ ok: true });
 }
