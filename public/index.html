@@ -4509,6 +4509,8 @@
       }
       
       musicMuteButton.classList.toggle('muted', game.musicMuted);
+      startMusicBtn.classList.toggle('muted', game.musicMuted);
+      gameoverMusicBtn.classList.toggle('muted', game.musicMuted);
       console.log('Background music', game.musicMuted ? 'muted' : 'unmuted');
     });
 
@@ -4523,6 +4525,8 @@
       }
       
       sfxMuteButton.classList.toggle('muted', game.muted);
+      startSfxBtn.classList.toggle('muted', game.muted);
+      gameoverSfxBtn.classList.toggle('muted', game.muted);
       console.log('Sound effects', game.muted ? 'muted' : 'unmuted');
     });
 
