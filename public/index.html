@@ -3780,7 +3780,7 @@
           .map((e, i) => `
             <li>
               <span>#${i + 1} ${e.initials ? e.initials : e.wallet.slice(0, 6)}</span>
-              <span>${e.score} 🚀 ${e.tbags || 0} 💰</span>
+              <span>${e.score}/${e.tbags || 0}</span>
             </li>
           `)
           .join("");
