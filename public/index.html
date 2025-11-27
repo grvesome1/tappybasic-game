@@ -953,9 +953,10 @@
     // $0.01 when ETH ≈ $2,000 and ensures deterministic cost without depending on
     // CoinGecko or the contract’s creditPriceETH value.  See commit message for details.
     const CREDIT_PRICE_WEI = 5000000000000n;
-    // Always start with 0 credits on page load
-    window.localCredits = 0;
-    localStorage.setItem('tappyCredits', '0');
+    // Load credits from localStorage (don't force to 0!)
+    const savedCredits = localStorage.getItem('tappyCredits');
+    window.localCredits = savedCredits ? parseInt(savedCredits, 10) : 0;
+    console.log('Loaded credits from localStorage:', window.localCredits);
 
     // Update credit display in the UI
     function updateCreditDisplay() {
@@ -1118,8 +1119,11 @@
         if (receipt.status === 1) {
           // Increment credits locally after successful purchase
           console.log('Purchase successful, incrementing credits...');
+          console.log('Credits before:', window.localCredits);
           window.localCredits += 1;
           localStorage.setItem('tappyCredits', window.localCredits.toString());
+          console.log('Credits after:', window.localCredits);
+          console.log('Saved to localStorage:', localStorage.getItem('tappyCredits'));
           updateCreditDisplay();
           alert('Credit purchased successfully! You now have ' + window.localCredits + ' credits.');
         } else {
