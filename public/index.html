@@ -989,6 +989,30 @@
     // Initialize credits to 0 - will be synced from blockchain on wallet connect
     window.localCredits = 0;
 
+    // Centralized credit sync function - single source of truth
+    async function syncCredits() {
+      if (!contract || !walletAddress) {
+        console.warn('Cannot sync credits: no contract or wallet');
+        return false;
+      }
+      
+      try {
+        console.log('🔄 Syncing credits from blockchain for:', walletAddress);
+        const creditsBN = await contract.credits(walletAddress);
+        const onChainCredits = Number(creditsBN);
+        
+        window.localCredits = onChainCredits;
+        localStorage.setItem('tappyCredits', String(onChainCredits));
+        updateCreditDisplay();
+        
+        console.log('✅ Credits synced:', onChainCredits);
+        return true;
+      } catch (err) {
+        console.error('❌ Failed to sync credits:', err);
+        return false;
+      }
+    }
+
     // Update credit display in the UI
     function updateCreditDisplay() {
       const addrSpan = document.getElementById('wallet-address');
@@ -1118,29 +1142,26 @@
         console.log('[4/5] Creating contract instance...');
         contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
         
-        // Sync credits from blockchain with retry logic for mobile
+        // Sync credits from blockchain with centralized function
         console.log('[5/5] Syncing credits from blockchain...');
-        let creditsSynced = false;
+        let syncSuccess = false;
         let retries = 3;
         
-        while (!creditsSynced && retries > 0) {
-          try {
-            const creditsBN = await contract.credits(walletAddress);
-            window.localCredits = Number(creditsBN);
-            localStorage.setItem('tappyCredits', String(window.localCredits));
-            console.log('✅ Credits synced:', window.localCredits);
-            creditsSynced = true;
-          } catch (err) {
+        while (!syncSuccess && retries > 0) {
+          syncSuccess = await syncCredits();
+          if (!syncSuccess) {
             retries--;
-            console.warn(`Credit sync failed, retries left: ${retries}`, err);
             if (retries > 0) {
-              await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1s before retry
-            } else {
-              console.error('❌ Credit sync failed after retries, defaulting to 0');
-              window.localCredits = 0;
-              localStorage.setItem('tappyCredits', '0');
+              console.log(`Sync failed, retrying... (${retries} left)`);
+              await new Promise(resolve => setTimeout(resolve, 1000));
             }
           }
+        }
+        
+        if (!syncSuccess) {
+          console.warn('⚠️ Could not sync credits after retries, defaulting to 0');
+          window.localCredits = 0;
+          localStorage.setItem('tappyCredits', '0');
         }
         
         // Update UI
@@ -1180,22 +1201,13 @@
       
       try {
         alert('🔄 Syncing credits from blockchain...');
-        console.log('Manual refresh: querying contract.credits()', walletAddress);
+        const success = await syncCredits();
         
-        const creditsBN = await contract.credits(walletAddress);
-        const onChainCredits = Number(creditsBN);
-        
-        console.log('✅ On-chain credits:', onChainCredits);
-        alert(`✅ Blockchain says you have ${onChainCredits} credits`);
-        
-        window.localCredits = onChainCredits;
-        localStorage.setItem('tappyCredits', String(window.localCredits));
-        updateCreditDisplay();
-        
-        alert(`✅ Credits updated to ${window.localCredits}`);
-      } catch (err) {
-        console.error('❌ Refresh failed:', err);
-        alert(`❌ Refresh failed: ${err.message}`);
+        if (success) {
+          alert(`✅ Credits synced! You have ${window.localCredits} credits`);
+        } else {
+          alert('❌ Failed to sync credits. Check console for details.');
+        }
       } finally {
         if (refreshBtn) refreshBtn.disabled = false;
       }
@@ -1281,35 +1293,27 @@
           let attempts = 5;
           
           while (!synced && attempts > 0) {
-            try {
-              // Wait a moment for blockchain state to update
-              await new Promise(resolve => setTimeout(resolve, 500));
-              
-              const creditsBN = await contract.credits(walletAddress);
-              const newCredits = Number(creditsBN);
-              console.log('Blockchain query result:', newCredits);
-              
-              if (newCredits > window.localCredits) {
-                window.localCredits = newCredits;
-                localStorage.setItem('tappyCredits', String(window.localCredits));
-                updateCreditDisplay();
-                console.log('✅ Credits updated:', window.localCredits);
-                synced = true;
-              } else {
-                attempts--;
-                console.log(`Credits not updated yet, retrying (${attempts} left)...`);
-              }
-            } catch (err) {
+            // Wait for blockchain state to propagate
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            synced = await syncCredits();
+            
+            if (!synced) {
               attempts--;
-              console.warn(`Sync attempt failed (${attempts} left):`, err);
-              if (attempts === 0) {
-                // Last resort fallback
-                window.localCredits = (window.localCredits || 0) + 1;
-                localStorage.setItem('tappyCredits', String(window.localCredits));
-                updateCreditDisplay();
-                console.log('⚠️ Using fallback credit increment');
-              }
+              console.log(`Sync failed, retrying... (${attempts} left)`);
+            } else if (window.localCredits <= 0) {
+              // Synced but no credits yet, keep trying
+              synced = false;
+              attempts--;
+              console.log(`Credits not updated yet, retrying... (${attempts} left)`);
             }
+          }
+          
+          if (!synced || window.localCredits <= 0) {
+            console.warn('⚠️ Could not verify credit update, using fallback');
+            window.localCredits = (window.localCredits || 0) + 1;
+            localStorage.setItem('tappyCredits', String(window.localCredits));
+            updateCreditDisplay();
           }
           
           alert('✅ Credit purchased! You now have ' + window.localCredits + ' credit(s).');
@@ -1394,22 +1398,18 @@
               let retries = 3;
               
               while (!synced && retries > 0) {
-                try {
-                  const creditsBN = await contract.credits(walletAddress);
-                  window.localCredits = Number(creditsBN);
-                  localStorage.setItem('tappyCredits', String(window.localCredits));
-                  console.log('✅ Credits synced for new account:', window.localCredits);
-                  synced = true;
-                } catch (err) {
+                synced = await syncCredits();
+                if (!synced && retries > 0) {
                   retries--;
-                  console.warn(`Sync failed, retries left: ${retries}`);
-                  if (retries === 0) {
-                    window.localCredits = 0;
-                    localStorage.setItem('tappyCredits', '0');
-                  } else {
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                  }
+                  console.log(`Sync failed, retrying... (${retries} left)`);
+                  await new Promise(resolve => setTimeout(resolve, 1000));
                 }
+              }
+              
+              if (!synced) {
+                console.warn('⚠️ Could not sync credits for new account, defaulting to 0');
+                window.localCredits = 0;
+                localStorage.setItem('tappyCredits', '0');
               }
               
               updateCreditDisplay();
@@ -1431,6 +1431,14 @@
           }
           window.location.reload();
         });
+      }
+    });
+    
+    // Resync credits when tab regains focus (critical for mobile wallet returns)
+    window.addEventListener('focus', () => {
+      if (contract && walletAddress) {
+        console.log('🔄 Tab focused, resyncing credits...');
+        syncCredits();
       }
     });
     
