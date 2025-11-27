@@ -1000,8 +1000,10 @@
     // $0.01 when ETH ≈ $2,000 and ensures deterministic cost without depending on
     // CoinGecko or the contract’s creditPriceETH value.  See commit message for details.
     const CREDIT_PRICE_WEI = 5000000000000n;
-    // Initialize credits to 0 - will be synced from blockchain on wallet connect
-    window.localCredits = 0;
+    // Initialize credits from localStorage, fallback to 0 if not found
+    const savedCredits = localStorage.getItem('tappyCredits');
+    window.localCredits = savedCredits ? parseInt(savedCredits, 10) : 0;
+    debugLog('💾 Loaded credits from localStorage:', window.localCredits);
 
     // Centralized credit sync function - single source of truth
     async function syncCredits() {
@@ -1422,9 +1424,9 @@
               }
               
               if (!synced) {
-                console.warn('⚠️ Could not sync credits for new account, defaulting to 0');
-                window.localCredits = 0;
-                localStorage.setItem('tappyCredits', '0');
+                console.warn('⚠️ Could not sync credits for new account');
+                // Don't reset to 0 - keep localStorage value and alert user
+                alert('⚠️ Could not sync credits from blockchain. Click refresh button to retry.');
               }
               
               updateCreditDisplay();
@@ -1452,7 +1454,14 @@
     // Resync credits when tab regains focus (critical for mobile wallet returns)
     window.addEventListener('focus', () => {
       if (contract && walletAddress) {
-        debugLog('🔄 Tab focused, resyncing credits...');
+        debugLog('🔄 Tab focused - loading credits from localStorage first');
+        // Load from localStorage immediately for instant UI update
+        const savedCredits = localStorage.getItem('tappyCredits');
+        if (savedCredits) {
+          window.localCredits = parseInt(savedCredits, 10);
+          updateCreditDisplay();
+        }
+        // Then sync from blockchain in background
         syncCredits();
       }
     });
@@ -4168,6 +4177,14 @@
       if (!walletAddress) {
         alert('Connect your wallet first.');
         return;
+      }
+
+      // Reload credits from localStorage before starting game
+      const savedCredits = localStorage.getItem('tappyCredits');
+      if (savedCredits) {
+        window.localCredits = parseInt(savedCredits, 10);
+        updateCreditDisplay();
+        debugLog('🎮 Pre-game credit check:', window.localCredits);
       }
 
       if (typeof window.useCredit === 'function') {
