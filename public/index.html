@@ -782,6 +782,7 @@
   <!-- Web3 UI Panel -->
   <div id="web3-ui">
     <button id="connect-btn">Connect Wallet</button>
+    <button id="disconnect-btn" style="display:none;">Disconnect</button>
     <span id="wallet-address"></span>
     <span id="credit-count">Credits: 0</span>
     <button id="purchase-btn">Buy Credit</button>
@@ -1108,11 +1109,33 @@
           document.getElementById("adminResetBtn").style.display = "block";
         }
         
+        // Show disconnect button, hide connect button
+        document.getElementById('connect-btn').style.display = 'none';
+        document.getElementById('disconnect-btn').style.display = 'inline-block';
+        
         updateCreditDisplay();
       } catch (err) {
         console.error(err);
         alert('Wallet connection failed');
       }
+    }
+
+    // Disconnect wallet handler
+    function disconnectWallet() {
+      walletAddress = null;
+      provider = null;
+      signer = null;
+      contract = null;
+      window.localCredits = 0;
+      
+      localStorage.removeItem('tappyWalletAddress');
+      localStorage.setItem('tappyCredits', '0');
+      
+      document.getElementById('connect-btn').style.display = 'inline-block';
+      document.getElementById('disconnect-btn').style.display = 'none';
+      
+      updateCreditDisplay();
+      console.log('Wallet disconnected');
     }
 
     // Helper to fetch current ETH price in USD from CoinGecko
@@ -1185,6 +1208,7 @@
     // Bind button events once DOM is ready
     window.addEventListener('DOMContentLoaded', () => {
       const connectBtn = document.getElementById('connect-btn');
+      const disconnectBtn = document.getElementById('disconnect-btn');
       const purchaseBtn = document.getElementById('purchase-btn');
       
       // Add both click and touchstart handlers for mobile reliability
@@ -1193,6 +1217,14 @@
         connectBtn.addEventListener('touchstart', (e) => {
           e.stopPropagation();
           connectWallet();
+        }, { passive: false });
+      }
+      
+      if (disconnectBtn) {
+        disconnectBtn.addEventListener('click', disconnectWallet);
+        disconnectBtn.addEventListener('touchstart', (e) => {
+          e.stopPropagation();
+          disconnectWallet();
         }, { passive: false });
       }
       
@@ -1253,16 +1285,6 @@
           }
           window.location.reload();
         });
-        
-        // Auto-connect if already connected
-        window.ethereum.request({ method: 'eth_accounts' })
-          .then(accounts => {
-            if (accounts.length > 0) {
-              console.log('Auto-connecting wallet on load...');
-              connectWallet();
-            }
-          })
-          .catch(console.error);
       }
     });
     
