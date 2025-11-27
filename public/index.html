@@ -4793,8 +4793,9 @@
     // Admin reset leaderboard button
     const adminResetBtn = document.getElementById('adminResetBtn');
     adminResetBtn.addEventListener('click', async () => {
-      if (!signer) {
-        alert("Please connect wallet first");
+      const adminToken = prompt("Enter admin token:");
+      
+      if (!adminToken) {
         return;
       }
       
@@ -4803,20 +4804,22 @@
       }
       
       try {
-        const sig = await signer.signMessage("admin-reset");
-        
         const res = await fetch("/api/leaderboard/reset", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sig })
+          body: JSON.stringify({ token: adminToken })
         });
         
         if (!res.ok) {
-          console.error("Reset HTTP error", res.status);
-          if (res.status === 500) {
-            alert("Leaderboard database not configured. Please set up Vercel KV in your dashboard.");
+          const data = await res.json();
+          console.error("Reset HTTP error", res.status, data);
+          
+          if (res.status === 403) {
+            alert("Invalid admin token");
+          } else if (res.status === 500 && data.error === 'admin-token-missing') {
+            alert("Admin token not configured on server. Contact administrator.");
           } else {
-            alert("Error resetting leaderboard: HTTP " + res.status);
+            alert("Error resetting leaderboard: " + (data.error || "HTTP " + res.status));
           }
           return;
         }
