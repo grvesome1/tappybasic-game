@@ -988,6 +988,8 @@
       console.log('=== CONNECT WALLET CALLED ===');
       // Mobile detection
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      console.log('Is mobile:', isMobile);
+      console.log('window.ethereum exists:', !!window.ethereum);
       
       if (!window.ethereum) {
         if (isMobile) {
@@ -1004,10 +1006,14 @@
         }
       }
       try {
+        console.log('Creating provider...');
         provider = new ethers.BrowserProvider(window.ethereum);
+        console.log('Requesting accounts...');
         await provider.send('eth_requestAccounts', []);
+        console.log('Getting signer...');
         signer = await provider.getSigner();
         walletAddress = await signer.getAddress();
+        console.log('Wallet connected:', walletAddress);
         contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
         
         // Check if we're on the correct network (Linea Sepolia)
@@ -1138,8 +1144,24 @@
     window.addEventListener('DOMContentLoaded', () => {
       const connectBtn = document.getElementById('connect-btn');
       const purchaseBtn = document.getElementById('purchase-btn');
-      if (connectBtn) connectBtn.addEventListener('click', connectWallet);
-      if (purchaseBtn) purchaseBtn.addEventListener('click', purchaseCredit);
+      
+      // Add both click and touchstart handlers for mobile reliability
+      if (connectBtn) {
+        connectBtn.addEventListener('click', connectWallet);
+        connectBtn.addEventListener('touchstart', (e) => {
+          e.stopPropagation();
+          connectWallet();
+        }, { passive: false });
+      }
+      
+      if (purchaseBtn) {
+        purchaseBtn.addEventListener('click', purchaseCredit);
+        purchaseBtn.addEventListener('touchstart', (e) => {
+          e.stopPropagation();
+          purchaseCredit();
+        }, { passive: false });
+      }
+      
       updateCreditDisplay();
       
       // Handle wallet events for mobile reconnection
@@ -3890,19 +3912,28 @@
     function startGame() {
       console.log('=== START GAME CALLED ===');
       console.log('Initial state - game.started:', game.started, 'game.over:', game.over);
+      console.log('Wallet address:', walletAddress);
+      console.log('Credits:', window.localCredits);
 
       // Check wallet connection first
       if (!walletAddress) {
+        console.log('BLOCKED: No wallet connected');
         alert('Please connect your wallet first.');
         return;
       }
 
       // Consume a credit before starting
-      if (typeof window.useCredit === 'function' && !window.useCredit()) {
+      console.log('Attempting to use credit...');
+      const creditUsed = typeof window.useCredit === 'function' ? window.useCredit() : false;
+      console.log('Credit used result:', creditUsed);
+      
+      if (!creditUsed) {
+        console.log('BLOCKED: No credits available');
         alert('You need credits to play. Please purchase a credit first.');
         return;
       }
 
+      console.log('All checks passed, starting game...');
       // Actually start the game
       doStartGame();
     }
@@ -4479,14 +4510,29 @@
       e.preventDefault();
     }, { passive: false });
 
-    dom.startMenu.addEventListener('click', () => {
-      console.log('=== START MENU CLICKED ===');
+    // Start menu handlers - use both click and touchstart for mobile reliability
+    dom.startMenu.addEventListener('touchstart', (e) => {
+      console.log('=== START MENU TOUCHSTART ===');
+      e.preventDefault();
+      e.stopPropagation();
       if (audioContext.state !== 'running') {
-        audioContext.resume().catch(e => console.warn('Audio resume failed:', e));
+        audioContext.resume().catch(err => console.warn('Audio resume failed:', err));
+      }
+      startGame();
+      console.log('After startGame() - game.started:', game.started, 'game.over:', game.over);
+    }, { passive: false });
+
+    dom.startMenu.addEventListener('click', (e) => {
+      console.log('=== START MENU CLICKED ===');
+      e.preventDefault();
+      e.stopPropagation();
+      if (audioContext.state !== 'running') {
+        audioContext.resume().catch(err => console.warn('Audio resume failed:', err));
       }
       startGame();
       console.log('After startGame() - game.started:', game.started, 'game.over:', game.over);
     });
+
     // Restart button - use both click and touchend for reliability
     dom.restartButton.addEventListener('touchend', (e) => {
       e.preventDefault();
