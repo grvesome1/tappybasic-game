@@ -3465,6 +3465,14 @@
     async function loadLeaderboardIntoUI() {
       try {
         const res = await fetch("/api/leaderboard/list");
+        
+        if (!res.ok) {
+          console.error("Leaderboard list HTTP error", res.status);
+          const list = document.getElementById("leaderboardList");
+          list.innerHTML = '<li style="justify-content: center; opacity: 0.6;">Error loading</li>';
+          return;
+        }
+        
         const data = await res.json();
         const list = document.getElementById("leaderboardList");
         
@@ -4482,13 +4490,20 @@
           body: JSON.stringify({ sig })
         });
         
+        if (!res.ok) {
+          console.error("Reset HTTP error", res.status);
+          alert("Error resetting leaderboard: HTTP " + res.status);
+          return;
+        }
+        
         const data = await res.json();
         
         if (data.ok) {
           alert("Leaderboard reset successfully.");
-          loadLeaderboardIntoUI();
+          await loadLeaderboardIntoUI();
         } else {
-          alert("Failed to reset leaderboard: " + (data.error || "Unknown error"));
+          console.error("Reset failed", data);
+          alert("Error resetting leaderboard: " + (data.error || "Unknown error"));
         }
       } catch (error) {
         console.error("Error resetting leaderboard:", error);
