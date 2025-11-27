@@ -1008,12 +1008,12 @@
     // Centralized credit sync function - single source of truth
     async function syncCredits() {
       if (!contract || !walletAddress) {
-        console.warn('Cannot sync credits: no contract or wallet');
+        debugWarn('Cannot sync credits: no contract or wallet');
         return false;
       }
       
       try {
-        console.log('🔄 Syncing credits from blockchain for:', walletAddress);
+        debugLog('🔄 Syncing credits from blockchain for:', walletAddress);
         const creditsBN = await contract.credits(walletAddress);
         const onChainCredits = Number(creditsBN);
         
@@ -1021,7 +1021,7 @@
         localStorage.setItem('tappyCredits', String(onChainCredits));
         updateCreditDisplay();
         
-        console.log('✅ Credits synced:', onChainCredits);
+        debugLog('✅ Credits synced:', onChainCredits);
         return true;
       } catch (err) {
         console.error('❌ Failed to sync credits:', err);
@@ -1064,7 +1064,7 @@
       }
       
       if (!Number.isFinite(window.localCredits)) {
-        console.warn('Credits not finite, defaulting to 0');
+        debugWarn('Credits not finite, defaulting to 0');
         window.localCredits = 0;
       }
       
@@ -1073,11 +1073,11 @@
         return false;
       }
 
-      console.log('✅ Using 1 credit, current balance:', window.localCredits);
+      debugLog('✅ Using 1 credit, current balance:', window.localCredits);
       window.localCredits -= 1;
       localStorage.setItem('tappyCredits', String(window.localCredits));
       updateCreditDisplay();
-      console.log('✅ Credit used, new balance:', window.localCredits);
+      debugLog('✅ Credit used, new balance:', window.localCredits);
       return true;
     };
 
@@ -1113,19 +1113,19 @@
         
         debugLog('[2/5] Requesting account access...');
         const accounts = await provider.send('eth_requestAccounts', []);
-        console.log('Accounts returned:', accounts);
+        debugLog('Accounts returned:', accounts);
         
-        console.log('[3/5] Getting signer...');
+        debugLog('[3/5] Getting signer...');
         signer = await provider.getSigner();
         walletAddress = await signer.getAddress();
-        console.log('Connected wallet:', walletAddress);
+        debugLog('Connected wallet:', walletAddress);
         
         // Check network and switch if needed
         const network = await provider.getNetwork();
-        console.log('Current network chainId:', network.chainId.toString());
+        debugLog('Current network chainId:', network.chainId.toString());
         
         if (network.chainId !== 59141n) {
-          console.log('Wrong network, switching to Linea Sepolia...');
+          debugLog('Wrong network, switching to Linea Sepolia...');
           try {
             await window.ethereum.request({
               method: 'wallet_switchEthereumChain',
@@ -1133,7 +1133,7 @@
             });
           } catch (switchError) {
             if (switchError.code === 4902) {
-              console.log('Network not found, adding Linea Sepolia...');
+              debugLog('Network not found, adding Linea Sepolia...');
               await window.ethereum.request({
                 method: 'wallet_addEthereumChain',
                 params: [{
@@ -1152,7 +1152,7 @@
           provider = new ethers.BrowserProvider(window.ethereum);
           signer = await provider.getSigner();
           walletAddress = await signer.getAddress();
-          console.log('Network switched, wallet reconnected:', walletAddress);
+          debugLog('Network switched, wallet reconnected:', walletAddress);
         }
         
         debugLog('[4/5] Creating contract instance...');
@@ -1175,7 +1175,7 @@
         }
         
         if (!syncSuccess) {
-          console.warn('⚠️ Could not sync credits after retries, defaulting to 0');
+          debugWarn('⚠️ Could not sync credits after retries, defaulting to 0');
           window.localCredits = 0;
           localStorage.setItem('tappyCredits', '0');
         }
@@ -1269,7 +1269,7 @@
         const data = await resp.json();
         return data.ethereum.usd;
       } catch (e) {
-        console.warn('Unable to fetch ETH price; falling back to contract price', e);
+        debugWarn('Unable to fetch ETH price; falling back to contract price', e);
         return null;
       }
     }
@@ -1288,19 +1288,19 @@
         if (purchaseBtn) purchaseBtn.disabled = true;
         window.isPurchasing = true;
 
-        console.log('=== STARTING CREDIT PURCHASE ===');
-        console.log('Price:', CREDIT_PRICE_WEI.toString(), 'wei');
-        console.log('Wallet:', walletAddress);
+        debugLog('=== STARTING CREDIT PURCHASE ===');
+        debugLog('Price:', CREDIT_PRICE_WEI.toString(), 'wei');
+        debugLog('Wallet:', walletAddress);
 
         // Send transaction
-        console.log('[1/3] Sending transaction...');
+        debugLog('[1/3] Sending transaction...');
         const tx = await contract.purchaseCreditsWithETH(1, { value: CREDIT_PRICE_WEI });
-        console.log('Transaction hash:', tx.hash);
+        debugLog('Transaction hash:', tx.hash);
         
         // Wait for confirmation with mobile-friendly timeout
-        console.log('[2/3] Waiting for confirmation (this may take 10-30 seconds on mobile)...');
+        debugLog('[2/3] Waiting for confirmation (this may take 10-30 seconds on mobile)...');
         const receipt = await tx.wait();
-        console.log('Transaction confirmed, status:', receipt.status);
+        debugLog('Transaction confirmed, status:', receipt.status);
         
         if (receipt.status === 1) {
           // Force blockchain resync with retry logic
@@ -1327,7 +1327,7 @@
           }
           
           if (!synced || window.localCredits <= 0) {
-            console.warn('⚠️ Could not verify credit update, using fallback');
+            debugWarn('⚠️ Could not verify credit update, using fallback');
             window.localCredits = (window.localCredits || 0) + 1;
             localStorage.setItem('tappyCredits', String(window.localCredits));
             updateCreditDisplay();
@@ -1397,8 +1397,8 @@
       // Handle wallet events for mobile reconnection
       if (window.ethereum) {
         window.ethereum.on('accountsChanged', async (accounts) => {
-          console.log('=== ACCOUNT CHANGED ===');
-          console.log('New accounts:', accounts);
+          debugLog('=== ACCOUNT CHANGED ===');
+          debugLog('New accounts:', accounts);
           
           if (accounts.length > 0) {
             try {
@@ -1408,7 +1408,7 @@
               walletAddress = await signer.getAddress();
               contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
               
-              console.log('Reconnected with new account:', walletAddress);
+              debugLog('Reconnected with new account:', walletAddress);
               
               // Force blockchain resync with retry
               let synced = false;
@@ -1424,7 +1424,7 @@
               }
               
               if (!synced) {
-                console.warn('⚠️ Could not sync credits for new account');
+                debugWarn('⚠️ Could not sync credits for new account');
                 // Don't reset to 0 - keep localStorage value and alert user
                 alert('⚠️ Could not sync credits from blockchain. Click refresh button to retry.');
               }
@@ -1443,7 +1443,7 @@
         window.ethereum.on('chainChanged', () => {
           // Don't reload if currently purchasing - prevents losing credits
           if (window.isPurchasing) {
-            console.log('Chain changed during purchase, deferring reload...');
+            debugLog('Chain changed during purchase, deferring reload...');
             return;
           }
           window.location.reload();
@@ -2089,7 +2089,7 @@
         audioConfig.mode = AudioMode.WEBAUDIO;
         try {
           audioContext = new (window.AudioContext || window.webkitAudioContext)();
-          console.log('AudioContext created for desktop');
+          debugLog('AudioContext created for desktop');
         } catch (err) {
           console.error('Failed to create AudioContext:', err);
           audioConfig.ready = false; // Disable audio if initialization fails
@@ -2107,7 +2107,7 @@
       }
 
       // Mobile: lean HTML5 audio only, no fancy WebAudio
-      console.log('Mobile detected: using HTML5 Audio');
+      debugLog('Mobile detected: using HTML5 Audio');
       audioConfig.mode = AudioMode.HTML5;
 
       try {
@@ -2185,7 +2185,7 @@
           audioContext.resume();
         }
       } catch (err) {
-        console.warn('Audio unlock failed:', err);
+        debugWarn('Audio unlock failed:', err);
         if (isMobile) game.muted = true;
       }
     }
@@ -2214,7 +2214,7 @@
         .then(audioBuffer => {
           sounds.background = audioBuffer;
         })
-        .catch(err => console.warn('Background music not found, continuing without it:', err));
+        .catch(err => debugWarn('Background music not found, continuing without it:', err));
     }
     
     function createBackgroundMusic() {
@@ -2222,7 +2222,7 @@
       
       // Skip background music entirely on mobile for performance
       if (audioConfig.mode === AudioMode.HTML5) {
-        console.log('Background music DISABLED on mobile for performance');
+        debugLog('Background music DISABLED on mobile for performance');
         return;
       }
       
@@ -2232,7 +2232,7 @@
           audioContext.resume().then(() => {
             startMusicSource();
           }).catch(err => {
-            console.warn('Audio context resume failed:', err);
+            debugWarn('Audio context resume failed:', err);
           });
         } else {
           startMusicSource();
@@ -2250,7 +2250,7 @@
             bgMusicSource.connect(bgMusicGain);
             bgMusicSource.start(0);
             
-            console.log('Background music started from MP3');
+            debugLog('Background music started from MP3');
           } catch (err) {
             console.error('Failed to start music source:', err);
             bgMusicSource = null;
@@ -2269,9 +2269,9 @@
         bgMusicSource.stop();
         bgMusicSource = null;
         bgMusicGain = null;
-        console.log('Background music stopped');
+        debugLog('Background music stopped');
       } catch (e) {
-        console.warn('Error stopping background music:', e);
+        debugWarn('Error stopping background music:', e);
       }
     }
 
@@ -2282,7 +2282,7 @@
         .then(audioBuffer => {
           sounds[name] = audioBuffer;
         })
-        .catch(err => console.warn(`Failed to load sound ${name}:`, err));
+        .catch(err => debugWarn(`Failed to load sound ${name}:`, err));
     }
     
     function safePlay(name, volume = 1.0, rate = 1.0) {
@@ -2353,7 +2353,7 @@
         assets.invincibility = await PIXI.Assets.load('./assets/images/invincibility.png');
         assets.flame = await PIXI.Assets.load('./assets/images/flame.png');
         assets.restartLogo = await PIXI.Assets.load('./assets/images/tbagburst.png');
-        console.log('Assets loaded successfully');
+        debugLog('Assets loaded successfully');
       } catch (error) {
         console.error('Failed to load assets:', error);
       }
@@ -3234,7 +3234,7 @@
     
     function createLogoBurst() {
       if (!assets.restartLogo) {
-        console.warn('Logo burst asset not loaded, skipping animation');
+        debugWarn('Logo burst asset not loaded, skipping animation');
         game.burstInProgress = false;
         return;
       }
@@ -3333,7 +3333,7 @@
           gameContainer.removeChild(l.sprite);
           l.sprite.destroy();
           game.logo = null;
-          console.log('Logo expired, resetting burstInProgress');
+          debugLog('Logo expired, resetting burstInProgress');
           game.burstInProgress = false; // Reset immediately when logo expires
         }
       }
@@ -3359,17 +3359,17 @@
     }
     
     function startIntroBurst() {
-      console.log('startIntroBurst called, assets.restartLogo:', !!assets.restartLogo);
+      debugLog('startIntroBurst called, assets.restartLogo:', !!assets.restartLogo);
       
       if (!assets.restartLogo) {
-        console.warn('Skipping intro burst - asset not loaded');
+        debugWarn('Skipping intro burst - asset not loaded');
         return;
       }
       
       game.burstInProgress = true;
       safePlay('powerup', 0.6, 1.0);
       setTimeout(() => {
-        console.log('Creating burst now');
+        debugLog('Creating burst now');
         createLogoBurst();
       }, 300);
     }
@@ -3418,10 +3418,10 @@
       
       if (isRedCandle) {
         game.redCandlesPassed++;
-        console.log('Red candle passed! Total:', game.redCandlesPassed);
+        debugLog('Red candle passed! Total:', game.redCandlesPassed);
         if (game.redCandlesPassed % 5 === 0) {
           game.tbags++;
-          console.log('TBAG EARNED! Total tbags:', game.tbags);
+          debugLog('TBAG EARNED! Total tbags:', game.tbags);
           dom.tbagDisplay.textContent = game.tbags;
           
           if (game.tbags > game.tbagHighScore) {
@@ -3769,7 +3769,7 @@
         if (!res.ok || !data.ok) {
           console.error("Score submission failed:", data);
         } else {
-          console.log("Score submitted successfully, total scores:", data.count);
+          debugLog("Score submitted successfully, total scores:", data.count);
           // Reload leaderboard to show new score
           await loadLeaderboardIntoUI();
         }
@@ -3813,7 +3813,7 @@
     }
 
     function initGame() {
-      console.log('=== INIT GAME CALLED ===');
+      debugLog('=== INIT GAME CALLED ===');
       game.started = false;
       game.over = false;
       game.score = 0;
@@ -4221,22 +4221,22 @@
       debugLog('Hiding menus...');
       dom.startMenu.classList.add('hidden');
       dom.gameOverMenu.classList.add('hidden');
-      console.log('Menus hidden - startMenu has hidden class:', dom.startMenu.classList.contains('hidden'));
+      debugLog('Menus hidden - startMenu has hidden class:', dom.startMenu.classList.contains('hidden'));
       
       // Reset game state first
-      console.log('Calling initGame()...');
+      debugLog('Calling initGame()...');
       initGame();
-      console.log('initGame() completed');
+      debugLog('initGame() completed');
       
       // Trigger logo burst
-      console.log('Calling startIntroBurst()...');
+      debugLog('Calling startIntroBurst()...');
       startIntroBurst();
-      console.log('startIntroBurst() completed');
+      debugLog('startIntroBurst() completed');
       
       // Start the game immediately so bird can be controlled
       game.started = true;
       game.over = false;
-      console.log('=== START GAME COMPLETE === game.started:', game.started, 'game.over:', game.over);
+      debugLog('=== START GAME COMPLETE === game.started:', game.started, 'game.over:', game.over);
     }
 
     // ==================== SCREEN TRANSFORM EFFECTS ====================
@@ -4417,7 +4417,7 @@
           game.slowActive = false;
           game.slowPermanentMultiplier *= 0.48875; // Reduced by 15% from 0.575 (0.575 * 0.85)
           updateSpeedMeter();
-          console.log(`Slow expired! Permanent multiplier: ${game.slowPermanentMultiplier.toFixed(2)}x`);
+          debugLog(`Slow expired! Permanent multiplier: ${game.slowPermanentMultiplier.toFixed(2)}x`);
           slowTimer = -1;
         }
       }
@@ -4734,7 +4734,7 @@
     function handleInput() {
       // Resume audio context only if not already running
       if (audioContext.state !== 'running') {
-        audioContext.resume().catch(e => console.warn('Audio resume failed:', e));
+        audioContext.resume().catch(e => debugWarn('Audio resume failed:', e));
       }
       
       if (!game.started) {
@@ -4772,32 +4772,32 @@
 
     // Start menu handlers - use both click and touchstart for mobile reliability
     dom.startMenu.addEventListener('touchstart', (e) => {
-      console.log('=== START MENU TOUCHSTART ===');
+      debugLog('=== START MENU TOUCHSTART ===');
       e.preventDefault();
       e.stopPropagation();
       if (audioContext.state !== 'running') {
-        audioContext.resume().catch(err => console.warn('Audio resume failed:', err));
+        audioContext.resume().catch(err => debugWarn('Audio resume failed:', err));
       }
       startGame();
-      console.log('After startGame() - game.started:', game.started, 'game.over:', game.over);
+      debugLog('After startGame() - game.started:', game.started, 'game.over:', game.over);
     }, { passive: false });
 
     dom.startMenu.addEventListener('click', (e) => {
-      console.log('=== START MENU CLICKED ===');
+      debugLog('=== START MENU CLICKED ===');
       e.preventDefault();
       e.stopPropagation();
       if (audioContext.state !== 'running') {
-        audioContext.resume().catch(err => console.warn('Audio resume failed:', err));
+        audioContext.resume().catch(err => debugWarn('Audio resume failed:', err));
       }
       startGame();
-      console.log('After startGame() - game.started:', game.started, 'game.over:', game.over);
+      debugLog('After startGame() - game.started:', game.started, 'game.over:', game.over);
     });
 
     // Restart button - use both click and touchend for reliability
     dom.restartButton.addEventListener('touchend', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      console.log('=== RESTART TOUCHEND ===');
+      debugLog('=== RESTART TOUCHEND ===');
       forceAudioUnlock();
       startGame(); // Changed to consume credit on restart
     }, { passive: false });
@@ -4805,7 +4805,7 @@
     dom.restartButton.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      console.log('=== RESTART CLICK ===');
+      debugLog('=== RESTART CLICK ===');
       forceAudioUnlock();
       startGame(); // Changed to consume credit on restart
     });
@@ -4879,7 +4879,7 @@
       musicMuteButton.classList.toggle('muted', game.musicMuted);
       startMusicBtn.classList.toggle('muted', game.musicMuted);
       gameoverMusicBtn.classList.toggle('muted', game.musicMuted);
-      console.log('Background music', game.musicMuted ? 'muted' : 'unmuted');
+      debugLog('Background music', game.musicMuted ? 'muted' : 'unmuted');
     });
 
     // Sound effects mute button
@@ -4895,7 +4895,7 @@
       sfxMuteButton.classList.toggle('muted', game.muted);
       startSfxBtn.classList.toggle('muted', game.muted);
       gameoverSfxBtn.classList.toggle('muted', game.muted);
-      console.log('Sound effects', game.muted ? 'muted' : 'unmuted');
+      debugLog('Sound effects', game.muted ? 'muted' : 'unmuted');
     });
 
     // Menu audio buttons - Start Menu
@@ -4990,12 +4990,12 @@
       // if (event.origin !== 'http://localhost:3000') return;
 
       const { type, payload } = event.data;
-      console.log('Game received message:', type, payload);
+      debugLog('Game received message:', type, payload);
 
       switch (type) {
         case 'INIT_GAME':
           parentGameState = payload;
-          console.log('Parent game state received:', parentGameState);
+          debugLog('Parent game state received:', parentGameState);
           break;
         case 'START_GAME':
           if (!game.started && !game.over) {
@@ -5011,7 +5011,7 @@
     // Notify parent that game is ready
     function notifyGameReady() {
       window.parent.postMessage({ type: 'GAME_READY' }, '*');
-      console.log('Game ready notification sent to parent');
+      debugLog('Game ready notification sent to parent');
     }
 
     // Initialize game after assets load
