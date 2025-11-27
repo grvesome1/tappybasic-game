@@ -976,10 +976,8 @@
     // $0.01 when ETH ≈ $2,000 and ensures deterministic cost without depending on
     // CoinGecko or the contract’s creditPriceETH value.  See commit message for details.
     const CREDIT_PRICE_WEI = 5000000000000n;
-    // Load credits from localStorage (don't force to 0!)
-    const savedCredits = localStorage.getItem('tappyCredits');
-    window.localCredits = savedCredits ? parseInt(savedCredits, 10) : 0;
-    console.log('Loaded credits from localStorage:', window.localCredits);
+    // Initialize credits to 0 - will be synced from blockchain on wallet connect
+    window.localCredits = 0;
 
     // Update credit display in the UI
     function updateCreditDisplay() {
@@ -1017,49 +1015,57 @@
 
     // Connect wallet handler with mobile support
     async function connectWallet() {
-      console.log('=== CONNECT WALLET CALLED ===');
-      // Mobile detection
+      console.log('=== MOBILE WALLET CONNECT START ===');
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      console.log('Is mobile:', isMobile);
-      console.log('window.ethereum exists:', !!window.ethereum);
+      console.log('Mobile device:', isMobile);
+      console.log('window.ethereum present:', !!window.ethereum);
+      
+      const connectBtn = document.getElementById('connect-btn');
+      const disconnectBtn = document.getElementById('disconnect-btn');
+      const purchaseBtn = document.getElementById('purchase-btn');
       
       if (!window.ethereum) {
         if (isMobile) {
-          // Deep link to MetaMask mobile app
-          const currentUrl = window.location.href;
           const deepLink = `https://metamask.app.link/dapp/${window.location.host}${window.location.pathname}${window.location.search}`;
-          console.log('Mobile wallet not detected, redirecting to:', deepLink);
-          alert('Opening MetaMask app...');
+          console.log('No wallet detected, opening MetaMask:', deepLink);
+          alert('Opening MetaMask mobile app...');
           window.location.href = deepLink;
           return;
         } else {
-          alert('MetaMask or compatible wallet is required. Please install MetaMask extension.');
+          alert('Please install MetaMask browser extension.');
           return;
         }
       }
+      
       try {
-        console.log('Creating provider...');
+        if (connectBtn) connectBtn.disabled = true;
+        
+        console.log('[1/5] Initializing provider...');
         provider = new ethers.BrowserProvider(window.ethereum);
-        console.log('Requesting accounts...');
-        await provider.send('eth_requestAccounts', []);
-        console.log('Getting signer...');
+        
+        console.log('[2/5] Requesting account access...');
+        const accounts = await provider.send('eth_requestAccounts', []);
+        console.log('Accounts returned:', accounts);
+        
+        console.log('[3/5] Getting signer...');
         signer = await provider.getSigner();
         walletAddress = await signer.getAddress();
-        console.log('Wallet connected:', walletAddress);
-        localStorage.setItem('tappyWalletAddress', walletAddress);
-        contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+        console.log('Connected wallet:', walletAddress);
         
-        // Check if we're on the correct network (Linea Sepolia)
+        // Check network and switch if needed
         const network = await provider.getNetwork();
+        console.log('Current network chainId:', network.chainId.toString());
+        
         if (network.chainId !== 59141n) {
+          console.log('Wrong network, switching to Linea Sepolia...');
           try {
             await window.ethereum.request({
               method: 'wallet_switchEthereumChain',
-              params: [{ chainId: '0xe705' }], // 59141 in hex
+              params: [{ chainId: '0xe705' }]
             });
           } catch (switchError) {
-            // If chain doesn't exist, add it
             if (switchError.code === 4902) {
+              console.log('Network not found, adding Linea Sepolia...');
               await window.ethereum.request({
                 method: 'wallet_addEthereumChain',
                 params: [{
@@ -1067,52 +1073,64 @@
                   chainName: 'Linea Sepolia',
                   nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
                   rpcUrls: ['https://rpc.sepolia.linea.build'],
-                  blockExplorerUrls: ['https://sepolia.lineascan.build'],
-                }],
+                  blockExplorerUrls: ['https://sepolia.lineascan.build']
+                }]
               });
             } else {
               throw switchError;
             }
           }
-          // Reconnect after network switch
+          // Reinitialize after network switch
           provider = new ethers.BrowserProvider(window.ethereum);
           signer = await provider.getSigner();
-          contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+          walletAddress = await signer.getAddress();
+          console.log('Network switched, wallet reconnected:', walletAddress);
         }
+        
+        console.log('[4/5] Creating contract instance...');
+        contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+        
+        // Sync credits from blockchain with retry logic for mobile
+        console.log('[5/5] Syncing credits from blockchain...');
+        let creditsSynced = false;
+        let retries = 3;
+        
+        while (!creditsSynced && retries > 0) {
+          try {
+            const creditsBN = await contract.credits(walletAddress);
+            window.localCredits = Number(creditsBN);
+            localStorage.setItem('tappyCredits', String(window.localCredits));
+            console.log('✅ Credits synced:', window.localCredits);
+            creditsSynced = true;
+          } catch (err) {
+            retries--;
+            console.warn(`Credit sync failed, retries left: ${retries}`, err);
+            if (retries > 0) {
+              await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1s before retry
+            } else {
+              console.error('❌ Credit sync failed after retries, defaulting to 0');
+              window.localCredits = 0;
+              localStorage.setItem('tappyCredits', '0');
+            }
+          }
+        }
+        
+        // Update UI
+        if (connectBtn) {
+          connectBtn.style.display = 'none';
+          connectBtn.disabled = false;
+        }
+        if (disconnectBtn) disconnectBtn.style.display = 'inline-block';
+        if (purchaseBtn) purchaseBtn.disabled = false;
         
         updateCreditDisplay();
-        try {
-          creditPriceWei = await contract.creditPriceETH();
-        } catch (e) {
-          console.warn('Could not fetch credit price', e);
-        }
-        
-        // Sync credits from blockchain on wallet connect
-        try {
-          console.log('Syncing credits from blockchain...');
-          const creditsBN = await contract.credits(walletAddress);
-          const onChainCredits = Number(creditsBN);
-          console.log('On-chain credits:', onChainCredits);
-          
-          // Use on-chain credits as source of truth
-          window.localCredits = onChainCredits;
-          localStorage.setItem('tappyCredits', String(window.localCredits));
-          console.log('Credits synced and saved to localStorage');
-        } catch (err) {
-          console.warn('Could not sync credits from contract on connect:', err);
-          // Keep localStorage credits if contract read fails
-        }
         
         // Show admin button if admin wallet
         if (walletAddress.toLowerCase() === "0x3100ff9597b87e791e5bb8c0d57c94336a432089") {
           document.getElementById("adminResetBtn").style.display = "block";
         }
         
-        // Show disconnect button, hide connect button
-        document.getElementById('connect-btn').style.display = 'none';
-        document.getElementById('disconnect-btn').style.display = 'inline-block';
-        
-        updateCreditDisplay();
+        console.log('=== MOBILE WALLET CONNECT SUCCESS ===');
       } catch (err) {
         console.error(err);
         alert('Wallet connection failed');
@@ -1121,20 +1139,33 @@
 
     // Disconnect wallet handler
     function disconnectWallet() {
+      console.log('=== DISCONNECTING WALLET ===');
+      
+      // Clear all state
       walletAddress = null;
       provider = null;
       signer = null;
       contract = null;
       window.localCredits = 0;
       
+      // Clear all localStorage
       localStorage.removeItem('tappyWalletAddress');
-      localStorage.setItem('tappyCredits', '0');
+      localStorage.removeItem('tappyCredits');
       
-      document.getElementById('connect-btn').style.display = 'inline-block';
-      document.getElementById('disconnect-btn').style.display = 'none';
+      // Update buttons
+      const connectBtn = document.getElementById('connect-btn');
+      const disconnectBtn = document.getElementById('disconnect-btn');
+      const purchaseBtn = document.getElementById('purchase-btn');
+      
+      if (connectBtn) {
+        connectBtn.style.display = 'inline-block';
+        connectBtn.disabled = false;
+      }
+      if (disconnectBtn) disconnectBtn.style.display = 'none';
+      if (purchaseBtn) purchaseBtn.disabled = true;
       
       updateCreditDisplay();
-      console.log('Wallet disconnected');
+      console.log('✅ Wallet disconnected, state cleared');
     }
 
     // Helper to fetch current ETH price in USD from CoinGecko
@@ -1161,43 +1192,73 @@
 
       try {
         if (purchaseBtn) purchaseBtn.disabled = true;
-
-        // Prevent chainChanged reload during purchase
         window.isPurchasing = true;
 
-        console.log('Purchasing 1 credit for', CREDIT_PRICE_WEI.toString(), 'wei');
+        console.log('=== STARTING CREDIT PURCHASE ===');
+        console.log('Price:', CREDIT_PRICE_WEI.toString(), 'wei');
+        console.log('Wallet:', walletAddress);
 
+        // Send transaction
+        console.log('[1/3] Sending transaction...');
         const tx = await contract.purchaseCreditsWithETH(1, { value: CREDIT_PRICE_WEI });
-        console.log('Transaction sent, waiting for confirmation...');
+        console.log('Transaction hash:', tx.hash);
         
+        // Wait for confirmation with mobile-friendly timeout
+        console.log('[2/3] Waiting for confirmation (this may take 10-30 seconds on mobile)...');
         const receipt = await tx.wait();
+        console.log('Transaction confirmed, status:', receipt.status);
         
         if (receipt.status === 1) {
-          console.log('✅ Purchase successful, syncing credits from blockchain...');
+          // Force blockchain resync with retry logic
+          console.log('[3/3] Resyncing credits from blockchain...');
+          let synced = false;
+          let attempts = 5;
           
-          // Sync credits from blockchain after successful purchase
-          try {
-            const creditsBN = await contract.credits(walletAddress);
-            window.localCredits = Number(creditsBN);
-            console.log('Credits synced from contract:', window.localCredits);
-          } catch (err) {
-            console.warn('Could not fetch credits from contract (using fallback):', err);
-            // Fallback: assume one credit was added
-            window.localCredits = (window.localCredits || 0) + 1;
+          while (!synced && attempts > 0) {
+            try {
+              // Wait a moment for blockchain state to update
+              await new Promise(resolve => setTimeout(resolve, 500));
+              
+              const creditsBN = await contract.credits(walletAddress);
+              const newCredits = Number(creditsBN);
+              console.log('Blockchain query result:', newCredits);
+              
+              if (newCredits > window.localCredits) {
+                window.localCredits = newCredits;
+                localStorage.setItem('tappyCredits', String(window.localCredits));
+                updateCreditDisplay();
+                console.log('✅ Credits updated:', window.localCredits);
+                synced = true;
+              } else {
+                attempts--;
+                console.log(`Credits not updated yet, retrying (${attempts} left)...`);
+              }
+            } catch (err) {
+              attempts--;
+              console.warn(`Sync attempt failed (${attempts} left):`, err);
+              if (attempts === 0) {
+                // Last resort fallback
+                window.localCredits = (window.localCredits || 0) + 1;
+                localStorage.setItem('tappyCredits', String(window.localCredits));
+                updateCreditDisplay();
+                console.log('⚠️ Using fallback credit increment');
+              }
+            }
           }
           
-          // Update localStorage and UI with the new credit count
-          localStorage.setItem('tappyCredits', String(window.localCredits));
-          updateCreditDisplay();
-          
-          alert('Credit purchased! You now have ' + window.localCredits + ' credit(s).');
+          alert('✅ Credit purchased! You now have ' + window.localCredits + ' credit(s).');
+          console.log('=== PURCHASE SUCCESS ===');
         } else {
-          console.error('Transaction failed on-chain:', receipt);
-          alert('Purchase failed on-chain. Please try again.');
+          console.error('❌ Transaction failed, status:', receipt.status);
+          alert('Transaction failed. Please try again.');
         }
       } catch (err) {
-        console.error('Error sending purchase transaction:', err);
-        alert('Purchase transaction error. Check console for details.');
+        console.error('❌ Purchase error:', err);
+        if (err.code === 4001) {
+          alert('Transaction cancelled.');
+        } else {
+          alert('Purchase failed: ' + (err.message || 'Unknown error'));
+        }
       } finally {
         window.isPurchasing = false;
         if (purchaseBtn) purchaseBtn.disabled = false;
@@ -1240,39 +1301,50 @@
       // Handle wallet events for mobile reconnection
       if (window.ethereum) {
         window.ethereum.on('accountsChanged', async (accounts) => {
+          console.log('=== ACCOUNT CHANGED ===');
+          console.log('New accounts:', accounts);
+          
           if (accounts.length > 0) {
-            walletAddress = accounts[0];
-            localStorage.setItem('tappyWalletAddress', walletAddress);
-            
-            // Reconnect with new account
             try {
+              // Full reconnection with new account
               provider = new ethers.BrowserProvider(window.ethereum);
               signer = await provider.getSigner();
+              walletAddress = await signer.getAddress();
               contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
               
-              // Sync credits from blockchain for new account
-              try {
-                console.log('Account changed, syncing credits for new account...');
-                const creditsBN = await contract.credits(walletAddress);
-                window.localCredits = Number(creditsBN);
-                localStorage.setItem('tappyCredits', String(window.localCredits));
-                console.log('Credits synced for new account:', window.localCredits);
-              } catch (err) {
-                console.warn('Could not sync credits for new account:', err);
-                window.localCredits = 0;
-                localStorage.setItem('tappyCredits', '0');
+              console.log('Reconnected with new account:', walletAddress);
+              
+              // Force blockchain resync with retry
+              let synced = false;
+              let retries = 3;
+              
+              while (!synced && retries > 0) {
+                try {
+                  const creditsBN = await contract.credits(walletAddress);
+                  window.localCredits = Number(creditsBN);
+                  localStorage.setItem('tappyCredits', String(window.localCredits));
+                  console.log('✅ Credits synced for new account:', window.localCredits);
+                  synced = true;
+                } catch (err) {
+                  retries--;
+                  console.warn(`Sync failed, retries left: ${retries}`);
+                  if (retries === 0) {
+                    window.localCredits = 0;
+                    localStorage.setItem('tappyCredits', '0');
+                  } else {
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                  }
+                }
               }
+              
+              updateCreditDisplay();
             } catch (err) {
-              console.error('Error reconnecting with new account:', err);
+              console.error('❌ Account switch failed:', err);
+              disconnectWallet();
             }
-            
-            updateCreditDisplay();
           } else {
-            walletAddress = null;
-            localStorage.removeItem('tappyWalletAddress');
-            window.localCredits = 0;
-            localStorage.setItem('tappyCredits', '0');
-            updateCreditDisplay();
+            console.log('No accounts, disconnecting...');
+            disconnectWallet();
           }
         });
         
