@@ -1683,13 +1683,19 @@
       PIXI.settings.ROUND_PIXELS = false;
       app.ticker.maxFPS = 60;
     }
+    
+    debugLog('🎮 Pixi.js app created. Renderer type:', app.renderer.type === 1 ? 'WebGL' : 'Canvas');
+    debugLog('🎮 App dimensions:', app.view.width, 'x', app.view.height);
+    debugLog('🎮 Device pixel ratio:', window.devicePixelRatio, 'isMobile:', isMobile);
 
     document.getElementById('game-container').appendChild(app.view);
     app.view.id = 'pixi-canvas';
+    debugLog('🎮 Canvas appended to game-container. Canvas ID:', app.view.id);
 
     // Container for all game objects
     const gameContainer = new PIXI.Container();
     app.stage.addChild(gameContainer);
+    debugLog('🎮 gameContainer added to stage. Stage children:', app.stage.children.length);
 
     // Powerup visual effects layer (drawn on top of everything)
     const powerupEffectsLayer = new PIXI.Graphics();
@@ -2450,6 +2456,7 @@
         
         // Add rocket sprite after flame so it renders on top
         gameContainer.addChild(this.sprite);
+        debugLog('🚀 Bird sprite added to gameContainer. Total children:', gameContainer.children.length);
         
         // Create sherk icon sprite on top of rocket
         this.sherkSprite = new PIXI.Sprite();
@@ -2459,6 +2466,7 @@
         
         this.flameTimer = 0;
         this.reset();
+        debugLog('🚀 Bird constructor complete. Sprite visible:', this.sprite.visible, 'Position:', this.sprite.x, this.sprite.y);
       }
 
       setTexture() {
@@ -2468,6 +2476,17 @@
           const displaySize = this.size * ROCKET_SIZE_MULTIPLIER;
           this.sprite.width = displaySize;
           this.sprite.height = displaySize;
+          debugLog('🚀 Bird texture applied from assets.rocket');
+        } else {
+          // Fallback: Create a visible colored rectangle if texture fails
+          debugLog('⚠️ No rocket texture! Creating fallback graphics');
+          const fallbackGraphics = new PIXI.Graphics();
+          fallbackGraphics.beginFill(0x00FF00); // Bright green for visibility
+          fallbackGraphics.drawRect(-16, -16, 32, 32);
+          fallbackGraphics.endFill();
+          this.sprite.texture = app.renderer.generateTexture(fallbackGraphics);
+          this.sprite.width = 32;
+          this.sprite.height = 32;
         }
         if (assets.flame) {
           this.flameSprite.texture = assets.flame;
@@ -2485,6 +2504,7 @@
         this.sprite.y = this.y;
         this.sprite.rotation = 0;
         this.sprite.visible = true;
+        debugLog('🚀 Bird.reset() - Position:', this.sprite.x, this.sprite.y, 'Visible:', this.sprite.visible, 'Has texture:', !!this.sprite.texture);
       }
 
       flap() {
@@ -2496,7 +2516,10 @@
       }
 
       update() {
-        if (!game.started || game.over) return;
+        if (!game.started || game.over) {
+          debugLog('🚀 Bird.update() skipped - game.started:', game.started, 'game.over:', game.over);
+          return;
+        }
 
         // Add motion trail when moving fast
         if (Math.abs(this.vy) > 3 && frameCount % 3 === 0) {
@@ -3866,8 +3889,10 @@
 
     function initGame() {
       debugLog('=== INIT GAME CALLED ===');
+      debugLog('Before reset - game.started:', game.started, 'game.over:', game.over);
       game.started = false;
       game.over = false;
+      debugLog('After reset - game.started:', game.started, 'game.over:', game.over);
       game.score = 0;
       game.tbags = 0;
       game.redCandlesPassed = 0;
@@ -4269,6 +4294,19 @@
         console.error('Failed to start background music:', err);
       }
 
+      // Debug: Check canvas and container state
+      const canvas = document.getElementById('pixi-canvas');
+      const container = document.getElementById('game-container');
+      debugLog('=== CANVAS STATE ===');
+      debugLog('Canvas element:', canvas ? 'EXISTS' : 'NULL');
+      if (canvas) {
+        debugLog('Canvas dimensions:', canvas.width, 'x', canvas.height);
+        debugLog('Canvas style:', canvas.style.display, 'visibility:', canvas.style.visibility);
+        debugLog('Canvas clientRect:', canvas.getBoundingClientRect());
+      }
+      debugLog('Container dimensions:', container ? `${container.offsetWidth}x${container.offsetHeight}` : 'NULL');
+      debugLog('gameContainer children count:', gameContainer.children.length);
+      
       // Hide menus immediately
       debugLog('Hiding menus...');
       dom.startMenu.classList.add('hidden');
@@ -4444,8 +4482,18 @@
     }
 
     // ==================== GAME LOOP ====================
+    let tickerLogCount = 0;
     app.ticker.add((delta) => {
       frameCount++;
+      
+      // Log first 5 ticks after game starts
+      if (game.started && tickerLogCount < 5) {
+        debugLog(`🎮 TICKER #${tickerLogCount} - game.started:`, game.started, 'game.over:', game.over, 'bird exists:', !!game.bird);
+        if (game.bird) {
+          debugLog('🎮 Bird sprite - x:', game.bird.sprite.x, 'y:', game.bird.sprite.y, 'visible:', game.bird.sprite.visible);
+        }
+        tickerLogCount++;
+      }
       
       // Apply screen warp and shake transforms before rendering
       applyScreenTransforms();
@@ -4459,7 +4507,12 @@
       updateBackgroundLayers();
       updateStars();
       
-      if (!game.started || game.over) return;
+      if (!game.started || game.over) {
+        if (frameCount % 120 === 0) { // Log every 2 seconds when not playing
+          debugLog('🎮 Ticker waiting - game.started:', game.started, 'game.over:', game.over);
+        }
+        return;
+      }
       
       // Countdown timers
       if (gunTimer > 0) gunTimer--;
@@ -5029,16 +5082,21 @@
     // Initialize game after assets load
     initAudioLayer(); // Initialize audio system first
     loadAssets().then(() => {
+      debugLog('✅ Assets loaded successfully!');
+      debugLog('🖼️ Checking assets - rocket:', !!assets.rocket, 'flame:', !!assets.flame, 'restartLogo:', !!assets.restartLogo);
       // Set bird texture after assets are loaded
       if (game.bird) {
         game.bird.setTexture();
+        debugLog('🚀 Bird texture set. Sprite has texture:', !!game.bird.sprite.texture);
       }
       initGame();
       // Start background music immediately after loading
       createBackgroundMusic();
       // Notify parent frame
       notifyGameReady();
-    }).catch(() => {
+    }).catch((err) => {
+      debugLog('⚠️ Asset loading failed:', err);
+      debugLog('🖼️ Assets state - rocket:', !!assets.rocket, 'flame:', !!assets.flame);
       // Initialize anyway with fallback graphics
       initGame();
       // Notify parent frame even on error
