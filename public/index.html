@@ -1459,30 +1459,19 @@
       // Attach start menu and restart button handlers (MUST be in DOMContentLoaded)
       if (dom.startMenu) {
         dom.startMenu.addEventListener('touchstart', (e) => {
-          try {
-            alert('TOUCHSTART EVENT FIRED!'); // TEMP DEBUG
-            debugLog('=== START MENU TOUCHSTART ===');
-            e.preventDefault();
-            e.stopPropagation();
-            alert('After preventDefault'); // TEMP DEBUG
-            if (audioContext && audioContext.state !== 'running') {
-              audioContext.resume().catch(err => debugWarn('Audio resume failed:', err));
-            }
-            alert('Before startGame()'); // TEMP DEBUG
-            startGame();
-            alert('After startGame()'); // TEMP DEBUG
-            debugLog('After startGame() - game.started:', game.started, 'game.over:', game.over);
-          } catch (err) {
-            alert('ERROR in touchstart: ' + err.message);
-          }
+          debugLog('=== START MENU TOUCHSTART ===');
+          e.preventDefault();
+          e.stopPropagation();
+          startGame();
+          debugLog('After startGame() - game.started:', game.started, 'game.over:', game.over);
         }, { passive: false });
 
         dom.startMenu.addEventListener('click', (e) => {
-          alert('CLICK EVENT FIRED!'); // TEMP DEBUG
           debugLog('=== START MENU CLICKED ===');
           e.preventDefault();
           e.stopPropagation();
-          if (audioContext.state !== 'running') {
+          // Audio context handled in initAudioLayer()
+          if (typeof audioContext !== 'undefined' && audioContext && audioContext.state !== 'running') {
             audioContext.resume().catch(err => debugWarn('Audio resume failed:', err));
           }
           startGame();
@@ -4236,7 +4225,6 @@
 
     function startGame() {
       debugLog('=== START GAME CALLED ===');
-      alert('DEBUG: startGame called'); // TEMP DEBUG
 
       if (!walletAddress) {
         alert('Connect your wallet first.');
@@ -4250,12 +4238,9 @@
         updateCreditDisplay();
         debugLog('🎮 Pre-game credit check:', window.localCredits);
       }
-      
-      alert(`DEBUG: Credits=${window.localCredits}, wallet=${walletAddress ? 'connected' : 'null'}`); // TEMP DEBUG
 
       if (typeof window.useCredit === 'function') {
         const ok = window.useCredit();
-        alert(`DEBUG: useCredit returned ${ok}`); // TEMP DEBUG
         if (!ok) {
           return;
         }
