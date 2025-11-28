@@ -32,6 +32,11 @@
       background: #000;
       touch-action: none;
       user-select: none;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      -webkit-touch-callout: none;
+      -webkit-tap-highlight-color: transparent;
       font-family: 'Barlow', sans-serif;
       font-weight: 200;
     }
@@ -78,6 +83,8 @@
       border-radius: 20px;
       touch-action: none;
       -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      -webkit-tap-highlight-color: transparent;
       user-select: none;
     }
 
@@ -1046,6 +1053,30 @@
         }, 100);
       }
     });
+    
+    // Prevent text selection and context menu on mobile
+    if (isMobile) {
+      document.addEventListener('contextmenu', (e) => e.preventDefault(), { passive: false });
+      document.addEventListener('selectstart', (e) => e.preventDefault(), { passive: false });
+      document.addEventListener('copy', (e) => e.preventDefault(), { passive: false });
+      document.addEventListener('cut', (e) => e.preventDefault(), { passive: false });
+      
+      // Prevent long-press selection
+      let longPressTimer;
+      document.addEventListener('touchstart', (e) => {
+        longPressTimer = setTimeout(() => {
+          e.preventDefault();
+        }, 500);
+      }, { passive: false });
+      
+      document.addEventListener('touchend', () => {
+        clearTimeout(longPressTimer);
+      }, { passive: true });
+      
+      document.addEventListener('touchmove', () => {
+        clearTimeout(longPressTimer);
+      }, { passive: true });
+    }
     
     // Focus/blur handlers for additional safety
     window.addEventListener('blur', () => {
