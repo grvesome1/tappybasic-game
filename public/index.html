@@ -1017,6 +1017,12 @@
         const creditsBN = await contract.credits(walletAddress);
         const onChainCredits = Number(creditsBN);
         
+        // Don't overwrite if game is active - local credit usage takes precedence
+        if (game.started && !game.over) {
+          debugLog('⚠️ Game is active, skipping credit overwrite. Blockchain:', onChainCredits, 'Local:', window.localCredits);
+          return true;
+        }
+        
         window.localCredits = onChainCredits;
         localStorage.setItem('tappyCredits', String(onChainCredits));
         updateCreditDisplay();
@@ -1461,8 +1467,13 @@
           window.localCredits = parseInt(savedCredits, 10);
           updateCreditDisplay();
         }
-        // Then sync from blockchain in background
-        syncCredits();
+        // DON'T sync from blockchain if game is active - prevents credit overwrite race condition
+        if (!game.started || game.over) {
+          debugLog('🔄 Game not active, syncing from blockchain');
+          syncCredits();
+        } else {
+          debugLog('⚠️ Game is active, skipping blockchain sync to prevent credit overwrite');
+        }
       }
     });
     
