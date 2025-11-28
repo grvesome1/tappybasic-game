@@ -1016,19 +1016,10 @@
         debugLog('🔄 Syncing credits from blockchain for:', walletAddress);
         const creditsBN = await contract.credits(walletAddress);
         const onChainCredits = Number(creditsBN);
-        debugLog('Blockchain credits:', onChainCredits, 'Local credits:', window.localCredits);
         
         // Don't overwrite if game is active - local credit usage takes precedence
         if (game.started && !game.over) {
           debugLog('⚠️ Game is active, skipping credit overwrite. Blockchain:', onChainCredits, 'Local:', window.localCredits);
-          return true;
-        }
-        
-        // Also check if local credits are less than blockchain (user played games)
-        // Only sync down if they match or local is greater (shouldn't happen)
-        if (window.localCredits < onChainCredits) {
-          debugLog('⚠️ Local credits less than blockchain - user may have played games. Keeping local value.');
-          debugLog('This should sync after game ends. Local:', window.localCredits, 'Blockchain:', onChainCredits);
           return true;
         }
         
@@ -1128,17 +1119,12 @@
         
         debugLog('[2/5] Requesting account access...');
         const accounts = await provider.send('eth_requestAccounts', []);
-        debugLog('Accounts returned from MetaMask:', accounts);
-        debugLog('Number of accounts:', accounts.length);
-        if (accounts.length > 0) {
-          debugLog('First account (will be used):', accounts[0]);
-        }
+        debugLog('Accounts returned:', accounts);
         
         debugLog('[3/5] Getting signer...');
         signer = await provider.getSigner();
         walletAddress = await signer.getAddress();
-        debugLog('✅ Connected wallet address:', walletAddress);
-        debugLog('Does it match first account?', accounts.length > 0 && accounts[0].toLowerCase() === walletAddress.toLowerCase());
+        debugLog('Connected wallet:', walletAddress);
         
         // Check network and switch if needed
         const network = await provider.getNetwork();
@@ -1472,41 +1458,25 @@
       
       // Attach start menu and restart button handlers (MUST be in DOMContentLoaded)
       if (dom.startMenu) {
-        dom.startMenu.addEventListener('touchstart', (e) => {
-          debugLog('=== START MENU TOUCHSTART ===');
+        dom.startMenu.addEventListener('pointerdown', (e) => {
           e.preventDefault();
           e.stopPropagation();
-          startGame();
-          debugLog('After startGame() - game.started:', game.started, 'game.over:', game.over);
-        }, { passive: false });
-
-        dom.startMenu.addEventListener('click', (e) => {
-          debugLog('=== START MENU CLICKED ===');
-          e.preventDefault();
-          e.stopPropagation();
-          // Audio context handled in initAudioLayer()
+          debugLog('=== START MENU POINTERDOWN ===');
           if (typeof audioContext !== 'undefined' && audioContext && audioContext.state !== 'running') {
             audioContext.resume().catch(err => debugWarn('Audio resume failed:', err));
           }
           startGame();
-          debugLog('After startGame() - game.started:', game.started, 'game.over:', game.over);
         });
       }
       
       if (dom.restartButton) {
-        dom.restartButton.addEventListener('touchend', (e) => {
+        dom.restartButton.addEventListener('pointerdown', (e) => {
           e.preventDefault();
           e.stopPropagation();
-          debugLog('=== RESTART TOUCHEND ===');
-          forceAudioUnlock();
-          startGame();
-        }, { passive: false });
-        
-        dom.restartButton.addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          debugLog('=== RESTART CLICK ===');
-          forceAudioUnlock();
+          debugLog('=== RESTART POINTERDOWN ===');
+          if (typeof audioContext !== 'undefined' && audioContext && audioContext.state !== 'running') {
+            audioContext.resume().catch(err => debugWarn('Audio resume failed:', err));
+          }
           startGame();
         });
       }
@@ -1674,42 +1644,29 @@
       width: GAME_WIDTH,
       height: GAME_HEIGHT,
       backgroundColor: 0x000000,
-      antialias: !isMobile, // Disable antialiasing on mobile for better performance
-      resolution: isMobile ? 1 : (window.devicePixelRatio || 1), // Force 1x resolution on mobile
+      antialias: !isMobile,                            // cheaper on mobile
+      resolution: isMobile ? 1 : (window.devicePixelRatio || 1),
       autoDensity: true,
-      powerPreference: isMobile ? 'default' : 'high-performance'
+      powerPreference: 'high-performance'
     });
     
-    // Mobile-specific renderer optimizations
-    if (isMobile) {
-      app.renderer.resolution = Math.min(window.devicePixelRatio, 1.0);
-      PIXI.settings.ROUND_PIXELS = true;
-      app.renderer.plugins.interaction.moveWhenInside = true;
-    }
+    // Global texture behaviour
+    PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.LINEAR;
+    // On mobile, round to whole pixels (less shimmering when low‑res)
+    PIXI.settings.ROUND_PIXELS = isMobile;
     
-    // Enable smooth textures globally (NEAREST for mobile performance)
+    // Target 60 FPS, but allow slowdown on low-end devices
+    app.ticker.maxFPS = 60;
     if (isMobile) {
-      PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.NEAREST;
-      PIXI.settings.ROUND_PIXELS = true;
-      app.ticker.maxFPS = 45; // Limit mobile FPS
-    } else {
-      PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.LINEAR;
-      PIXI.settings.ROUND_PIXELS = false;
-      app.ticker.maxFPS = 60;
+      app.ticker.minFPS = 30; // mobile can drop to 30 without going crazy
     }
-    
-    debugLog('🎮 Pixi.js app created. Renderer type:', app.renderer.type === 1 ? 'WebGL' : 'Canvas');
-    debugLog('🎮 App dimensions:', app.view.width, 'x', app.view.height);
-    debugLog('🎮 Device pixel ratio:', window.devicePixelRatio, 'isMobile:', isMobile);
 
     document.getElementById('game-container').appendChild(app.view);
     app.view.id = 'pixi-canvas';
-    debugLog('🎮 Canvas appended to game-container. Canvas ID:', app.view.id);
 
     // Container for all game objects
     const gameContainer = new PIXI.Container();
     app.stage.addChild(gameContainer);
-    debugLog('🎮 gameContainer added to stage. Stage children:', app.stage.children.length);
 
     // Powerup visual effects layer (drawn on top of everything)
     const powerupEffectsLayer = new PIXI.Graphics();
@@ -1753,12 +1710,14 @@
     // Deep space gradient layers with organic nebula shapes
     const bgLayers = [];
     
-    // Reduce layer counts on mobile
-    const CLOUD_COUNT = isMobile ? 5 : 15;
-    const MID_LAYER_COUNT = isMobile ? 4 : 12;
+    // Per‑platform counts
+    const BG_LAYER1_COUNT = isMobile ? 8 : 15;
+    const BG_LAYER2_COUNT = isMobile ? 6 : 12;
+    const STAR_CONTAINER_MAX = isMobile ? 120 : 200;
+    const STAR_COUNT = isMobile ? 80 : 150;
     
     // Layer 1: Deep space nebula clouds (slowest, darkest) - optimized
-    for (let i = 0; i < CLOUD_COUNT; i++) {
+    for (let i = 0; i < BG_LAYER1_COUNT; i++) {
       const cloud = new PIXI.Graphics();
       const x = Math.random() * GAME_WIDTH * 2.5;
       const y = Math.random() * GAME_HEIGHT;
@@ -1848,7 +1807,7 @@
     }
     
     // Layer 2: Mid-depth nebula gradients (medium speed) - optimized
-    for (let i = 0; i < MID_LAYER_COUNT; i++) {
+    for (let i = 0; i < BG_LAYER2_COUNT; i++) {
       const layer = new PIXI.Graphics();
       const x = Math.random() * GAME_WIDTH * 2.5;
       const y = Math.random() * GAME_HEIGHT;
@@ -1973,7 +1932,7 @@
     }
     
     // PERFORMANCE: Use ParticleContainer for stars (10-100x faster than individual Graphics)
-    const starContainer = new PIXI.ParticleContainer(200, {
+    const starContainer = new PIXI.ParticleContainer(STAR_CONTAINER_MAX, {
       position: true,
       alpha: true,
       scale: false,
@@ -2015,7 +1974,6 @@
     starGraphics.endFill();
     const starTexture = app.renderer.generateTexture(starGraphics);
     
-    const STAR_COUNT = isMobile ? 50 : 150;
     for (let i = 0; i < STAR_COUNT; i++) {
       const star = new PIXI.Sprite(starTexture);
       star.anchor.set(0.5);
@@ -2470,7 +2428,6 @@
         
         // Add rocket sprite after flame so it renders on top
         gameContainer.addChild(this.sprite);
-        debugLog('🚀 Bird sprite added to gameContainer. Total children:', gameContainer.children.length);
         
         // Create sherk icon sprite on top of rocket
         this.sherkSprite = new PIXI.Sprite();
@@ -2480,7 +2437,6 @@
         
         this.flameTimer = 0;
         this.reset();
-        debugLog('🚀 Bird constructor complete. Sprite visible:', this.sprite.visible, 'Position:', this.sprite.x, this.sprite.y);
       }
 
       setTexture() {
@@ -2490,17 +2446,6 @@
           const displaySize = this.size * ROCKET_SIZE_MULTIPLIER;
           this.sprite.width = displaySize;
           this.sprite.height = displaySize;
-          debugLog('🚀 Bird texture applied from assets.rocket');
-        } else {
-          // Fallback: Create a visible colored rectangle if texture fails
-          debugLog('⚠️ No rocket texture! Creating fallback graphics');
-          const fallbackGraphics = new PIXI.Graphics();
-          fallbackGraphics.beginFill(0x00FF00); // Bright green for visibility
-          fallbackGraphics.drawRect(-16, -16, 32, 32);
-          fallbackGraphics.endFill();
-          this.sprite.texture = app.renderer.generateTexture(fallbackGraphics);
-          this.sprite.width = 32;
-          this.sprite.height = 32;
         }
         if (assets.flame) {
           this.flameSprite.texture = assets.flame;
@@ -2518,7 +2463,6 @@
         this.sprite.y = this.y;
         this.sprite.rotation = 0;
         this.sprite.visible = true;
-        debugLog('🚀 Bird.reset() - Position:', this.sprite.x, this.sprite.y, 'Visible:', this.sprite.visible, 'Has texture:', !!this.sprite.texture);
       }
 
       flap() {
@@ -2530,10 +2474,7 @@
       }
 
       update() {
-        if (!game.started || game.over) {
-          debugLog('🚀 Bird.update() skipped - game.started:', game.started, 'game.over:', game.over);
-          return;
-        }
+        if (!game.started || game.over) return;
 
         // Add motion trail when moving fast
         if (Math.abs(this.vy) > 3 && frameCount % 3 === 0) {
@@ -3903,10 +3844,8 @@
 
     function initGame() {
       debugLog('=== INIT GAME CALLED ===');
-      debugLog('Before reset - game.started:', game.started, 'game.over:', game.over);
       game.started = false;
       game.over = false;
-      debugLog('After reset - game.started:', game.started, 'game.over:', game.over);
       game.score = 0;
       game.tbags = 0;
       game.redCandlesPassed = 0;
@@ -4264,8 +4203,6 @@
 
     function startGame() {
       debugLog('=== START GAME CALLED ===');
-      debugLog('walletAddress:', walletAddress);
-      debugLog('window.localCredits BEFORE:', window.localCredits);
 
       if (!walletAddress) {
         alert('Connect your wallet first.');
@@ -4280,22 +4217,15 @@
         debugLog('🎮 Pre-game credit check:', window.localCredits);
       }
 
-      // Check if we have credits BEFORE decrementing
-      if (!Number.isFinite(window.localCredits) || window.localCredits <= 0) {
-        alert(`You need credits to play. You have ${window.localCredits || 0} credits. Please buy a credit first.`);
-        return;
+      if (typeof window.useCredit === 'function') {
+        const ok = window.useCredit();
+        if (!ok) {
+          return;
+        }
       }
 
-      // Decrement credit BEFORE starting (revert to original approach but with better protection)
-      debugLog('✅ Decrementing credit from', window.localCredits, 'to', window.localCredits - 1);
-      window.localCredits -= 1;
-      localStorage.setItem('tappyCredits', String(window.localCredits));
-      updateCreditDisplay();
-      debugLog('✅ Credit decremented, new balance:', window.localCredits);
-
-      // Start the game
+      // Actually start the game
       doStartGame();
-      debugLog('=== START GAME COMPLETE - game.started:', game.started);
     }
     
     function doStartGame() {
@@ -4317,19 +4247,6 @@
         console.error('Failed to start background music:', err);
       }
 
-      // Debug: Check canvas and container state
-      const canvas = document.getElementById('pixi-canvas');
-      const container = document.getElementById('game-container');
-      debugLog('=== CANVAS STATE ===');
-      debugLog('Canvas element:', canvas ? 'EXISTS' : 'NULL');
-      if (canvas) {
-        debugLog('Canvas dimensions:', canvas.width, 'x', canvas.height);
-        debugLog('Canvas style:', canvas.style.display, 'visibility:', canvas.style.visibility);
-        debugLog('Canvas clientRect:', canvas.getBoundingClientRect());
-      }
-      debugLog('Container dimensions:', container ? `${container.offsetWidth}x${container.offsetHeight}` : 'NULL');
-      debugLog('gameContainer children count:', gameContainer.children.length);
-      
       // Hide menus immediately
       debugLog('Hiding menus...');
       dom.startMenu.classList.add('hidden');
@@ -4433,7 +4350,7 @@
         }
       }
       // Apply water ripple displacement filter ONLY during slow powerup
-      else if (game.slowActive && slowTimer > 0 && game.slowWarpLevel > 0 && !game.over) {
+      else if (!isMobile && game.slowActive && slowTimer > 0 && game.slowWarpLevel > 0 && !game.over) {
         if (!displacementFilter) initDisplacementFilter();
         
         const speedFactor = game.speed / game.baseSpeed;
@@ -4505,18 +4422,8 @@
     }
 
     // ==================== GAME LOOP ====================
-    let tickerLogCount = 0;
     app.ticker.add((delta) => {
       frameCount++;
-      
-      // Log first 5 ticks after game starts
-      if (game.started && tickerLogCount < 5) {
-        debugLog(`🎮 TICKER #${tickerLogCount} - game.started:`, game.started, 'game.over:', game.over, 'bird exists:', !!game.bird);
-        if (game.bird) {
-          debugLog('🎮 Bird sprite - x:', game.bird.sprite.x, 'y:', game.bird.sprite.y, 'visible:', game.bird.sprite.visible);
-        }
-        tickerLogCount++;
-      }
       
       // Apply screen warp and shake transforms before rendering
       applyScreenTransforms();
@@ -4530,12 +4437,7 @@
       updateBackgroundLayers();
       updateStars();
       
-      if (!game.started || game.over) {
-        if (frameCount % 120 === 0) { // Log every 2 seconds when not playing
-          debugLog('🎮 Ticker waiting - game.started:', game.started, 'game.over:', game.over);
-        }
-        return;
-      }
+      if (!game.started || game.over) return;
       
       // Countdown timers
       if (gunTimer > 0) gunTimer--;
@@ -4879,24 +4781,22 @@
       }
     });
 
-    document.getElementById('game-container').addEventListener('click', handleInput);
-    document.getElementById('game-container').addEventListener('touchstart', (e) => {
+    const gameContainerEl = document.getElementById('game-container');
+
+    // Unified pointer input for desktop + mobile
+    function handlePrimaryPointerDown(e) {
       e.preventDefault();
-      
-      // Show touch feedback at touch point
-      if (e.touches.length > 0) {
-        const touch = e.touches[0];
-        const rect = e.target.getBoundingClientRect();
-        showTouchFeedback(touch.clientX - rect.left, touch.clientY - rect.top);
+
+      if (e.pointerType === 'touch') {
+        const rect = gameContainerEl.getBoundingClientRect();
+        showTouchFeedback(e.clientX - rect.left, e.clientY - rect.top);
       }
-      
+
       handleInput();
-    }, { passive: false }); // passive: false allows preventDefault
-    
-    // Prevent double-tap zoom on mobile
-    document.getElementById('game-container').addEventListener('touchend', (e) => {
-      e.preventDefault();
-    }, { passive: false });
+    }
+
+    // IMPORTANT: only one listener – no click + touch duplication
+    gameContainerEl.addEventListener('pointerdown', handlePrimaryPointerDown, { passive: false });
 
     // Admin reset leaderboard button
     const adminResetBtn = document.getElementById('adminResetBtn');
@@ -5105,21 +5005,16 @@
     // Initialize game after assets load
     initAudioLayer(); // Initialize audio system first
     loadAssets().then(() => {
-      debugLog('✅ Assets loaded successfully!');
-      debugLog('🖼️ Checking assets - rocket:', !!assets.rocket, 'flame:', !!assets.flame, 'restartLogo:', !!assets.restartLogo);
       // Set bird texture after assets are loaded
       if (game.bird) {
         game.bird.setTexture();
-        debugLog('🚀 Bird texture set. Sprite has texture:', !!game.bird.sprite.texture);
       }
       initGame();
       // Start background music immediately after loading
       createBackgroundMusic();
       // Notify parent frame
       notifyGameReady();
-    }).catch((err) => {
-      debugLog('⚠️ Asset loading failed:', err);
-      debugLog('🖼️ Assets state - rocket:', !!assets.rocket, 'flame:', !!assets.flame);
+    }).catch(() => {
       // Initialize anyway with fallback graphics
       initGame();
       // Notify parent frame even on error
