@@ -934,6 +934,131 @@
     // ==================== MOBILE DETECTION ====================
     // Detect mobile once, reuse everywhere
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const isMetaMaskMobile = /MetaMaskMobile|MetaMask/i.test(navigator.userAgent) && isMobile;
+    
+    // Performance profiles for different contexts
+    const PERF_PROFILE = isMetaMaskMobile ? {
+      resolution: 1,
+      antialias: false,
+      maxFPS: 60,
+      effectScale: 0.5,
+      particleScale: 0.4,
+      enableFilters: false,
+      cullDistance: 100, // Cull objects 100px off-screen
+      skipRenderThreshold: 0.8 // Skip heavy updates if frame time > 13.3ms (80% of 16.67ms budget)
+    } : isMobile ? {
+      resolution: 1,
+      antialias: false,
+      maxFPS: 45,
+      effectScale: 0.6,
+      particleScale: 0.5,
+      enableFilters: false,
+      cullDistance: 80,
+      skipRenderThreshold: 0.85
+    } : {
+      resolution: window.devicePixelRatio || 1,
+      antialias: true,
+      maxFPS: 60,
+      effectScale: 1.0,
+      particleScale: 1.0,
+      enableFilters: true,
+      cullDistance: 50, // Desktop can handle closer culling
+      skipRenderThreshold: 1.0 // No frame skipping on desktop
+    };
+    
+    // FPS monitoring
+    const enablePerfHud = /[?&]debug=1/.test(window.location.search) || localStorage.getItem('perfHud') === '1';
+    let fpsText = null;
+    let fpsUpdateCounter = 0;
+    
+    // Frame budget management
+    let lastFrameTime = performance.now();
+    let frameTimeAvg = 16.67; // Start at 60fps (16.67ms)
+    const FRAME_TIME_SAMPLES = 10;
+    let frameTimes = new Array(FRAME_TIME_SAMPLES).fill(16.67);
+    let frameTimeIndex = 0;
+    
+    // Performance logging hook
+    window.__perfLog = function(event, data) {
+      if (enablePerfHud || DEBUG) {
+        console.log(`[PERF] ${event}:`, data);
+      }
+    };
+    
+    // Ticker management for MetaMask interactions
+    let tickerPaused = false;
+    let pauseOverlay = null;
+    let pixiApp = null; // Will be set after PIXI app is created
+    
+    function pauseGameTicker(reason = 'unknown') {
+      if (!pixiApp || tickerPaused) return;
+      tickerPaused = true;
+      pixiApp.ticker.stop();
+      window.__perfLog('ticker-paused', { reason });
+      
+      // Show pause overlay
+      if (!pauseOverlay) {
+        pauseOverlay = document.createElement('div');
+        pauseOverlay.style.cssText = `
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0,0,0,0.7);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #00ffff;
+          font-family: 'Barlow', sans-serif;
+          font-size: 18px;
+          z-index: 1000;
+          pointer-events: none;
+        `;
+        pauseOverlay.textContent = 'Waiting for MetaMask...';
+        document.getElementById('game-container').appendChild(pauseOverlay);
+      }
+      pauseOverlay.style.display = 'flex';
+    }
+    
+    function resumeGameTicker(reason = 'unknown') {
+      if (!pixiApp || !tickerPaused) return;
+      tickerPaused = false;
+      pixiApp.ticker.start();
+      window.__perfLog('ticker-resumed', { reason });
+      
+      // Hide pause overlay
+      if (pauseOverlay) {
+        pauseOverlay.style.display = 'none';
+      }
+    }
+    
+    // Visibility change handler for MetaMask mobile
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        pauseGameTicker('visibility-hidden');
+      } else {
+        // Small delay to ensure MetaMask UI is fully dismissed
+        setTimeout(() => {
+          resumeGameTicker('visibility-visible');
+        }, 100);
+      }
+    });
+    
+    // Focus/blur handlers for additional safety
+    window.addEventListener('blur', () => {
+      if (isMetaMaskMobile) {
+        pauseGameTicker('window-blur');
+      }
+    });
+    
+    window.addEventListener('focus', () => {
+      if (isMetaMaskMobile) {
+        setTimeout(() => {
+          resumeGameTicker('window-focus');
+        }, 100);
+      }
+    });
 
     // ==================== GAME STATE ====================
     const GAME_WIDTH = 400;
@@ -1080,16 +1205,20 @@
     // Connect wallet handler with mobile support
     async function connectWallet() {
       debugLog('=== MOBILE WALLET CONNECT START ===');
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      debugLog('Mobile device:', isMobile);
+      const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      debugLog('Mobile device:', isMobileDevice);
       debugLog('window.ethereum present:', !!window.ethereum);
+      
+      // Pause game during wallet interaction
+      pauseGameTicker('wallet-connect');
       
       const connectBtn = document.getElementById('connect-btn');
       const disconnectBtn = document.getElementById('disconnect-btn');
       const purchaseBtn = document.getElementById('purchase-btn');
       
       if (!window.ethereum) {
-        if (isMobile) {
+        resumeGameTicker('wallet-connect-no-provider');
+        if (isMobileDevice) {
           const deepLink = `https://metamask.app.link/dapp/${window.location.host}${window.location.pathname}${window.location.search}`;
           debugLog('No wallet detected, opening MetaMask:', deepLink);
           alert('Opening MetaMask mobile app...');
@@ -1195,9 +1324,11 @@
         }
         
         debugLog('=== MOBILE WALLET CONNECT SUCCESS ===');
+        resumeGameTicker('wallet-connect-success');
       } catch (err) {
         console.error(err);
         alert('Wallet connection failed');
+        resumeGameTicker('wallet-connect-error');
       }
     }
 
@@ -1283,6 +1414,9 @@
       try {
         if (purchaseBtn) purchaseBtn.disabled = true;
         window.isPurchasing = true;
+        
+        // Pause game during purchase transaction
+        pauseGameTicker('purchase-start');
 
         debugLog('=== STARTING CREDIT PURCHASE ===');
         debugLog('Price:', CREDIT_PRICE_WEI.toString(), 'wei');
@@ -1345,6 +1479,7 @@
       } finally {
         window.isPurchasing = false;
         if (purchaseBtn) purchaseBtn.disabled = false;
+        resumeGameTicker('purchase-complete');
       }
     }
 
@@ -1637,33 +1772,38 @@
     showTutorialIfNeeded();
 
     // ==================== PIXI.JS SETUP ====================
-    // Optimize renderer settings for mobile (reuse isMobile variable defined above)
+    // Optimize renderer settings using performance profile
     
     const app = new PIXI.Application({
       width: GAME_WIDTH,
       height: GAME_HEIGHT,
       backgroundColor: 0x000000,
-      antialias: !isMobile,                            // cheaper on mobile
-      resolution: isMobile ? 1 : (window.devicePixelRatio || 1),
+      antialias: PERF_PROFILE.antialias,
+      resolution: PERF_PROFILE.resolution,
       autoDensity: true,
-      powerPreference: 'high-performance'
+      powerPreference: 'high-performance',
+      transparent: false // Opaque background for better compositing
     });
     
-    // Global texture behaviour
-    PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.LINEAR;
-    // On mobile, round to whole pixels (less shimmering when low‑res)
-    PIXI.settings.ROUND_PIXELS = isMobile;
+    // Set global app reference for ticker management
+    pixiApp = app;
     
-    // Target 60 FPS, but allow slowdown on low-end devices
-    app.ticker.maxFPS = 60;
-    if (isMobile) {
-      app.ticker.minFPS = 30; // mobile can drop to 30 without going crazy
-      // Additional mobile GPU optimizations
-      app.renderer.resolution = 1;
-      app.ticker.maxFPS = 45; // Lower FPS cap on mobile
-      PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.NEAREST;
-      PIXI.settings.ROUND_PIXELS = true;
+    // Global texture behaviour
+    PIXI.settings.SCALE_MODE = PERF_PROFILE.antialias ? PIXI.SCALE_MODES.LINEAR : PIXI.SCALE_MODES.NEAREST;
+    PIXI.settings.ROUND_PIXELS = !PERF_PROFILE.antialias;
+    
+    // Configure ticker based on performance profile
+    app.ticker.maxFPS = PERF_PROFILE.maxFPS;
+    if (isMobile || isMetaMaskMobile) {
+      app.ticker.minFPS = 30; // Allow graceful degradation
     }
+    
+    window.__perfLog('renderer-init', {
+      isMetaMaskMobile,
+      isMobile,
+      resolution: PERF_PROFILE.resolution,
+      maxFPS: PERF_PROFILE.maxFPS
+    });
 
     document.getElementById('game-container').appendChild(app.view);
     app.view.id = 'pixi-canvas';
@@ -1671,6 +1811,21 @@
     // Container for all game objects
     const gameContainer = new PIXI.Container();
     app.stage.addChild(gameContainer);
+    
+    // FPS overlay (if enabled)
+    if (enablePerfHud) {
+      fpsText = new PIXI.Text('FPS: --', {
+        fontFamily: 'monospace',
+        fontSize: 16,
+        fill: 0x00ff00,
+        stroke: 0x000000,
+        strokeThickness: 3
+      });
+      fpsText.position.set(10, 10);
+      fpsText.zIndex = 10000;
+      app.stage.addChild(fpsText);
+      window.__perfLog('fps-overlay-enabled', { position: 'top-left' });
+    }
 
     // Powerup visual effects layer (drawn on top of everything)
     const powerupEffectsLayer = new PIXI.Graphics();
@@ -2002,8 +2157,13 @@
     }
 
     function updateStars() {
-      // Mobile: update every other frame to reduce CPU load
-      if (isMobile && (frameCount % 2 !== 0)) return;
+      // Adaptive quality: skip if frame budget exceeded
+      const frameBudget = 16.67 * PERF_PROFILE.skipRenderThreshold;
+      if (frameTimeAvg > frameBudget) {
+        if (frameCount % 4 !== 0) return; // Update every 4th frame when stressed
+      } else if (isMobile && (frameCount % 2 !== 0)) {
+        return; // Normal mobile: every other frame
+      }
       
       for (const star of stars) {
         star.x -= star.speed * (game.speed / game.baseSpeed);
@@ -2021,8 +2181,13 @@
     }
     
     function updateBackgroundLayers() {
-      // Mobile: update every other frame to reduce CPU load
-      if (isMobile && (frameCount % 2 !== 0)) return;
+      // Adaptive quality: skip if frame budget exceeded
+      const frameBudget = 16.67 * PERF_PROFILE.skipRenderThreshold;
+      if (frameTimeAvg > frameBudget) {
+        if (frameCount % 4 !== 0) return; // Update every 4th frame when stressed
+      } else if (isMobile && (frameCount % 2 !== 0)) {
+        return; // Normal mobile: every other frame
+      }
       
       const time = Date.now() * 0.0005;
       for (const layer of bgLayers) {
@@ -2677,9 +2842,18 @@
 
       update() {
         this.x -= game.speed;
-        this.updatePosition();
         
-        // Check scoring
+        // Viewport culling: skip rendering if far off-screen
+        const cullDistance = PERF_PROFILE.cullDistance;
+        const isVisible = this.x > -cullDistance && this.x < GAME_WIDTH + cullDistance;
+        this.topSprite.visible = isVisible;
+        this.bottomSprite.visible = isVisible;
+        
+        if (isVisible) {
+          this.updatePosition();
+        }
+        
+        // Check scoring (always run for gameplay)
         if (!this.scored && this.x < game.bird.x) {
           this.scored = true;
           // All pipes are red candles in this game (not target practice)
@@ -2726,8 +2900,17 @@
       update() {
         this.x += this.vx;
         this.y += this.vy;
-        this.sprite.x = this.x;
-        this.sprite.y = this.y;
+        
+        // Viewport culling
+        const cullDistance = PERF_PROFILE.cullDistance;
+        const isVisible = this.x > -cullDistance && this.x < GAME_WIDTH + cullDistance &&
+                         this.y > -cullDistance && this.y < GAME_HEIGHT + cullDistance;
+        this.sprite.visible = isVisible;
+        
+        if (isVisible) {
+          this.sprite.x = this.x;
+          this.sprite.y = this.y;
+        }
         
         return this.x < -10 || this.x > GAME_WIDTH + 10 || 
                this.y < -10 || this.y > GAME_HEIGHT + 10;
@@ -2910,15 +3093,23 @@
 
       update(game) {
         this.x -= 2; // Original speed = 2
-        this.sprite.x = this.x;
-        this.sprite.y = this.y;
+        
+        // Viewport culling
+        const cullDistance = PERF_PROFILE.cullDistance;
+        const isVisible = this.x > -cullDistance && this.x < GAME_WIDTH + cullDistance;
+        this.sprite.visible = isVisible;
+        
+        if (isVisible) {
+          this.sprite.x = this.x;
+          this.sprite.y = this.y;
 
-        // Pulsing scale animation - 70% slower, scales with game speed
-        // Apply pulse on top of base scale
-        const speedFactor = game ? (game.speed / game.baseSpeed) : 1;
-        const pulseFactor = 1.0 + 0.15 * Math.sin(frameCount * 0.036 * speedFactor);
-        const finalScale = (this.baseScale || 1) * pulseFactor;
-        this.sprite.scale.set(finalScale);
+          // Pulsing scale animation - 70% slower, scales with game speed
+          // Apply pulse on top of base scale
+          const speedFactor = game ? (game.speed / game.baseSpeed) : 1;
+          const pulseFactor = 1.0 + 0.15 * Math.sin(frameCount * 0.036 * speedFactor);
+          const finalScale = (this.baseScale || 1) * pulseFactor;
+          this.sprite.scale.set(finalScale);
+        }
 
         return this.x < -this.r;
       }
@@ -4254,6 +4445,14 @@
       // Force audio
       forceAudioUnlock();
       
+      // Performance logging
+      window.__perfLog('game-start', {
+        credits: window.localCredits,
+        isMobile,
+        isMetaMaskMobile,
+        profile: PERF_PROFILE
+      });
+      
       // Notify parent that game is starting
       window.parent.postMessage({ 
         type: 'GAME_STARTED',
@@ -4447,7 +4646,38 @@
 
     // ==================== GAME LOOP ====================
     app.ticker.add((delta) => {
+      // PERFORMANCE NOTE: This game uses fixed timestep (not delta-based movement)
+      // because maxFPS is locked (60 on desktop/MetaMask mobile, 45 on regular mobile).
+      // This simplifies physics and ensures consistent behavior across devices.
+      // The `delta` parameter is available but intentionally unused.
+      
+      // Track frame time for adaptive quality
+      const now = performance.now();
+      const frameTime = now - lastFrameTime;
+      lastFrameTime = now;
+      
+      // Rolling average of frame times
+      frameTimes[frameTimeIndex] = frameTime;
+      frameTimeIndex = (frameTimeIndex + 1) % FRAME_TIME_SAMPLES;
+      frameTimeAvg = frameTimes.reduce((a, b) => a + b, 0) / FRAME_TIME_SAMPLES;
+      
       frameCount++;
+      
+      // Update FPS overlay if enabled
+      if (fpsText && ++fpsUpdateCounter % 30 === 0) {
+        const fps = Math.round(app.ticker.FPS);
+        const ms = frameTimeAvg.toFixed(1);
+        fpsText.text = `FPS: ${fps} (${ms}ms)`;
+        
+        // Color code: green = good, yellow = stressed, red = bad
+        if (frameTimeAvg < 16.67) {
+          fpsText.style.fill = 0x00ff00; // Green
+        } else if (frameTimeAvg < 22) {
+          fpsText.style.fill = 0xffff00; // Yellow
+        } else {
+          fpsText.style.fill = 0xff0000; // Red
+        }
+      }
       
       // Apply screen warp and shake transforms before rendering
       applyScreenTransforms();
