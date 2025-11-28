@@ -1824,6 +1824,8 @@
     // Global texture behaviour
     PIXI.settings.SCALE_MODE = PERF_PROFILE.antialias ? PIXI.SCALE_MODES.LINEAR : PIXI.SCALE_MODES.NEAREST;
     PIXI.settings.ROUND_PIXELS = !PERF_PROFILE.antialias;
+    PIXI.settings.MIPMAP_TEXTURES = PIXI.MIPMAP_MODES.ON; // Enable mipmaps for smoother scaling
+    PIXI.settings.ANISOTROPIC_LEVEL = 0; // Let GPU decide (0 = auto, 16 = max quality)
     
     // Configure ticker based on performance profile
     app.ticker.maxFPS = PERF_PROFILE.maxFPS;
