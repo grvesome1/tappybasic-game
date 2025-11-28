@@ -1480,8 +1480,8 @@
         const balance = await provider.getBalance(walletAddress);
         debugLog('Wallet balance:', ethers.formatEther(balance), 'ETH');
         
-        const requiredAmount = ethers.BigNumber.from(CREDIT_PRICE_WEI);
-        const hasEnoughBalance = balance.gte(requiredAmount);
+        const requiredAmount = BigInt(CREDIT_PRICE_WEI);
+        const hasEnoughBalance = balance >= requiredAmount;
         
         if (!hasEnoughBalance) {
           const needed = ethers.formatEther(requiredAmount);
@@ -1500,7 +1500,7 @@
           debugLog('Gas estimate:', gasEstimate.toString());
           
           // Add 20% buffer to gas estimate
-          const gasLimit = gasEstimate.mul(120).div(100);
+          const gasLimit = (gasEstimate * BigInt(120)) / BigInt(100);
           debugLog('Gas limit with buffer:', gasLimit.toString());
         } catch (gasErr) {
           console.error('Gas estimation failed:', gasErr);
@@ -1513,7 +1513,7 @@
         
         const txParams = {
           value: requiredAmount,
-          gasLimit: gasEstimate.mul(120).div(100) // 20% buffer
+          gasLimit: (gasEstimate * BigInt(120)) / BigInt(100) // 20% buffer
         };
         
         const tx = await contract.purchaseCreditsWithETH(1, txParams);
