@@ -2349,12 +2349,12 @@
           shoot: './assets/audio/gun.mp3', // Added for shooting bullets
           invincibility: './assets/audio/invincibility.mp3', // Added for invincibility powerup
           powerup: './assets/audio/tbagburst.mp3', // Added for generic powerup collection
+          flap: './assets/audio/flap.mp3', // Added flap sound to mobile
         };
         
         // Desktop gets more sounds
         if (!isMobile) {
           Object.assign(soundMap, {
-            flap: './assets/audio/flap.mp3',
           });
         }
         
@@ -2366,8 +2366,8 @@
       }
       
       async loadMusic(url) {
-        if (isMobile || this.disabled) {
-          debugLog('[Audio] Background music DISABLED on mobile');
+        if (this.disabled) {
+          debugLog('[Audio] Music loading disabled');
           return;
         }
         
@@ -2429,7 +2429,7 @@
       }
       
       startMusic() {
-        if (isMobile || this.disabled || this.musicMuted || !this.buffers.music) return;
+        if (this.disabled || this.musicMuted || !this.buffers.music) return;
         if (this.musicSource) return; // Already playing
         
         try {
@@ -2472,7 +2472,7 @@
         this.musicMuted = muted;
         if (muted) {
           this.stopMusic();
-        } else if (!isMobile && this.buffers.music) {
+        } else if (this.buffers.music) {
           this.startMusic();
         }
       }
@@ -2530,10 +2530,8 @@
       // Load all sounds
       await audioManager.loadAllSounds();
       
-      // Load background music (desktop only)
-      if (!isMobile) {
-        await audioManager.loadMusic('./assets/audio/background.mp3');
-      }
+      // Load background music (now enabled for mobile too!)
+      await audioManager.loadMusic('./assets/audio/background.mp3');
       
       debugLog('[Audio] AudioManager initialized');
     }
