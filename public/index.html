@@ -4184,6 +4184,7 @@
 
     function startGame() {
       debugLog('=== START GAME CALLED ===');
+      alert('DEBUG: startGame called'); // TEMP DEBUG
 
       if (!walletAddress) {
         alert('Connect your wallet first.');
@@ -4197,9 +4198,12 @@
         updateCreditDisplay();
         debugLog('🎮 Pre-game credit check:', window.localCredits);
       }
+      
+      alert(`DEBUG: Credits=${window.localCredits}, wallet=${walletAddress ? 'connected' : 'null'}`); // TEMP DEBUG
 
       if (typeof window.useCredit === 'function') {
         const ok = window.useCredit();
+        alert(`DEBUG: useCredit returned ${ok}`); // TEMP DEBUG
         if (!ok) {
           return;
         }
