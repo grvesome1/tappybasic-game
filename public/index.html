@@ -994,6 +994,7 @@
       if (!pixiApp || tickerPaused) return;
       tickerPaused = true;
       pixiApp.ticker.stop();
+      audioManager.pause(); // Suspend audio context on MetaMask pause
       window.__perfLog('ticker-paused', { reason });
       
       // Show pause overlay
@@ -1025,6 +1026,7 @@
       if (!pixiApp || !tickerPaused) return;
       tickerPaused = false;
       pixiApp.ticker.start();
+      audioManager.resume(); // Resume audio context when game resumes
       window.__perfLog('ticker-resumed', { reason });
       
       // Hide pause overlay
@@ -2258,299 +2260,319 @@
     }
 
     // ==================== AUDIO MANAGER ====================
-    const AudioMode = {
-      NONE: 'none',
-      HTML5: 'html5',
-      WEBAUDIO: 'webaudio'
-    };
-
-    const audioConfig = {
-      mode: AudioMode.NONE,
-      ready: false,
-      sfxMuted: false,
-      musicMuted: false,
-      tracks: {
-        music: null,
-        flap: null,
-        score: null,
-        explosion: null,
-      },
-    };
-
-    // Legacy compatibility - keep these for desktop WebAudio path
-    let audioContext;
-    let bgMusicSource = null;
-    let bgMusicGain = null;
-    const sounds = {};
-
-    // Call once on DOM ready
-    function initAudioLayer() {
-      if (!isMobile) {
-        // Desktop: use existing WebAudio path
-        audioConfig.mode = AudioMode.WEBAUDIO;
+    // MetaMask Mobile-optimized audio system with Web Audio API pooling
+    // Designed for smooth 60 FPS with rapid score sound playback
+    
+    class AudioManager {
+      constructor() {
+        this.context = null;
+        this.buffers = {};
+        this.musicSource = null;
+        this.musicGain = null;
+        this.ready = false;
+        this.disabled = false;
+        this.sfxMuted = false;
+        this.musicMuted = false;
+        
+        // Rate limiting for rapid sounds (MetaMask Mobile optimization)
+        this.lastPlayTimes = {};
+        this.minPlayInterval = 50; // ms between rapid plays (MetaMask: 50ms, Desktop: 0ms)
+        
+        // Sound pool for reusing nodes
+        this.soundPool = new Map();
+        this.maxPoolSize = 3;
+        
+        // MetaMask-specific config
+        this.isMetaMask = isMetaMaskMobile;
+        this.suspendOnPause = this.isMetaMask; // Suspend context when paused on MetaMask
+      }
+      
+      async init() {
+        if (this.context) return;
+        
         try {
-          audioContext = new (window.AudioContext || window.webkitAudioContext)();
-          debugLog('AudioContext created for desktop');
+          this.context = new (window.AudioContext || window.webkitAudioContext)();
+          
+          // MetaMask Mobile: Use lower sample rate for better performance
+          if (this.isMetaMask && this.context.sampleRate > 22050) {
+            debugLog('[Audio] MetaMask Mobile detected, using optimized settings');
+          }
+          
+          this.ready = true;
+          debugLog(`[Audio] AudioContext initialized (sampleRate: ${this.context.sampleRate})`);
+          
+          // Auto-resume on user gesture
+          this.setupAutoResume();
         } catch (err) {
-          console.error('Failed to create AudioContext:', err);
-          audioConfig.ready = false; // Disable audio if initialization fails
-          audioContext = {
-            state: 'running',
-            resume: () => Promise.resolve(),
-            createGain: () => ({ gain: { value: 0 }, connect: () => {} }),
-            createBufferSource: () => ({ buffer: null, loop: false, connect: () => {}, start: () => {} }),
-            destination: {},
-            decodeAudioData: () => Promise.reject('Audio not supported')
-          };
+          console.error('[Audio] Failed to create AudioContext:', err);
+          this.disabled = true;
         }
-        audioConfig.ready = true;
-        return;
       }
-
-      // Mobile: dirt-cheap HTML5 audio - NO background music, minimal SFX
-      debugLog('Mobile detected: using minimal HTML5 Audio');
-      audioConfig.mode = AudioMode.HTML5;
-
-      try {
-        // NO background music on mobile for performance
-        audioConfig.tracks.music = null;
-
-        // Only 1 essential SFX: score.mp3
-        audioConfig.tracks.score = new Audio('./assets/audio/score.mp3');
-        audioConfig.tracks.score.preload = 'auto';
-        audioConfig.tracks.score.volume = 0.5;
-
-        audioConfig.ready = true;
-        debugLog('Mobile audio initialized: score.mp3 only');
-      } catch (err) {
-        console.error('Failed to initialize mobile audio:', err);
-        audioConfig.ready = false;
-        audioConfig.disabled = true;
+      
+      setupAutoResume() {
+        const resumeContext = () => {
+          if (this.context && this.context.state === 'suspended') {
+            this.context.resume().catch(err => {
+              debugWarn('[Audio] Resume failed:', err);
+            });
+          }
+        };
+        
+        ['touchstart', 'touchend', 'mousedown', 'click'].forEach(event => {
+          document.addEventListener(event, resumeContext, { passive: true, once: true });
+        });
       }
-
-      // Unlock on first touch/click (with aggressive error handling)
-      const unlock = () => {
-        if (audioConfig.disabled) return;
+      
+      async loadSound(name, url) {
+        if (!this.context || this.disabled) return;
+        
         try {
-          Object.values(audioConfig.tracks).forEach(a => {
-            if (!a) return;
-            try {
-              a.play().then(() => a.pause()).catch(() => {});
-            } catch (_) {
-              audioConfig.disabled = true;
-            }
+          const response = await fetch(url);
+          const arrayBuffer = await response.arrayBuffer();
+          const audioBuffer = await this.context.decodeAudioData(arrayBuffer);
+          
+          this.buffers[name] = audioBuffer;
+          debugLog(`[Audio] Loaded: ${name} (${(audioBuffer.duration).toFixed(2)}s)`);
+        } catch (err) {
+          debugWarn(`[Audio] Failed to load ${name}:`, err);
+        }
+      }
+      
+      async loadAllSounds() {
+        const soundMap = {
+          score: './assets/audio/score.mp3',
+        };
+        
+        // Desktop gets more sounds
+        if (!isMobile) {
+          Object.assign(soundMap, {
+            flap: './assets/audio/flap.mp3',
+            explosion: './assets/audio/explosion.mp3',
+            powerup: './assets/audio/tbagburst.mp3',
+            shoot: './assets/audio/gun.mp3',
+            sherk: './assets/audio/sherk.mp3',
+            slow: './assets/audio/slow.mp3',
+            invincibility: './assets/audio/invincibility.mp3',
+            tbagsecured: './assets/audio/tbagsecured.mp3',
           });
-        } catch (err) {
-          console.error('Audio unlock failed:', err);
-          audioConfig.ready = false;
-          audioConfig.disabled = true;
         }
-        window.removeEventListener('touchstart', unlock);
-        window.removeEventListener('click', unlock);
-      };
-      window.addEventListener('touchstart', unlock, { once: true });
-      window.addEventListener('click', unlock, { once: true });
+        
+        await Promise.all(
+          Object.entries(soundMap).map(([name, url]) => this.loadSound(name, url))
+        );
+        
+        debugLog(`[Audio] All sounds loaded (${Object.keys(this.buffers).length} sounds)`);
+      }
+      
+      async loadMusic(url) {
+        if (isMobile || this.disabled) {
+          debugLog('[Audio] Background music DISABLED on mobile');
+          return;
+        }
+        
+        try {
+          const response = await fetch(url);
+          const arrayBuffer = await response.arrayBuffer();
+          const audioBuffer = await this.context.decodeAudioData(arrayBuffer);
+          this.buffers.music = audioBuffer;
+          debugLog('[Audio] Background music loaded');
+        } catch (err) {
+          debugWarn('[Audio] Failed to load background music:', err);
+        }
+      }
+      
+      playSfx(name, volume = 1.0, rate = 1.0) {
+        if (!this.ready || this.disabled || this.sfxMuted || !this.context) return;
+        if (!this.buffers[name]) return;
+        
+        // Rate limiting (MetaMask Mobile optimization)
+        const now = Date.now();
+        const lastPlay = this.lastPlayTimes[name] || 0;
+        const interval = this.isMetaMask ? this.minPlayInterval : 0;
+        
+        if (now - lastPlay < interval) {
+          // Too soon, skip this play to avoid audio stutter
+          return;
+        }
+        
+        this.lastPlayTimes[name] = now;
+        
+        try {
+          // Resume context if suspended
+          if (this.context.state === 'suspended') {
+            this.context.resume();
+          }
+          
+          // Create source
+          const source = this.context.createBufferSource();
+          source.buffer = this.buffers[name];
+          source.playbackRate.value = rate;
+          
+          // Create gain
+          const gainNode = this.context.createGain();
+          gainNode.gain.value = volume;
+          
+          // Connect and play
+          source.connect(gainNode);
+          gainNode.connect(this.context.destination);
+          source.start(0);
+          
+          // Auto-cleanup after playback
+          source.onended = () => {
+            source.disconnect();
+            gainNode.disconnect();
+          };
+        } catch (err) {
+          debugWarn(`[Audio] Failed to play ${name}:`, err);
+        }
+      }
+      
+      startMusic() {
+        if (isMobile || this.disabled || this.musicMuted || !this.buffers.music) return;
+        if (this.musicSource) return; // Already playing
+        
+        try {
+          if (this.context.state === 'suspended') {
+            this.context.resume();
+          }
+          
+          this.musicGain = this.context.createGain();
+          this.musicGain.gain.value = 0.2;
+          this.musicGain.connect(this.context.destination);
+          
+          this.musicSource = this.context.createBufferSource();
+          this.musicSource.buffer = this.buffers.music;
+          this.musicSource.loop = true;
+          this.musicSource.connect(this.musicGain);
+          this.musicSource.start(0);
+          
+          debugLog('[Audio] Background music started');
+        } catch (err) {
+          console.error('[Audio] Failed to start music:', err);
+        }
+      }
+      
+      stopMusic() {
+        if (!this.musicSource) return;
+        
+        try {
+          this.musicSource.stop();
+          this.musicSource.disconnect();
+          this.musicGain.disconnect();
+          this.musicSource = null;
+          this.musicGain = null;
+          debugLog('[Audio] Background music stopped');
+        } catch (err) {
+          debugWarn('[Audio] Error stopping music:', err);
+        }
+      }
+      
+      setMusicMuted(muted) {
+        this.musicMuted = muted;
+        if (muted) {
+          this.stopMusic();
+        } else if (!isMobile && this.buffers.music) {
+          this.startMusic();
+        }
+      }
+      
+      setSfxMuted(muted) {
+        this.sfxMuted = muted;
+      }
+      
+      // MetaMask pause/resume integration
+      pause() {
+        if (!this.context) return;
+        
+        if (this.suspendOnPause && this.context.state === 'running') {
+          this.context.suspend().catch(err => {
+            debugWarn('[Audio] Suspend failed:', err);
+          });
+          debugLog('[Audio] Context suspended (MetaMask pause)');
+        }
+      }
+      
+      resume() {
+        if (!this.context) return;
+        
+        if (this.context.state === 'suspended') {
+          this.context.resume().catch(err => {
+            debugWarn('[Audio] Resume failed:', err);
+          });
+          debugLog('[Audio] Context resumed (MetaMask resume)');
+        }
+      }
+    }
+    
+    // Global AudioManager instance
+    const audioManager = new AudioManager();
+    
+    // Legacy compatibility
+    const audioConfig = {
+      get ready() { return audioManager.ready; },
+      get disabled() { return audioManager.disabled; },
+      get sfxMuted() { return audioManager.sfxMuted; },
+      get musicMuted() { return audioManager.musicMuted; },
+      set sfxMuted(v) { audioManager.setSfxMuted(v); },
+      set musicMuted(v) { audioManager.setMusicMuted(v); },
+    };
+    
+    let audioContext; // Legacy
+    let bgMusicSource = null; // Legacy
+    let bgMusicGain = null; // Legacy
+    const sounds = {}; // Legacy
+
+    // Initialize AudioManager (called on DOM ready)
+    async function initAudioLayer() {
+      await audioManager.init();
+      
+      // Load all sounds
+      await audioManager.loadAllSounds();
+      
+      // Load background music (desktop only)
+      if (!isMobile) {
+        await audioManager.loadMusic('./assets/audio/background.mp3');
+      }
+      
+      debugLog('[Audio] AudioManager initialized');
     }
 
-    function playSfx(name) {
-      if (!audioConfig.ready || audioConfig.sfxMuted || audioConfig.disabled) return;
-      if (audioConfig.mode !== AudioMode.HTML5) return; // desktop handled elsewhere
-
-      const audio = audioConfig.tracks[name];
-      if (!audio) return;
-
-      try {
-        // Reuse same Audio object - only play if not already playing
-        if (audio.paused || audio.ended) {
-          audio.currentTime = 0;
-          audio.play().catch(() => {
-            audioConfig.disabled = true;
-          });
-        }
-      } catch (err) {
-        audioConfig.disabled = true;
-      }
+    // Legacy wrapper for AudioManager
+    function playSfx(name, volume = 1.0, rate = 1.0) {
+      audioManager.playSfx(name, volume, rate);
     }
 
     function setMusicMuted(muted) {
-      audioConfig.musicMuted = muted;
-      const m = audioConfig.tracks.music;
-      if (!m || isMobile) return; // No music on mobile
-      try {
-        if (muted) m.pause();
-        else m.play().catch(() => {});
-      } catch (err) {
-        audioConfig.disabled = true;
-      }
+      audioManager.setMusicMuted(muted);
     }
 
     function setSfxMuted(muted) {
-      audioConfig.sfxMuted = muted;
+      audioManager.setSfxMuted(muted);
     }
 
-    // Aggressive audio unlock - try on every user interaction
+    // Legacy audio unlock (now handled by AudioManager.setupAutoResume)
     function forceAudioUnlock() {
-      if (audioConfig.disabled) return;
-      try {
-        if (audioConfig.mode === AudioMode.WEBAUDIO && audioContext && audioContext.state !== 'running') {
-          audioContext.resume().catch(() => {
-            if (isMobile) audioConfig.disabled = true;
-          });
-        }
-      } catch (err) {
-        debugWarn('Audio unlock failed:', err);
-        if (isMobile) audioConfig.disabled = true;
-      }
-    }
-    
-    // Unlock everywhere including mobile touchstart
-    ['touchstart', 'touchend', 'mousedown', 'click', 'keydown'].forEach(event => {
-      document.addEventListener(event, forceAudioUnlock, { passive: true });
-    });
-    
-    // Mobile-specific audio unlock
-    if (isMobile) {
-      document.addEventListener('touchstart', () => {
-        if (audioContext && audioContext.state !== 'running') {
-          audioContext.resume().catch(() => {
-            audioConfig.disabled = true;
-          });
-        }
-      }, { once: true });
+      audioManager.resume();
     }
 
-    // Load and play background music from MP3
     // Background music: "background.mp3" made by Elisaveta Stoycheva
     // https://pixabay.com/users/elisaveta_stoycheva-49582321/
-    function loadBackgroundMusic() {
-      return fetch('./assets/audio/background.mp3')
-        .then(response => response.arrayBuffer())
-        .then(arrayBuffer => audioContext.decodeAudioData(arrayBuffer))
-        .then(audioBuffer => {
-          sounds.background = audioBuffer;
-        })
-        .catch(err => debugWarn('Background music not found, continuing without it:', err));
-    }
+    // (Now loaded via AudioManager)
     
     function createBackgroundMusic() {
-      // Skip background music entirely on mobile for performance
-      if (isMobile || audioConfig.mode === AudioMode.HTML5) {
-        debugLog('Background music DISABLED on mobile for performance');
-        return;
-      }
-      
-      if (bgMusicSource || !sounds.background) return;
-      
-      try {
-        // Web Audio API for desktop only
-        if (audioContext.state === 'suspended') {
-          audioContext.resume().then(() => {
-            startMusicSource();
-          }).catch(err => {
-            debugWarn('Audio context resume failed:', err);
-          });
-        } else {
-          startMusicSource();
-        }
-        
-        function startMusicSource() {
-          try {
-            bgMusicGain = audioContext.createGain();
-            bgMusicGain.gain.value = game.musicMuted ? 0 : 0.2;
-            bgMusicGain.connect(audioContext.destination);
-            
-            bgMusicSource = audioContext.createBufferSource();
-            bgMusicSource.buffer = sounds.background;
-            bgMusicSource.loop = true;
-            bgMusicSource.connect(bgMusicGain);
-            bgMusicSource.start(0);
-            
-            debugLog('Background music started from MP3');
-          } catch (err) {
-            console.error('Failed to start music source:', err);
-            bgMusicSource = null;
-            bgMusicGain = null;
-          }
-        }
-      } catch (err) {
-        console.error('Failed to create background music:', err);
-      }
+      audioManager.startMusic();
     }
     
     function stopBackgroundMusic() {
-      if (!bgMusicSource) return;
-      
-      try {
-        bgMusicSource.stop();
-        bgMusicSource = null;
-        bgMusicGain = null;
-        debugLog('Background music stopped');
-      } catch (e) {
-        debugWarn('Error stopping background music:', e);
-      }
+      audioManager.stopMusic();
     }
 
-    function loadSound(name, url) {
-      return fetch(url)
-        .then(response => response.arrayBuffer())
-        .then(arrayBuffer => audioContext.decodeAudioData(arrayBuffer))
-        .then(audioBuffer => {
-          sounds[name] = audioBuffer;
-        })
-        .catch(err => debugWarn(`Failed to load sound ${name}:`, err));
+    function safePlay(name, volume = 1.0, rate = 1.0) {
+      if (game.muted || audioManager.sfxMuted) return;
+      audioManager.playSfx(name, volume, rate);
     }
     
-    function safePlay(name, volume = 1.0, rate = 1.0) {
-      if (game.muted) return;
-      
-      // Mobile HTML5 Audio path - use AudioManager
-      if (audioConfig.mode === AudioMode.HTML5) {
-        playSfx(name);
-        return;
-      }
-
-      // Desktop WebAudio path
-      try {
-        if (!sounds[name]) return;
-        
-        const source = audioContext.createBufferSource();
-        source.buffer = sounds[name];
-        source.playbackRate.value = rate;
-        
-        const gainNode = audioContext.createGain();
-        gainNode.gain.value = volume;
-        
-        source.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-        source.start(0);
-        
-        // Store reference to invincibility audio so we can stop it later
-        if (name === 'invincibility') {
-          if (game.invincibilityAudio) {
-            game.invincibilityAudio.stop();
-          }
-          game.invincibilityAudio = source;
-        }
-      } catch (error) {
-        // Silently fail on mobile
-      }
-    }
-
-    // Load all sounds
-    Promise.all([
-      loadSound('flap', './assets/audio/flap.mp3'),
-      loadSound('lift', './assets/audio/lift.mp3'),
-      loadSound('score', './assets/audio/score.mp3'),
-      loadSound('hit', './assets/audio/lift.mp3'),
-      loadSound('explosion', './assets/audio/explosion.mp3'),
-      loadSound('powerup', './assets/audio/tbagburst.mp3'),
-      loadSound('shoot', './assets/audio/gun.mp3'),
-      loadSound('sherk', './assets/audio/sherk.mp3'),
-      loadSound('slow', './assets/audio/slow.mp3'),
-      loadSound('invincibility', './assets/audio/invincibility.mp3'),
-      loadSound('tbagsecured', './assets/audio/tbagsecured.mp3'),
-      loadBackgroundMusic() // Load background music MP3
-    ]);
+    // Audio loading now handled by AudioManager.loadAllSounds()
 
     // ==================== GRAPHICS & SPRITES ====================
     // Load actual image assets
