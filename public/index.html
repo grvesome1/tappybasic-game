@@ -25,7 +25,14 @@
   <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@200;700;800&display=swap" rel="stylesheet" />
 
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    * { 
+      margin: 0; 
+      padding: 0; 
+      box-sizing: border-box;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      text-rendering: optimizeLegibility;
+    }
     html, body {
       height: 100%;
       overflow: hidden;
@@ -55,6 +62,9 @@
       box-shadow: 0 0 30px rgba(0, 255, 255, 0.4), 0 0 80px rgba(138, 43, 226, 0.6);
       overflow: hidden;
       font-family: 'Barlow', sans-serif;
+      will-change: transform;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
     }
 
     @media (min-width: 500px) {
@@ -122,12 +132,16 @@
       font-weight: 700;
       font-size: 12px;
       white-space: nowrap;
-      transition: all 0.15s;
+      transition: all 0.15s ease-out;
+      transform: translateZ(0);
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
     }
 
     #web3-ui button:hover {
       background: rgba(0, 255, 255, 0.3);
       box-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
+      transform: translateZ(0) scale(1.02);
     }
 
     #web3-ui span {
@@ -469,16 +483,19 @@
       letter-spacing: 1px;
       text-transform: uppercase;
       box-shadow: 0 0 12px rgba(0, 255, 255, 0.8), 0 0 25px rgba(138, 43, 226, 0.9);
-      transition: transform 0.1s ease, box-shadow 0.1s ease;
+      transition: transform 0.1s ease-out, box-shadow 0.1s ease-out;
+      transform: translateZ(0);
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
     }
 
     .btn-restart:hover {
-      transform: translateY(-1px);
+      transform: translateY(-1px) translateZ(0);
       box-shadow: 0 0 16px rgba(0, 255, 255, 1), 0 0 30px rgba(138, 43, 226, 1);
     }
 
     .btn-restart:active {
-      transform: translateY(1px);
+      transform: translateY(1px) translateZ(0);
       box-shadow: 0 0 10px rgba(0, 255, 255, 0.7), 0 0 20px rgba(138, 43, 226, 0.7);
     }
 
