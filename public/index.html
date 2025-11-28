@@ -4787,33 +4787,14 @@
     function handlePrimaryPointerDown(e) {
       e.preventDefault();
 
-      // During active gameplay, check if tap is near rocket sprite
+      // During active gameplay, accept all taps (no hitbox check for performance)
       if (game.started && !game.over && game.bird) {
-        const rect = gameContainerEl.getBoundingClientRect();
-        const canvasX = e.clientX - rect.left;
-        const canvasY = e.clientY - rect.top;
-        
-        // Scale to game coordinates (canvas might be scaled)
-        const scaleX = GAME_WIDTH / rect.width;
-        const scaleY = GAME_HEIGHT / rect.height;
-        const gameX = canvasX * scaleX;
-        const gameY = canvasY * scaleY;
-        
-        // Calculate distance from rocket (with generous hitbox)
-        const dx = gameX - game.bird.x;
-        const dy = gameY - game.bird.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        
-        // Generous hitbox: 100px radius (covers most of screen width on mobile)
-        const hitRadius = 100;
-        
-        if (distance <= hitRadius) {
-          if (e.pointerType === 'touch') {
-            showTouchFeedback(canvasX, canvasY);
-          }
-          game.bird.flap();
+        if (e.pointerType === 'touch') {
+          // Simplified touch feedback without getBoundingClientRect
+          const rect = gameContainerEl.getBoundingClientRect();
+          showTouchFeedback(e.clientX - rect.left, e.clientY - rect.top);
         }
-        // Ignore taps outside rocket hitbox during gameplay
+        game.bird.flap();
         return;
       }
       
