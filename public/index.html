@@ -1459,15 +1459,22 @@
       // Attach start menu and restart button handlers (MUST be in DOMContentLoaded)
       if (dom.startMenu) {
         dom.startMenu.addEventListener('touchstart', (e) => {
-          alert('TOUCHSTART EVENT FIRED!'); // TEMP DEBUG
-          debugLog('=== START MENU TOUCHSTART ===');
-          e.preventDefault();
-          e.stopPropagation();
-          if (audioContext.state !== 'running') {
-            audioContext.resume().catch(err => debugWarn('Audio resume failed:', err));
+          try {
+            alert('TOUCHSTART EVENT FIRED!'); // TEMP DEBUG
+            debugLog('=== START MENU TOUCHSTART ===');
+            e.preventDefault();
+            e.stopPropagation();
+            alert('After preventDefault'); // TEMP DEBUG
+            if (audioContext && audioContext.state !== 'running') {
+              audioContext.resume().catch(err => debugWarn('Audio resume failed:', err));
+            }
+            alert('Before startGame()'); // TEMP DEBUG
+            startGame();
+            alert('After startGame()'); // TEMP DEBUG
+            debugLog('After startGame() - game.started:', game.started, 'game.over:', game.over);
+          } catch (err) {
+            alert('ERROR in touchstart: ' + err.message);
           }
-          startGame();
-          debugLog('After startGame() - game.started:', game.started, 'game.over:', game.over);
         }, { passive: false });
 
         dom.startMenu.addEventListener('click', (e) => {
