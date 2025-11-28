@@ -1476,6 +1476,7 @@
         const balance = await provider.getBalance(walletAddress);
         debugLog('Wallet balance:', balance.toString(), 'wei');
         
+        // Check if balance is less than required price (using BigNumber.lt method)
         if (balance.lt(CREDIT_PRICE_WEI)) {
           throw new Error('Insufficient balance. You need at least ' + ethers.utils.formatEther(CREDIT_PRICE_WEI) + ' ETH');
         }
