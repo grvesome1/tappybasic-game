@@ -2343,7 +2343,8 @@
           score: './assets/audio/score.mp3',
           lift: './assets/audio/lift.mp3', // Testing mobile performance with lift.mp3
           tbagsecured: './assets/audio/tbagsecured.mp3', // Added for tbag powerup collection
-          explosion: './assets/audio/explosion.mp3', // Added for player death/collision
+          explosion: './assets/audio/explosion.mp3', // Added for destroying pipes/candles
+          sherk: './assets/audio/sherk.mp3', // Added for sherk powerup
         };
         
         // Desktop gets more sounds
@@ -2352,7 +2353,6 @@
             flap: './assets/audio/flap.mp3',
             powerup: './assets/audio/tbagburst.mp3',
             shoot: './assets/audio/gun.mp3',
-            sherk: './assets/audio/sherk.mp3',
             slow: './assets/audio/slow.mp3',
             invincibility: './assets/audio/invincibility.mp3',
           });
@@ -3960,7 +3960,7 @@
       }
       
       const explosionPitch = 0.9 + Math.random() * 0.2; // Pitch variation (0.9-1.1)
-      const explosionVolume = isCece ? 0.55 : 0.4 + Math.random() * 0.1; // Louder for cece
+      const explosionVolume = isCece ? 0.7 : 0.6 + Math.random() * 0.1; // Louder for mobile
       safePlay('explosion', explosionVolume, explosionPitch);
     }
 
