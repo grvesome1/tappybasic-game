@@ -110,12 +110,19 @@
       will-change: opacity, transform;
     }
 
-    /* Web3 panel - only fade on mobile */
+    /* Mobile-only fade of Web3 panel */
     @media (max-width: 500px) {
+      #web3-ui {
+        opacity: 1;
+        pointer-events: auto;
+        transition: opacity 220ms ease-in-out, transform 220ms ease-in-out;
+        will-change: opacity, transform;
+      }
+
       #web3-ui.hidden-in-game {
         opacity: 0;
         pointer-events: none;
-        transform: translateX(-50%) translateY(-10px);
+        transform: translateY(-10px);
       }
     }
 
@@ -945,6 +952,10 @@
     const debugWarn = (...args) => DEBUG && console.warn(...args);
     // Keep console.error for production error tracking
 
+    // ==================== MOBILE DETECTION ====================
+    // Detect mobile once, reuse everywhere
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
     // ==================== GAME STATE ====================
     const GAME_WIDTH = 400;
     const GAME_HEIGHT = 600;
@@ -1558,17 +1569,14 @@
       logoShake: 0
     };
 
-    // Object pool and rendering limits
-    // Auto-detect mobile once at startup
-    const isMobile = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    
-    const MAX_BULLETS = isMobile ? 6 : 25;
-    const MAX_ROCKETS = isMobile ? 4 : 12;
-    const MAX_PARTICLES = isMobile ? 12 : 40;
-    const MAX_EXPLOSIONS = isMobile ? 2 : 6;
-    const MAX_SLOW_WAVES = isMobile ? 2 : 8;
-    const MAX_FLOATING_TEXTS = isMobile ? 5 : 20;
-    const MAX_MUZZLE_FLASHES = isMobile ? 2 : 10;
+    // Object pool and rendering limits (using consolidated isMobile)
+    const MAX_BULLETS = isMobile ? 10 : 25;
+    const MAX_ROCKETS = isMobile ? 5 : 12;
+    const MAX_PARTICLES = isMobile ? 15 : 40;
+    const MAX_EXPLOSIONS = isMobile ? 3 : 6;
+    const MAX_SLOW_WAVES = isMobile ? 3 : 8;
+    const MAX_FLOATING_TEXTS = isMobile ? 6 : 20;
+    const MAX_MUZZLE_FLASHES = isMobile ? 3 : 10;
     const GUN_FIRE_INTERVAL = isMobile ? 15 : 10;
     const INVINC_FIRE_INTERVAL = isMobile ? 8 : 4;
     const POWERUP_COOLDOWN_FRAMES = 140;
@@ -1602,6 +1610,22 @@
       finalTbagDisplay: document.getElementById('finalTbagDisplay'),
       finalTbagHighScoreDisplay: document.getElementById('finalTbagHighScoreDisplay')
     };
+
+    function toggleWeb3DuringGameplay(isRunning) {
+      const web3 = document.getElementById('web3-ui');
+      if (!web3) return;
+
+      // Mobile only
+      if (window.innerWidth > 500) return;
+
+      if (isRunning) {
+        // Hide during active gameplay
+        web3.classList.add('hidden-in-game');
+      } else {
+        // Show on start / game over / menus
+        web3.classList.remove('hidden-in-game');
+      }
+    }
 
     const TUTORIAL_KEY = 'tappyRocketTutorialSeen';
 
@@ -1659,6 +1683,11 @@
     app.ticker.maxFPS = 60;
     if (isMobile) {
       app.ticker.minFPS = 30; // mobile can drop to 30 without going crazy
+      // Additional mobile GPU optimizations
+      app.renderer.resolution = 1;
+      app.ticker.maxFPS = 45; // Lower FPS cap on mobile
+      PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.NEAREST;
+      PIXI.settings.ROUND_PIXELS = true;
     }
 
     document.getElementById('game-container').appendChild(app.view);
@@ -1796,6 +1825,7 @@
       cloud.baseScale = 1.0;
       cloud.scalePhase = Math.random() * Math.PI * 2;
       cloud.depthLayer = 1; // Farthest
+      // Disable expensive blur filters on mobile
       if (!isMobile) {
         cloud.filters = [new PIXI.BlurFilter(15 + Math.random() * 5)];
       } else {
@@ -1997,6 +2027,9 @@
     }
 
     function updateStars() {
+      // Mobile: update every other frame to reduce CPU load
+      if (isMobile && (frameCount % 2 !== 0)) return;
+      
       for (const star of stars) {
         star.x -= star.speed * (game.speed / game.baseSpeed);
         
@@ -2014,7 +2047,7 @@
     
     function updateBackgroundLayers() {
       // Mobile: update every other frame to reduce CPU load
-      if (isMobile && frameCount % 2 !== 0) return;
+      if (isMobile && (frameCount % 2 !== 0)) return;
       
       const time = Date.now() * 0.0005;
       for (const layer of bgLayers) {
@@ -2112,8 +2145,6 @@
 
     // Call once on DOM ready
     function initAudioLayer() {
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-
       if (!isMobile) {
         // Desktop: use existing WebAudio path
         audioConfig.mode = AudioMode.WEBAUDIO;
@@ -2136,45 +2167,51 @@
         return;
       }
 
-      // Mobile: lean HTML5 audio only, no fancy WebAudio
-      debugLog('Mobile detected: using HTML5 Audio');
+      // Mobile: dirt-cheap HTML5 audio - NO background music, minimal SFX
+      debugLog('Mobile detected: using minimal HTML5 Audio');
       audioConfig.mode = AudioMode.HTML5;
 
       try {
-        audioConfig.tracks.music = new Audio('./assets/audio/background.mp3');
-        audioConfig.tracks.music.loop = true;
-        audioConfig.tracks.music.preload = 'none';
-        audioConfig.tracks.music.volume = 0.4;
+        // NO background music on mobile for performance
+        audioConfig.tracks.music = null;
 
+        // Only 3 essential SFX
         audioConfig.tracks.flap = new Audio('./assets/audio/flap.mp3');
-        audioConfig.tracks.flap.preload = 'none';
-        audioConfig.tracks.flap.volume = 0.5;
+        audioConfig.tracks.flap.preload = 'auto';
+        audioConfig.tracks.flap.volume = 0.4;
 
         audioConfig.tracks.score = new Audio('./assets/audio/score.mp3');
-        audioConfig.tracks.score.preload = 'none';
-        audioConfig.tracks.score.volume = 0.6;
+        audioConfig.tracks.score.preload = 'auto';
+        audioConfig.tracks.score.volume = 0.5;
 
         audioConfig.tracks.explosion = new Audio('./assets/audio/explosion.mp3');
-        audioConfig.tracks.explosion.preload = 'none';
-        audioConfig.tracks.explosion.volume = 0.7;
+        audioConfig.tracks.explosion.preload = 'auto';
+        audioConfig.tracks.explosion.volume = 0.6;
 
         audioConfig.ready = true;
+        debugLog('Mobile audio initialized: 3 SFX only, no music');
       } catch (err) {
         console.error('Failed to initialize mobile audio:', err);
-        audioConfig.ready = false; // Disable audio if initialization fails
+        audioConfig.ready = false;
+        audioConfig.disabled = true;
       }
 
-      // Unlock on first touch/click
+      // Unlock on first touch/click (with aggressive error handling)
       const unlock = () => {
+        if (audioConfig.disabled) return;
         try {
           Object.values(audioConfig.tracks).forEach(a => {
             if (!a) return;
-            a.muted = audioConfig.musicMuted && a === audioConfig.tracks.music;
-            try { a.play().then(() => a.pause()).catch(() => {}); } catch (_) {}
+            try {
+              a.play().then(() => a.pause()).catch(() => {});
+            } catch (_) {
+              audioConfig.disabled = true;
+            }
           });
         } catch (err) {
           console.error('Audio unlock failed:', err);
           audioConfig.ready = false;
+          audioConfig.disabled = true;
         }
         window.removeEventListener('touchstart', unlock);
         window.removeEventListener('click', unlock);
@@ -2184,24 +2221,35 @@
     }
 
     function playSfx(name) {
-      if (!audioConfig.ready || audioConfig.sfxMuted) return;
+      if (!audioConfig.ready || audioConfig.sfxMuted || audioConfig.disabled) return;
       if (audioConfig.mode !== AudioMode.HTML5) return; // desktop handled elsewhere
 
-      const base = audioConfig.tracks[name];
-      if (!base) return;
+      const audio = audioConfig.tracks[name];
+      if (!audio) return;
 
-      // Simple, low-overhead clone
-      const a = base.cloneNode();
-      a.volume = base.volume;
-      a.play().catch(() => {});
+      try {
+        // Reuse same Audio object - only play if not already playing
+        if (audio.paused || audio.ended) {
+          audio.currentTime = 0;
+          audio.play().catch(() => {
+            audioConfig.disabled = true;
+          });
+        }
+      } catch (err) {
+        audioConfig.disabled = true;
+      }
     }
 
     function setMusicMuted(muted) {
       audioConfig.musicMuted = muted;
       const m = audioConfig.tracks.music;
-      if (!m) return;
-      if (muted) m.pause();
-      else m.play().catch(() => {});
+      if (!m || isMobile) return; // No music on mobile
+      try {
+        if (muted) m.pause();
+        else m.play().catch(() => {});
+      } catch (err) {
+        audioConfig.disabled = true;
+      }
     }
 
     function setSfxMuted(muted) {
@@ -2210,13 +2258,16 @@
 
     // Aggressive audio unlock - try on every user interaction
     function forceAudioUnlock() {
+      if (audioConfig.disabled) return;
       try {
         if (audioConfig.mode === AudioMode.WEBAUDIO && audioContext && audioContext.state !== 'running') {
-          audioContext.resume();
+          audioContext.resume().catch(() => {
+            if (isMobile) audioConfig.disabled = true;
+          });
         }
       } catch (err) {
         debugWarn('Audio unlock failed:', err);
-        if (isMobile) game.muted = true;
+        if (isMobile) audioConfig.disabled = true;
       }
     }
     
@@ -2226,13 +2277,15 @@
     });
     
     // Mobile-specific audio unlock
-    document.addEventListener('touchstart', () => {
-      if (audioContext && audioContext.state !== 'running') {
-        audioContext.resume().catch(e => {
-          if (isMobile) game.muted = true;
-        });
-      }
-    }, { once: true });
+    if (isMobile) {
+      document.addEventListener('touchstart', () => {
+        if (audioContext && audioContext.state !== 'running') {
+          audioContext.resume().catch(() => {
+            audioConfig.disabled = true;
+          });
+        }
+      }, { once: true });
+    }
 
     // Load and play background music from MP3
     // Background music: "background.mp3" made by Elisaveta Stoycheva
@@ -2248,13 +2301,13 @@
     }
     
     function createBackgroundMusic() {
-      if (bgMusicSource || !sounds.background) return;
-      
       // Skip background music entirely on mobile for performance
-      if (audioConfig.mode === AudioMode.HTML5) {
+      if (isMobile || audioConfig.mode === AudioMode.HTML5) {
         debugLog('Background music DISABLED on mobile for performance');
         return;
       }
+      
+      if (bgMusicSource || !sounds.background) return;
       
       try {
         // Web Audio API for desktop only
@@ -3324,6 +3377,9 @@
     }
     
     function updateLogoBurst() {
+      // Mobile: update every other frame to reduce CPU load
+      if (isMobile && (frameCount % 2 !== 0)) return;
+      
       if (game.logoFlash > 0) game.logoFlash--;
       
       // Update particles
@@ -3540,11 +3596,11 @@
       const spread = options.spread || Math.PI * 2; // Full circle by default
       const direction = options.direction || 0; // Direction offset
       
-      // Mobile optimizations: reduce particle count and lifetimes
+      // Mobile optimizations: reduce particle count and lifetimes aggressively
       if (isMobile) {
-        lifeMin *= 0.4;
-        lifeMax *= 0.4;
-        count = Math.max(1, Math.ceil(count * 0.3)); // Reduce to 30% of original
+        count = Math.min(count, 4); // Hard cap at 4 particles
+        lifeMin *= 0.6;
+        lifeMax *= 0.6;
       }
       
       for (let i = 0; i < count && particlePool.active.length < MAX_PARTICLES; i++) {
@@ -3728,6 +3784,8 @@
     }
 
     function gameOver() {
+      toggleWeb3DuringGameplay(false);
+      
       game.over = true;
       game.shake = 10; // Screen shake on game over
       game.flash = 150;
@@ -3868,6 +3926,8 @@
       game.slowWarpLevel = 0;
       game.slowFadeCounter = 0;
       
+      toggleWeb3DuringGameplay(false);
+      
       // Stop any audio loops
       if (game.invincibilityAudio) {
         try {
@@ -3951,20 +4011,7 @@
     }
 
     // ==================== WEB3 UI TOGGLE ====================
-    
-    function toggleWeb3DuringGameplay(isRunning) {
-      const isMobileView = window.innerWidth <= 500;
-      if (!isMobileView) return; // Only hide on mobile
-      
-      const web3 = document.getElementById('web3-ui');
-      if (!web3) return;
-      
-      if (isRunning) {
-        web3.classList.add('hidden-in-game');
-      } else {
-        web3.classList.remove('hidden-in-game');
-      }
-    }
+    // (Function moved after dom declaration above)
 
     // ==================== SLOW EFFECTS ====================
     
@@ -4252,6 +4299,8 @@
       dom.startMenu.classList.add('hidden');
       dom.gameOverMenu.classList.add('hidden');
       debugLog('Menus hidden - startMenu has hidden class:', dom.startMenu.classList.contains('hidden'));
+      
+      toggleWeb3DuringGameplay(true);
       
       // Reset game state first
       debugLog('Calling initGame()...');
@@ -4668,12 +4717,14 @@
         }
       }
       
-      // Update Cece smoke
-      for (let i = game.ceceSmokes.length - 1; i >= 0; i--) {
-        const smoke = game.ceceSmokes[i];
-        if (smoke.update()) {
-          ceceSmokePool.release(smoke);
-          game.ceceSmokes.splice(i, 1);
+      // Update Cece smoke (throttled on mobile)
+      if (!isMobile || (frameCount % 2 === 0)) {
+        for (let i = game.ceceSmokes.length - 1; i >= 0; i--) {
+          const smoke = game.ceceSmokes[i];
+          if (smoke.update()) {
+            ceceSmokePool.release(smoke);
+            game.ceceSmokes.splice(i, 1);
+          }
         }
       }
       
