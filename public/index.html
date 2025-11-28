@@ -2438,7 +2438,7 @@
           }
           
           this.musicGain = this.context.createGain();
-          this.musicGain.gain.value = 0.2;
+          this.musicGain.gain.value = 0.3;
           this.musicGain.connect(this.context.destination);
           
           this.musicSource = this.context.createBufferSource();
@@ -2675,8 +2675,8 @@
         this.vy = -5;
         this.flameTimer = 10; // Trigger flame for 10 frames
         const pitch = 0.95 + Math.random() * 0.1;
-        safePlay('flap', 0.3, pitch);
-        safePlay('lift', 0.4, pitch);
+        safePlay('flap', 0.2, pitch);
+        safePlay('lift', 0.3, pitch);
       }
 
       update() {
@@ -3632,7 +3632,7 @@
       }
       
       game.burstInProgress = true;
-      safePlay('powerup', 0.6, 1.0);
+      safePlay('powerup', 0.4, 1.0);
       setTimeout(() => {
         debugLog('Creating burst now');
         createLogoBurst();
@@ -3739,7 +3739,7 @@
       setTimeout(() => {
         dom.graffitiImage.classList.remove('active');
       }, 700);
-      safePlay('tbagsecured', 0.6, 1.0);
+      safePlay('tbagsecured', 0.5, 1.0);
     }
 
     function spawnPipe() {
@@ -3764,7 +3764,7 @@
       game.bullets.push(bullet);
       
       const shootPitch = 0.95 + Math.random() * 0.15; // Pitch variation (0.95-1.1)
-      safePlay('shoot', 0.2, shootPitch);
+      safePlay('shoot', 0.4, shootPitch);
     }
 
     function createParticles(x, y, count, color, options = {}) {
@@ -3869,7 +3869,7 @@
         game.sherkAnim = 0; // Start sherk icon grow animation
         // Add minor speed boost for sherk
         game.baseSpeed *= 1.08;
-        safePlay('sherk', 0.5, 0.95); // Play sherk sound (not powerup sound)
+        safePlay('sherk', 0.7, 0.95); // Play sherk sound (not powerup sound)
         // Cyan burst with sparkles
         createParticles(game.bird.x, game.bird.y, 12, 0x00FFFF, { speedMin: 2, speedMax: 5 });
         createParticles(game.bird.x, game.bird.y, 8, 0xFFFFFF, { speedMin: 3, speedMax: 6, lifeMin: 25, lifeMax: 40 });
@@ -3888,7 +3888,7 @@
         createParticles(game.bird.x, game.bird.y, 12, 0x00FFFF, { speedMin: 2, speedMax: 5 });
         createParticles(game.bird.x, game.bird.y, 8, 0xFF00FF, { speedMin: 3, speedMax: 6, lifeMin: 25, lifeMax: 40 });
         // Play invincibility theme (80s action track)
-        safePlay('invincibility', 0.4, 0.9);
+        safePlay('invincibility', 0.3, 0.9);
         return; // Don't play generic powerup sound
       }
       
@@ -3958,7 +3958,7 @@
       }
       
       const explosionPitch = 0.9 + Math.random() * 0.2; // Pitch variation (0.9-1.1)
-      const explosionVolume = isCece ? 0.7 : 0.6 + Math.random() * 0.1; // Louder for mobile
+      const explosionVolume = isCece ? 0.85 : 0.75 + Math.random() * 0.1; // Louder explosive impact
       safePlay('explosion', explosionVolume, explosionPitch);
     }
 
@@ -4832,7 +4832,7 @@
           
           game.ceceLastShotFrame = frameCount;
           const rocketPitch = 0.75 + Math.random() * 0.15; // Much deeper missile sounds (was 0.95-1.15)
-          safePlay('shoot', 0.45, rocketPitch); // Louder volume for heavy missiles
+          safePlay('shoot', 0.4, rocketPitch); // Consistent shoot volume
         }
       }
       
