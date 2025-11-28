@@ -1462,7 +1462,10 @@
       if (purchaseBtn && purchaseBtn.disabled) return;
 
       try {
-        if (purchaseBtn) purchaseBtn.disabled = true;
+        if (purchaseBtn) {
+          purchaseBtn.disabled = true;
+          purchaseBtn.textContent = '⏳ Processing...';
+        }
         window.isPurchasing = true;
         
         // Pause game during purchase transaction
@@ -1472,70 +1475,77 @@
         debugLog('Price:', CREDIT_PRICE_WEI.toString(), 'wei');
         debugLog('Wallet:', walletAddress);
 
-        // Validate wallet balance first
+        // Step 1: Check wallet balance
+        debugLog('[1/4] Checking balance...');
         const balance = await provider.getBalance(walletAddress);
-        debugLog('Wallet balance:', balance.toString(), 'wei');
+        debugLog('Wallet balance:', ethers.utils.formatEther(balance), 'ETH');
         
-        // Check if balance is less than required price (using BigNumber.lt method)
-        if (balance.lt(CREDIT_PRICE_WEI)) {
-          throw new Error('Insufficient balance. You need at least ' + ethers.utils.formatEther(CREDIT_PRICE_WEI) + ' ETH');
+        const requiredAmount = ethers.BigNumber.from(CREDIT_PRICE_WEI);
+        const hasEnoughBalance = balance.gte(requiredAmount);
+        
+        if (!hasEnoughBalance) {
+          const needed = ethers.utils.formatEther(requiredAmount);
+          const current = ethers.utils.formatEther(balance);
+          throw new Error(`Insufficient balance. Need ${needed} ETH, you have ${current} ETH`);
         }
 
-        // Estimate gas first to catch errors early
-        debugLog('[1/4] Estimating gas...');
+        // Step 2: Estimate gas
+        debugLog('[2/4] Estimating gas...');
+        let gasEstimate;
         try {
-          const gasEstimate = await contract.estimateGas.purchaseCreditsWithETH(1, { value: CREDIT_PRICE_WEI });
+          gasEstimate = await contract.estimateGas.purchaseCreditsWithETH(1, { 
+            value: requiredAmount,
+            from: walletAddress
+          });
           debugLog('Gas estimate:', gasEstimate.toString());
+          
+          // Add 20% buffer to gas estimate
+          const gasLimit = gasEstimate.mul(120).div(100);
+          debugLog('Gas limit with buffer:', gasLimit.toString());
         } catch (gasErr) {
           console.error('Gas estimation failed:', gasErr);
-          if (gasErr.message.includes('insufficient funds')) {
-            throw new Error('Insufficient ETH for gas + purchase');
-          } else if (gasErr.message.includes('execution reverted')) {
-            throw new Error('Contract rejected transaction. Check contract state.');
-          } else {
-            throw new Error('Pre-flight check failed: ' + (gasErr.reason || gasErr.message));
-          }
+          throw new Error('Cannot estimate gas. Contract may be paused or transaction will fail.');
         }
 
-        // Send transaction
-        debugLog('[2/4] Sending transaction...');
-        const tx = await contract.purchaseCreditsWithETH(1, { 
-          value: CREDIT_PRICE_WEI,
-          gasLimit: 100000 // Set explicit gas limit
-        });
+        // Step 3: Send transaction
+        debugLog('[3/4] Sending transaction...');
+        if (purchaseBtn) purchaseBtn.textContent = '⏳ Confirm in wallet...';
+        
+        const txParams = {
+          value: requiredAmount,
+          gasLimit: gasEstimate.mul(120).div(100) // 20% buffer
+        };
+        
+        const tx = await contract.purchaseCreditsWithETH(1, txParams);
         debugLog('Transaction hash:', tx.hash);
         
-        // Wait for confirmation with mobile-friendly timeout
-        debugLog('[3/4] Waiting for confirmation (this may take 10-30 seconds on mobile)...');
-        const receipt = await tx.wait();
+        if (purchaseBtn) purchaseBtn.textContent = '⏳ Waiting for confirmation...';
+        
+        // Step 4: Wait for confirmation
+        debugLog('[4/4] Waiting for confirmation...');
+        const receipt = await tx.wait(1); // Wait for 1 confirmation
         debugLog('Transaction confirmed, status:', receipt.status);
         
         if (receipt.status === 1) {
-          // Force blockchain resync with retry logic
-          debugLog('[4/4] Resyncing credits from blockchain...');
-          purchaseBtn.textContent = '⏳ Syncing...';
+          // Success - sync credits from blockchain
+          if (purchaseBtn) purchaseBtn.textContent = '⏳ Syncing...';
+          
           let synced = false;
           let attempts = 5;
           
           while (!synced && attempts > 0) {
-            // Wait for blockchain state to propagate
-            await new Promise(resolve => setTimeout(resolve, 500));
-            
+            await new Promise(resolve => setTimeout(resolve, 600));
             synced = await syncCredits();
             
-            if (!synced) {
+            if (!synced || window.localCredits <= 0) {
               attempts--;
-              debugLog(`Sync failed, retrying... (${attempts} left)`);
-            } else if (window.localCredits <= 0) {
-              // Synced but no credits yet, keep trying
-              synced = false;
-              attempts--;
-              debugLog(`Credits not updated yet, retrying... (${attempts} left)`);
+              debugLog(`Sync retry ${5 - attempts}/5...`);
             }
           }
           
           if (!synced || window.localCredits <= 0) {
-            debugWarn('⚠️ Could not verify credit update, using fallback');
+            // Fallback: add credit locally
+            debugWarn('Using fallback credit increment');
             window.localCredits = (window.localCredits || 0) + 1;
             localStorage.setItem('tappyCredits', String(window.localCredits));
             updateCreditDisplay();
@@ -1544,36 +1554,35 @@
           alert('✅ Credit purchased! You now have ' + window.localCredits + ' credit(s).');
           debugLog('=== PURCHASE SUCCESS ===');
         } else {
-          console.error('❌ Transaction failed, status:', receipt.status);
-          alert('Transaction failed. Please try again.');
+          throw new Error('Transaction failed with status: ' + receipt.status);
         }
       } catch (err) {
         console.error('❌ Purchase error:', err);
+        
         let errorMsg = 'Purchase failed';
         
         if (err.code === 4001 || err.code === 'ACTION_REJECTED') {
           errorMsg = 'Transaction cancelled';
-        } else if (err.message.includes('insufficient funds')) {
-          errorMsg = 'Insufficient ETH balance';
-        } else if (err.message.includes('user rejected')) {
-          errorMsg = 'Transaction rejected';
-        } else if (err.reason) {
-          errorMsg = 'Error: ' + err.reason;
         } else if (err.message) {
-          // Clean up error message
-          let msg = err.message;
-          if (msg.includes('missing revert data')) {
-            errorMsg = 'Contract call failed. Check if contract is paused or if you have sufficient ETH.';
+          const msg = err.message.toLowerCase();
+          if (msg.includes('user rejected') || msg.includes('user denied')) {
+            errorMsg = 'Transaction rejected';
+          } else if (msg.includes('insufficient')) {
+            errorMsg = 'Insufficient ETH balance';
+          } else if (msg.includes('cannot estimate')) {
+            errorMsg = 'Contract unavailable or paused';
           } else {
-            errorMsg = msg.substring(0, 100); // Truncate long messages
+            errorMsg = err.message.substring(0, 150);
           }
         }
         
         alert(errorMsg);
-        debugLog('Error details:', err);
       } finally {
         window.isPurchasing = false;
-        if (purchaseBtn) purchaseBtn.disabled = false;
+        if (purchaseBtn) {
+          purchaseBtn.disabled = false;
+          purchaseBtn.textContent = '💳 Buy Credit';
+        }
         resumeGameTicker('purchase-complete');
       }
     }
