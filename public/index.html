@@ -2315,21 +2315,13 @@
         // NO background music on mobile for performance
         audioConfig.tracks.music = null;
 
-        // Only 3 essential SFX
-        audioConfig.tracks.flap = new Audio('./assets/audio/flap.mp3');
-        audioConfig.tracks.flap.preload = 'auto';
-        audioConfig.tracks.flap.volume = 0.4;
-
+        // Only 1 essential SFX: score.mp3
         audioConfig.tracks.score = new Audio('./assets/audio/score.mp3');
         audioConfig.tracks.score.preload = 'auto';
         audioConfig.tracks.score.volume = 0.5;
 
-        audioConfig.tracks.explosion = new Audio('./assets/audio/explosion.mp3');
-        audioConfig.tracks.explosion.preload = 'auto';
-        audioConfig.tracks.explosion.volume = 0.6;
-
         audioConfig.ready = true;
-        debugLog('Mobile audio initialized: 3 SFX only, no music');
+        debugLog('Mobile audio initialized: score.mp3 only');
       } catch (err) {
         console.error('Failed to initialize mobile audio:', err);
         audioConfig.ready = false;
