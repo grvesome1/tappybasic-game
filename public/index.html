@@ -103,27 +103,6 @@
       font-family: 'Barlow', sans-serif;
       font-size: 13px;
       z-index: 30;
-      /* smooth fade + prevent stray taps while hidden */
-      opacity: 1;
-      pointer-events: auto;
-      transition: opacity 220ms ease-in-out, transform 220ms ease-in-out;
-      will-change: opacity, transform;
-    }
-
-    /* Mobile-only fade of Web3 panel */
-    @media (max-width: 500px) {
-      #web3-ui {
-        opacity: 1;
-        pointer-events: auto;
-        transition: opacity 220ms ease-in-out, transform 220ms ease-in-out;
-        will-change: opacity, transform;
-      }
-
-      #web3-ui.hidden-in-game {
-        opacity: 0;
-        pointer-events: none;
-        transform: translateY(-10px);
-      }
     }
 
     #web3-ui button {
@@ -1611,19 +1590,21 @@
       finalTbagHighScoreDisplay: document.getElementById('finalTbagHighScoreDisplay')
     };
 
-    function toggleWeb3DuringGameplay(isRunning) {
+    function updateWeb3VisibilityForState() {
       const web3 = document.getElementById('web3-ui');
       if (!web3) return;
 
-      // Mobile only
-      if (window.innerWidth > 500) return;
+      // Desktop: never hide Web3 UI
+      if (window.innerWidth > 600) {
+        web3.classList.remove('web3-hidden-mobile');
+        return;
+      }
 
-      if (isRunning) {
-        // Hide during active gameplay
-        web3.classList.add('hidden-in-game');
+      // Mobile: hide only while game is actively running
+      if (game.started && !game.over) {
+        web3.classList.add('web3-hidden-mobile');
       } else {
-        // Show on start / game over / menus
-        web3.classList.remove('hidden-in-game');
+        web3.classList.remove('web3-hidden-mobile');
       }
     }
 
@@ -3784,8 +3765,6 @@
     }
 
     function gameOver() {
-      toggleWeb3DuringGameplay(false);
-      
       game.over = true;
       game.shake = 10; // Screen shake on game over
       game.flash = 150;
@@ -3830,6 +3809,8 @@
       
       dom.gameOverMenu.classList.remove('hidden');
       safePlay('hit', 0.5);
+      
+      updateWeb3VisibilityForState();
     }
 
     async function submitScoreToLeaderboard(score, tbags) {
@@ -3926,8 +3907,6 @@
       game.slowWarpLevel = 0;
       game.slowFadeCounter = 0;
       
-      toggleWeb3DuringGameplay(false);
-      
       // Stop any audio loops
       if (game.invincibilityAudio) {
         try {
@@ -4008,6 +3987,8 @@
       
       // Clear floating texts
       floatingTexts.length = 0;
+      
+      updateWeb3VisibilityForState();
     }
 
     // ==================== WEB3 UI TOGGLE ====================
@@ -4300,8 +4281,6 @@
       dom.gameOverMenu.classList.add('hidden');
       debugLog('Menus hidden - startMenu has hidden class:', dom.startMenu.classList.contains('hidden'));
       
-      toggleWeb3DuringGameplay(true);
-      
       // Reset game state first
       debugLog('Calling initGame()...');
       initGame();
@@ -4316,6 +4295,8 @@
       game.started = true;
       game.over = false;
       debugLog('=== START GAME COMPLETE === game.started:', game.started, 'game.over:', game.over);
+      
+      updateWeb3VisibilityForState();
     }
 
     // ==================== SCREEN TRANSFORM EFFECTS ====================
