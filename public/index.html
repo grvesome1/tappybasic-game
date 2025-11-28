@@ -1478,14 +1478,14 @@
         // Step 1: Check wallet balance
         debugLog('[1/4] Checking balance...');
         const balance = await provider.getBalance(walletAddress);
-        debugLog('Wallet balance:', ethers.utils.formatEther(balance), 'ETH');
+        debugLog('Wallet balance:', ethers.formatEther(balance), 'ETH');
         
         const requiredAmount = ethers.BigNumber.from(CREDIT_PRICE_WEI);
         const hasEnoughBalance = balance.gte(requiredAmount);
         
         if (!hasEnoughBalance) {
-          const needed = ethers.utils.formatEther(requiredAmount);
-          const current = ethers.utils.formatEther(balance);
+          const needed = ethers.formatEther(requiredAmount);
+          const current = ethers.formatEther(balance);
           throw new Error(`Insufficient balance. Need ${needed} ETH, you have ${current} ETH`);
         }
 
