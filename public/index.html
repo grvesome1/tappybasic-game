@@ -1472,19 +1472,46 @@
         debugLog('Price:', CREDIT_PRICE_WEI.toString(), 'wei');
         debugLog('Wallet:', walletAddress);
 
+        // Validate wallet balance first
+        const balance = await provider.getBalance(walletAddress);
+        debugLog('Wallet balance:', balance.toString(), 'wei');
+        
+        if (balance.lt(CREDIT_PRICE_WEI)) {
+          throw new Error('Insufficient balance. You need at least ' + ethers.utils.formatEther(CREDIT_PRICE_WEI) + ' ETH');
+        }
+
+        // Estimate gas first to catch errors early
+        debugLog('[1/4] Estimating gas...');
+        try {
+          const gasEstimate = await contract.estimateGas.purchaseCreditsWithETH(1, { value: CREDIT_PRICE_WEI });
+          debugLog('Gas estimate:', gasEstimate.toString());
+        } catch (gasErr) {
+          console.error('Gas estimation failed:', gasErr);
+          if (gasErr.message.includes('insufficient funds')) {
+            throw new Error('Insufficient ETH for gas + purchase');
+          } else if (gasErr.message.includes('execution reverted')) {
+            throw new Error('Contract rejected transaction. Check contract state.');
+          } else {
+            throw new Error('Pre-flight check failed: ' + (gasErr.reason || gasErr.message));
+          }
+        }
+
         // Send transaction
-        debugLog('[1/3] Sending transaction...');
-        const tx = await contract.purchaseCreditsWithETH(1, { value: CREDIT_PRICE_WEI });
+        debugLog('[2/4] Sending transaction...');
+        const tx = await contract.purchaseCreditsWithETH(1, { 
+          value: CREDIT_PRICE_WEI,
+          gasLimit: 100000 // Set explicit gas limit
+        });
         debugLog('Transaction hash:', tx.hash);
         
         // Wait for confirmation with mobile-friendly timeout
-        debugLog('[2/3] Waiting for confirmation (this may take 10-30 seconds on mobile)...');
+        debugLog('[3/4] Waiting for confirmation (this may take 10-30 seconds on mobile)...');
         const receipt = await tx.wait();
         debugLog('Transaction confirmed, status:', receipt.status);
         
         if (receipt.status === 1) {
           // Force blockchain resync with retry logic
-          debugLog('[3/3] Resyncing credits from blockchain...');
+          debugLog('[4/4] Resyncing credits from blockchain...');
           purchaseBtn.textContent = '⏳ Syncing...';
           let synced = false;
           let attempts = 5;
@@ -1521,11 +1548,28 @@
         }
       } catch (err) {
         console.error('❌ Purchase error:', err);
-        if (err.code === 4001) {
-          alert('Transaction cancelled.');
-        } else {
-          alert('Purchase failed: ' + (err.message || 'Unknown error'));
+        let errorMsg = 'Purchase failed';
+        
+        if (err.code === 4001 || err.code === 'ACTION_REJECTED') {
+          errorMsg = 'Transaction cancelled';
+        } else if (err.message.includes('insufficient funds')) {
+          errorMsg = 'Insufficient ETH balance';
+        } else if (err.message.includes('user rejected')) {
+          errorMsg = 'Transaction rejected';
+        } else if (err.reason) {
+          errorMsg = 'Error: ' + err.reason;
+        } else if (err.message) {
+          // Clean up error message
+          let msg = err.message;
+          if (msg.includes('missing revert data')) {
+            errorMsg = 'Contract call failed. Check if contract is paused or if you have sufficient ETH.';
+          } else {
+            errorMsg = msg.substring(0, 100); // Truncate long messages
+          }
         }
+        
+        alert(errorMsg);
+        debugLog('Error details:', err);
       } finally {
         window.isPurchasing = false;
         if (purchaseBtn) purchaseBtn.disabled = false;
