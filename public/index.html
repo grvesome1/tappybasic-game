@@ -939,7 +939,7 @@
     // Performance profiles for different contexts
     const PERF_PROFILE = isMetaMaskMobile ? {
       resolution: 1,
-      antialias: false,
+      antialias: true, // Enable smooth sprites
       maxFPS: 60,
       effectScale: 0.5,
       particleScale: 0.4,
@@ -948,7 +948,7 @@
       skipRenderThreshold: 0.8 // Skip heavy updates if frame time > 13.3ms (80% of 16.67ms budget)
     } : isMobile ? {
       resolution: 1,
-      antialias: false,
+      antialias: true, // Enable smooth sprites
       maxFPS: 45,
       effectScale: 0.6,
       particleScale: 0.5,
