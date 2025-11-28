@@ -1594,17 +1594,11 @@
       const web3 = document.getElementById('web3-ui');
       if (!web3) return;
 
-      // Desktop: never hide Web3 UI
-      if (window.innerWidth > 600) {
-        web3.classList.remove('web3-hidden-mobile');
-        return;
-      }
-
-      // Mobile: hide only while game is actively running
+      // Hide during gameplay, show on menus
       if (game.started && !game.over) {
-        web3.classList.add('web3-hidden-mobile');
+        web3.style.display = 'none';
       } else {
-        web3.classList.remove('web3-hidden-mobile');
+        web3.style.display = 'flex';
       }
     }
 
