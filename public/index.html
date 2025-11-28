@@ -4787,6 +4787,7 @@
 
     // Start menu handlers - use both click and touchstart for mobile reliability
     dom.startMenu.addEventListener('touchstart', (e) => {
+      alert('TOUCHSTART EVENT FIRED!'); // TEMP DEBUG
       debugLog('=== START MENU TOUCHSTART ===');
       e.preventDefault();
       e.stopPropagation();
@@ -4798,6 +4799,7 @@
     }, { passive: false });
 
     dom.startMenu.addEventListener('click', (e) => {
+      alert('CLICK EVENT FIRED!'); // TEMP DEBUG
       debugLog('=== START MENU CLICKED ===');
       e.preventDefault();
       e.stopPropagation();
