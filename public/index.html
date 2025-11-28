@@ -1455,6 +1455,51 @@
           window.location.reload();
         });
       }
+      
+      // Attach start menu and restart button handlers (MUST be in DOMContentLoaded)
+      if (dom.startMenu) {
+        dom.startMenu.addEventListener('touchstart', (e) => {
+          alert('TOUCHSTART EVENT FIRED!'); // TEMP DEBUG
+          debugLog('=== START MENU TOUCHSTART ===');
+          e.preventDefault();
+          e.stopPropagation();
+          if (audioContext.state !== 'running') {
+            audioContext.resume().catch(err => debugWarn('Audio resume failed:', err));
+          }
+          startGame();
+          debugLog('After startGame() - game.started:', game.started, 'game.over:', game.over);
+        }, { passive: false });
+
+        dom.startMenu.addEventListener('click', (e) => {
+          alert('CLICK EVENT FIRED!'); // TEMP DEBUG
+          debugLog('=== START MENU CLICKED ===');
+          e.preventDefault();
+          e.stopPropagation();
+          if (audioContext.state !== 'running') {
+            audioContext.resume().catch(err => debugWarn('Audio resume failed:', err));
+          }
+          startGame();
+          debugLog('After startGame() - game.started:', game.started, 'game.over:', game.over);
+        });
+      }
+      
+      if (dom.restartButton) {
+        dom.restartButton.addEventListener('touchend', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          debugLog('=== RESTART TOUCHEND ===');
+          forceAudioUnlock();
+          startGame();
+        }, { passive: false });
+        
+        dom.restartButton.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          debugLog('=== RESTART CLICK ===');
+          forceAudioUnlock();
+          startGame();
+        });
+      }
     });
     
     // Resync credits when tab regains focus (critical for mobile wallet returns)
@@ -4785,48 +4830,6 @@
       e.preventDefault();
     }, { passive: false });
 
-    // Start menu handlers - use both click and touchstart for mobile reliability
-    dom.startMenu.addEventListener('touchstart', (e) => {
-      alert('TOUCHSTART EVENT FIRED!'); // TEMP DEBUG
-      debugLog('=== START MENU TOUCHSTART ===');
-      e.preventDefault();
-      e.stopPropagation();
-      if (audioContext.state !== 'running') {
-        audioContext.resume().catch(err => debugWarn('Audio resume failed:', err));
-      }
-      startGame();
-      debugLog('After startGame() - game.started:', game.started, 'game.over:', game.over);
-    }, { passive: false });
-
-    dom.startMenu.addEventListener('click', (e) => {
-      alert('CLICK EVENT FIRED!'); // TEMP DEBUG
-      debugLog('=== START MENU CLICKED ===');
-      e.preventDefault();
-      e.stopPropagation();
-      if (audioContext.state !== 'running') {
-        audioContext.resume().catch(err => debugWarn('Audio resume failed:', err));
-      }
-      startGame();
-      debugLog('After startGame() - game.started:', game.started, 'game.over:', game.over);
-    });
-
-    // Restart button - use both click and touchend for reliability
-    dom.restartButton.addEventListener('touchend', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      debugLog('=== RESTART TOUCHEND ===');
-      forceAudioUnlock();
-      startGame(); // Changed to consume credit on restart
-    }, { passive: false });
-    
-    dom.restartButton.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      debugLog('=== RESTART CLICK ===');
-      forceAudioUnlock();
-      startGame(); // Changed to consume credit on restart
-    });
-    
     // Admin reset leaderboard button
     const adminResetBtn = document.getElementById('adminResetBtn');
     adminResetBtn.addEventListener('click', async () => {
