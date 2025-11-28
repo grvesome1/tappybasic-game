@@ -4264,6 +4264,8 @@
 
     function startGame() {
       debugLog('=== START GAME CALLED ===');
+      debugLog('walletAddress:', walletAddress);
+      debugLog('window.localCredits BEFORE:', window.localCredits);
 
       if (!walletAddress) {
         alert('Connect your wallet first.');
@@ -4284,17 +4286,16 @@
         return;
       }
 
-      // Start the game FIRST
+      // Decrement credit BEFORE starting (revert to original approach but with better protection)
+      debugLog('✅ Decrementing credit from', window.localCredits, 'to', window.localCredits - 1);
+      window.localCredits -= 1;
+      localStorage.setItem('tappyCredits', String(window.localCredits));
+      updateCreditDisplay();
+      debugLog('✅ Credit decremented, new balance:', window.localCredits);
+
+      // Start the game
       doStartGame();
-      
-      // Only decrement credit after game starts
-      // Note: doStartGame() sets game.started = true, so credit won't be overwritten by syncCredits
-      if (typeof window.useCredit === 'function') {
-        const ok = window.useCredit();
-        if (!ok) {
-          debugWarn('useCredit failed after game started - this should not happen!');
-        }
-      }
+      debugLog('=== START GAME COMPLETE - game.started:', game.started);
     }
     
     function doStartGame() {
