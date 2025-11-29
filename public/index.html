@@ -1574,6 +1574,17 @@
       const purchaseBtn = document.getElementById('purchase-btn');
       if (purchaseBtn && purchaseBtn.disabled) return;
 
+      // Timeout protection - force reset after 2 minutes
+      const timeoutId = setTimeout(() => {
+        debugWarn('⚠️ Purchase timeout - resetting button');
+        window.isPurchasing = false;
+        if (purchaseBtn) {
+          purchaseBtn.disabled = false;
+          purchaseBtn.textContent = '💳 Buy Credit';
+        }
+        resumeGameTicker('purchase-timeout');
+      }, 120000); // 2 minutes
+
       try {
         if (purchaseBtn) {
           purchaseBtn.disabled = true;
@@ -1701,9 +1712,23 @@
         alert(`✅ Credit purchased! You now have ${finalCredits} credit(s).`);
         debugLog('=== PURCHASE SUCCESS ===');
         
+        // Clear timeout on success
+        clearTimeout(timeoutId);
+        
       } catch (err) {
         console.error('❌ Purchase error:', err);
         debugLog('Full error object:', err);
+        
+        // Clear timeout
+        clearTimeout(timeoutId);
+        
+        // Reset button immediately before showing error
+        window.isPurchasing = false;
+        if (purchaseBtn) {
+          purchaseBtn.disabled = false;
+          purchaseBtn.textContent = '💳 Buy Credit';
+        }
+        resumeGameTicker('purchase-error');
         
         let errorMsg = 'Purchase failed';
         
@@ -1732,6 +1757,7 @@
         alert('❌ ' + errorMsg);
         debugLog('User-facing error:', errorMsg);
       } finally {
+        // Safety reset in case catch block had issues
         window.isPurchasing = false;
         if (purchaseBtn) {
           purchaseBtn.disabled = false;
@@ -1750,9 +1776,19 @@
       
       // Add both click and touchstart handlers for mobile reliability
       if (connectBtn) {
-        connectBtn.addEventListener('click', connectWallet);
+        connectBtn.addEventListener('click', () => {
+          // Unlock audio on mobile
+          if (audioManager && audioManager.audioContext) {
+            audioManager.audioContext.resume().catch(err => debugWarn('Audio unlock failed:', err));
+          }
+          connectWallet();
+        });
         connectBtn.addEventListener('touchstart', (e) => {
           e.stopPropagation();
+          // Unlock audio on mobile
+          if (audioManager && audioManager.audioContext) {
+            audioManager.audioContext.resume().catch(err => debugWarn('Audio unlock failed:', err));
+          }
           connectWallet();
         }, { passive: false });
       }
@@ -1766,9 +1802,19 @@
       }
       
       if (purchaseBtn) {
-        purchaseBtn.addEventListener('click', purchaseCredit);
+        purchaseBtn.addEventListener('click', () => {
+          // Unlock audio on mobile
+          if (audioManager && audioManager.audioContext) {
+            audioManager.audioContext.resume().catch(err => debugWarn('Audio unlock failed:', err));
+          }
+          purchaseCredit();
+        });
         purchaseBtn.addEventListener('touchstart', (e) => {
           e.stopPropagation();
+          // Unlock audio on mobile
+          if (audioManager && audioManager.audioContext) {
+            audioManager.audioContext.resume().catch(err => debugWarn('Audio unlock failed:', err));
+          }
           purchaseCredit();
         }, { passive: false });
       }
@@ -1792,14 +1838,26 @@
           if (accounts.length === 0) {
             // Disconnected
             debugLog('No accounts, disconnecting...');
-            await WalletManager.setAddress(null);
-            WalletManager.updateUI();
-            CreditManager.updateUI();
+            if (WalletManager.setAddress) {
+              await WalletManager.setAddress(null);
+              WalletManager.updateUI();
+              CreditManager.updateUI();
+            }
           } else {
             // Switched to different account
             try {
               debugLog('Switching to new account:', accounts[0]);
+              
+              // Wait for WalletManager to be ready
+              if (!WalletManager.setAddress) {
+                debugLog('WalletManager not ready yet, initializing...');
+                await new Promise(resolve => setTimeout(resolve, 500));
+              }
+              
               await WalletManager.setAddress(accounts[0]);
+              
+              // Wait a bit for contract to reinitialize
+              await new Promise(resolve => setTimeout(resolve, 300));
               
               // Sync credits with retry
               let synced = false;
@@ -1825,7 +1883,9 @@
               CreditManager.updateUI();
             } catch (err) {
               console.error('❌ Account switch failed:', err);
-              await disconnectWallet();
+              if (typeof disconnectWallet === 'function') {
+                await disconnectWallet();
+              }
             }
           }
         });
