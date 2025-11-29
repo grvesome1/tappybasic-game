@@ -1630,9 +1630,13 @@
         
         let gasEstimate;
         try {
-          // In ethers v6, use getFunction() then estimateGas()
-          const func = WalletManager.contract.getFunction('purchaseCreditsWithETH');
-          gasEstimate = await func.estimateGas(quantity, { value: totalCost });
+          // In ethers v6, directly call the method with .staticCall first to verify it will work
+          debugLog('Testing transaction with staticCall...');
+          await WalletManager.contract.purchaseCreditsWithETH.staticCall(quantity, { value: totalCost });
+          debugLog('Static call succeeded, estimating gas...');
+          
+          // Now estimate gas - use bracket notation to avoid property access issues
+          gasEstimate = await WalletManager.contract['purchaseCreditsWithETH'].estimateGas(quantity, { value: totalCost });
           debugLog('Gas estimate:', gasEstimate.toString());
         } catch (gasErr) {
           console.error('❌ Gas estimation failed:', gasErr);
@@ -1640,11 +1644,11 @@
           debugLog('Error message:', gasErr.message);
           
           // More detailed error
-          let detailMsg = 'Cannot estimate gas. ';
+          let detailMsg = 'Transaction will fail: ';
           if (gasErr.code === 'INVALID_ARGUMENT') {
-            detailMsg += 'Contract method call syntax error. Please report this bug.';
+            detailMsg += 'Invalid contract parameters.';
           } else if (gasErr.message?.includes('execution reverted')) {
-            detailMsg += 'Contract reverted. Check if contract is paused or if you have the correct parameters.';
+            detailMsg += 'Contract reverted. May be paused or requirements not met.';
           } else if (gasErr.message?.includes('insufficient funds')) {
             detailMsg += 'Insufficient ETH for transaction.';
           } else {
@@ -1657,12 +1661,11 @@
         const gasLimit = (gasEstimate * BigInt(120)) / BigInt(100);
         debugLog('Gas limit with buffer:', gasLimit.toString());
 
-        // Step 3: Send transaction (ethers v6 syntax)
+        // Step 3: Send transaction (ethers v6 direct call)
         debugLog('[3/5] Sending transaction...');
         if (purchaseBtn) purchaseBtn.textContent = '⏳ Confirm in wallet...';
         
-        const func = WalletManager.contract.getFunction('purchaseCreditsWithETH');
-        const tx = await func(quantity, {
+        const tx = await WalletManager.contract['purchaseCreditsWithETH'](quantity, {
           value: totalCost,
           gasLimit: gasLimit
         });
