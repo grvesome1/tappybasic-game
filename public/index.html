@@ -4532,6 +4532,12 @@
         game.logo = null;
       }
       
+      // Clear logo particles
+      for (let i = game.logoParticles.length - 1; i >= 0; i--) {
+        logoParticlePool.release(game.logoParticles[i]);
+      }
+      game.logoParticles = [];
+      
       // Clear pools
       pipePool.releaseAll();
       bulletPool.releaseAll();
