@@ -1785,54 +1785,62 @@
       
       // Add both click and touchstart handlers for mobile reliability
       if (connectBtn) {
-        connectBtn.addEventListener('click', () => {
+        const handleConnect = () => {
           // Unlock audio on mobile
           if (audioManager && audioManager.resume) {
             audioManager.resume();
           }
           connectWallet();
-        });
-        connectBtn.addEventListener('touchstart', (e) => {
+        };
+        
+        connectBtn.addEventListener('click', handleConnect);
+        connectBtn.addEventListener('touchend', (e) => {
+          e.preventDefault();
           e.stopPropagation();
-          // Unlock audio on mobile
-          if (audioManager && audioManager.resume) {
-            audioManager.resume();
-          }
-          connectWallet();
+          handleConnect();
         }, { passive: false });
       }
       
       if (disconnectBtn) {
-        disconnectBtn.addEventListener('click', disconnectWallet);
-        disconnectBtn.addEventListener('touchstart', (e) => {
-          e.stopPropagation();
+        const handleDisconnect = () => {
           disconnectWallet();
+        };
+        
+        disconnectBtn.addEventListener('click', handleDisconnect);
+        disconnectBtn.addEventListener('touchend', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          handleDisconnect();
         }, { passive: false });
       }
       
       if (purchaseBtn) {
-        purchaseBtn.addEventListener('click', () => {
+        const handlePurchase = () => {
           // Unlock audio on mobile
           if (audioManager && audioManager.resume) {
             audioManager.resume();
           }
           purchaseCredit();
-        });
-        purchaseBtn.addEventListener('touchstart', (e) => {
+        };
+        
+        purchaseBtn.addEventListener('click', handlePurchase);
+        purchaseBtn.addEventListener('touchend', (e) => {
+          e.preventDefault();
           e.stopPropagation();
-          // Unlock audio on mobile
-          if (audioManager && audioManager.resume) {
-            audioManager.resume();
-          }
-          purchaseCredit();
+          handlePurchase();
         }, { passive: false });
       }
       
       if (refreshBtn) {
-        refreshBtn.addEventListener('click', refreshCredits);
-        refreshBtn.addEventListener('touchstart', (e) => {
-          e.stopPropagation();
+        const handleRefresh = () => {
           refreshCredits();
+        };
+        
+        refreshBtn.addEventListener('click', handleRefresh);
+        refreshBtn.addEventListener('touchend', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          handleRefresh();
         }, { passive: false });
       }
       
