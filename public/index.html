@@ -1127,8 +1127,251 @@
 
     // ==================== WEB3 INTEGRATION ====================
     // Signature: YnVpbHQgYnkgZ3J1ZXPDuG1l
-    // This section handles wallet connection, credit purchasing and credit tracking.
+    // COMPLETE REWRITE: Robust wallet connection + per-wallet credit system
+    // Uses ethers v6 + BigInt throughout, handles account switching correctly
+    
     const CONTRACT_ADDRESS = '0xB670AB661c91081A44DEE43D9f0c79CEa5930dDf';
+    const CONTRACT_ABI = [
+      {
+        inputs: [ { internalType: 'uint256', name: 'amount', type: 'uint256' } ],
+        name: 'purchaseCreditsWithETH',
+        outputs: [],
+        stateMutability: 'payable',
+        type: 'function',
+      },
+      {
+        inputs: [],
+        name: 'creditPriceETH',
+        outputs: [ { internalType: 'uint256', name: '', type: 'uint256' } ],
+        stateMutability: 'view',
+        type: 'function',
+      },
+      {
+        inputs: [ { internalType: 'address', name: '', type: 'address' } ],
+        name: 'credits',
+        outputs: [ { internalType: 'uint256', name: '', type: 'uint256' } ],
+        stateMutability: 'view',
+        type: 'function',
+      },
+    ];
+
+    // Fixed credit price: 0.000005 ETH (~$0.01 when ETH ≈ $2,000)
+    const CREDIT_PRICE_WEI = 5000000000000n;
+
+    // ========== WALLET MANAGER ==========
+    // Single source of truth for wallet connection state
+    const WalletManager = {
+      currentAddress: null,  // Always lowercase, or null if disconnected
+      provider: null,
+      signer: null,
+      contract: null,
+      
+      // Get current wallet address (always lowercase)
+      getAddress() {
+        return this.currentAddress;
+      },
+      
+      // Check if wallet is connected
+      isConnected() {
+        return this.currentAddress !== null;
+      },
+      
+      // Update wallet address and reinitialize provider/signer/contract
+      async setAddress(address) {
+        if (!address) {
+          this.currentAddress = null;
+          this.provider = null;
+          this.signer = null;
+          this.contract = null;
+          debugLog('🔌 Wallet disconnected');
+          return;
+        }
+        
+        const normalized = address.toLowerCase();
+        const changed = this.currentAddress !== normalized;
+        this.currentAddress = normalized;
+        
+        if (changed) {
+          debugLog('👛 Wallet changed to:', this.currentAddress);
+          
+          // Reinitialize ethers v6 objects
+          this.provider = new ethers.BrowserProvider(window.ethereum);
+          this.signer = await this.provider.getSigner();
+          this.contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, this.signer);
+          
+          // Notify credit system
+          await CreditManager.onWalletChanged();
+        }
+      },
+      
+      // Update UI to reflect current wallet state
+      updateUI() {
+        const addrSpan = document.getElementById('wallet-address');
+        const connectBtn = document.getElementById('connect-btn');
+        const disconnectBtn = document.getElementById('disconnect-btn');
+        const purchaseBtn = document.getElementById('purchase-btn');
+        const refreshBtn = document.getElementById('refresh-btn');
+        
+        if (this.isConnected()) {
+          // Connected state
+          const short = this.currentAddress.slice(0, 6) + '...' + this.currentAddress.slice(-4);
+          if (addrSpan) addrSpan.textContent = short;
+          if (connectBtn) connectBtn.style.display = 'none';
+          if (disconnectBtn) disconnectBtn.style.display = 'inline-block';
+          if (purchaseBtn) purchaseBtn.disabled = false;
+          if (refreshBtn) refreshBtn.style.display = 'inline-block';
+          
+          // Show admin button if admin wallet
+          if (this.currentAddress === "0x3100ff9597b87e791e5bb8c0d57c94336a432089") {
+            const adminBtn = document.getElementById("adminResetBtn");
+            if (adminBtn) adminBtn.style.display = "block";
+          }
+        } else {
+          // Disconnected state
+          if (addrSpan) addrSpan.textContent = '';
+          if (connectBtn) {
+            connectBtn.style.display = 'inline-block';
+            connectBtn.disabled = false;
+          }
+          if (disconnectBtn) disconnectBtn.style.display = 'none';
+          if (purchaseBtn) purchaseBtn.disabled = true;
+          if (refreshBtn) refreshBtn.style.display = 'none';
+          
+          const adminBtn = document.getElementById("adminResetBtn");
+          if (adminBtn) adminBtn.style.display = "none";
+        }
+      }
+    };
+
+    // ========== CREDIT MANAGER ==========
+    // Handles per-wallet credit storage, purchase, and spending
+    const CreditManager = {
+      currentCredits: 0,  // Current wallet's credits
+      
+      // Get localStorage key for specific wallet
+      getStorageKey(address) {
+        return `tappyCredits_${address}`;
+      },
+      
+      // Load credits from localStorage for current wallet
+      loadCredits() {
+        if (!WalletManager.isConnected()) {
+          this.currentCredits = 0;
+          return 0;
+        }
+        
+        const key = this.getStorageKey(WalletManager.getAddress());
+        const saved = localStorage.getItem(key);
+        this.currentCredits = saved ? parseInt(saved, 10) : 0;
+        debugLog('💾 Loaded', this.currentCredits, 'credits for', WalletManager.getAddress());
+        return this.currentCredits;
+      },
+      
+      // Save credits to localStorage for current wallet
+      saveCredits(amount) {
+        if (!WalletManager.isConnected()) {
+          debugWarn('Cannot save credits: no wallet connected');
+          return;
+        }
+        
+        this.currentCredits = amount;
+        const key = this.getStorageKey(WalletManager.getAddress());
+        localStorage.setItem(key, String(amount));
+        debugLog('💾 Saved', amount, 'credits for', WalletManager.getAddress());
+        this.updateUI();
+      },
+      
+      // Get current credit count
+      getCredits() {
+        return this.currentCredits;
+      },
+      
+      // Called when wallet changes - load that wallet's credits
+      async onWalletChanged() {
+        this.loadCredits();
+        this.updateUI();
+        
+        // Try to sync from blockchain
+        await this.syncFromBlockchain();
+      },
+      
+      // Sync credits from blockchain (only increases local count, never decreases)
+      async syncFromBlockchain() {
+        if (!WalletManager.isConnected() || !WalletManager.contract) {
+          return false;
+        }
+        
+        try {
+          debugLog('🔄 Syncing credits from blockchain...');
+          const onChainCredits = await WalletManager.contract.credits(WalletManager.getAddress());
+          const chainTotal = Number(onChainCredits);
+          
+          debugLog('Blockchain:', chainTotal, 'Local:', this.currentCredits);
+          
+          // Only sync UP (blockchain tracks purchases, not spends)
+          if (chainTotal > this.currentCredits) {
+            debugLog('✅ Blockchain has more, syncing up to', chainTotal);
+            this.saveCredits(chainTotal);
+            return true;
+          } else {
+            debugLog('⚠️ Keeping local credits (already spent some)');
+            return true;
+          }
+        } catch (err) {
+          console.error('❌ Blockchain sync failed:', err);
+          return false;
+        }
+      },
+      
+      // Use one credit for game (returns true if successful, false if not enough)
+      useCredit() {
+        if (!WalletManager.isConnected()) {
+          alert('Connect your wallet first.');
+          return false;
+        }
+        
+        // Reload from localStorage to ensure we have latest value
+        this.loadCredits();
+        
+        if (this.currentCredits <= 0) {
+          alert(`You need credits to play. You have ${this.currentCredits} credits. Please buy a credit first.`);
+          return false;
+        }
+        
+        // Decrement and save
+        debugLog('✅ Using 1 credit, current balance:', this.currentCredits);
+        this.saveCredits(this.currentCredits - 1);
+        debugLog('✅ Credit used, new balance:', this.currentCredits);
+        return true;
+      },
+      
+      // Update credit count display
+      updateUI() {
+        const creditSpan = document.getElementById('credit-count');
+        if (creditSpan) {
+          creditSpan.textContent = '🎮 ' + this.currentCredits;
+        }
+      }
+    };
+
+    // Initialize - credits start at 0 until wallet connects
+    window.localCredits = 0; // Keep for backward compatibility
+    debugLog('💾 Wallet + Credit system initialized');
+
+    // Legacy compatibility functions (redirect to new managers)
+    function updateCreditDisplay() {
+      CreditManager.updateUI();
+      WalletManager.updateUI();
+      // Also update window.localCredits for backward compatibility
+      window.localCredits = CreditManager.getCredits();
+    }
+
+    window.useCredit = function() {
+      const result = CreditManager.useCredit();
+      window.localCredits = CreditManager.getCredits();
+      return result;
+    };
+
     const CONTRACT_ABI = [
       {
         inputs: [ { internalType: 'uint256', name: 'amount', type: 'uint256' } ],
@@ -1165,10 +1408,28 @@
     // $0.01 when ETH ≈ $2,000 and ensures deterministic cost without depending on
     // CoinGecko or the contract’s creditPriceETH value.  See commit message for details.
     const CREDIT_PRICE_WEI = 5000000000000n;
-    // Initialize credits from localStorage, fallback to 0 if not found
-    const savedCredits = localStorage.getItem('tappyCredits');
-    window.localCredits = savedCredits ? parseInt(savedCredits, 10) : 0;
-    debugLog('💾 Loaded credits from localStorage:', window.localCredits);
+    
+    // Helper functions for wallet-specific credit storage
+    function getCreditStorageKey() {
+      return walletAddress ? `tappyCredits_${walletAddress.toLowerCase()}` : 'tappyCredits_disconnected';
+    }
+    
+    function loadLocalCredits() {
+      const key = getCreditStorageKey();
+      const saved = localStorage.getItem(key);
+      return saved ? parseInt(saved, 10) : 0;
+    }
+    
+    function saveLocalCredits(credits) {
+      const key = getCreditStorageKey();
+      localStorage.setItem(key, String(credits));
+      debugLog('💾 Saved', credits, 'credits for', walletAddress || 'disconnected');
+    }
+    
+    // Initialize credits - will be 0 until wallet connects
+    window.localCredits = 0;
+    debugLog('💾 Credits initialized to 0 (waiting for wallet connection)');
+
 
     // Centralized credit sync function - single source of truth
     async function syncCredits() {
@@ -1182,17 +1443,19 @@
         const creditsBN = await contract.credits(walletAddress);
         const onChainCredits = Number(creditsBN);
         
-        // Don't overwrite if game is active - local credit usage takes precedence
-        if (game.started && !game.over) {
-          debugLog('⚠️ Game is active, skipping credit overwrite. Blockchain:', onChainCredits, 'Local:', window.localCredits);
-          return true;
+        debugLog('Blockchain credits:', onChainCredits, 'Local credits:', window.localCredits);
+        
+        // Only sync if blockchain has MORE credits (someone bought credits)
+        // Never overwrite with LESS credits (blockchain doesn't track spending)
+        if (onChainCredits > window.localCredits) {
+          debugLog('✅ Blockchain has more credits, syncing:', onChainCredits);
+          window.localCredits = onChainCredits;
+          saveLocalCredits(onChainCredits);
+          updateCreditDisplay();
+        } else {
+          debugLog('⚠️ Keeping local credit count (blockchain:', onChainCredits, ', local:', window.localCredits, ')');
         }
         
-        window.localCredits = onChainCredits;
-        localStorage.setItem('tappyCredits', String(onChainCredits));
-        updateCreditDisplay();
-        
-        debugLog('✅ Credits synced:', onChainCredits);
         return true;
       } catch (err) {
         console.error('❌ Failed to sync credits:', err);
@@ -1228,11 +1491,8 @@
       }
       
       // Force read from localStorage to ensure we have latest value
-      const savedCredits = localStorage.getItem('tappyCredits');
-      if (savedCredits) {
-        window.localCredits = parseInt(savedCredits, 10);
-        debugLog('Reloaded credits from localStorage:', window.localCredits);
-      }
+      window.localCredits = loadLocalCredits();
+      debugLog('Reloaded credits from localStorage:', window.localCredits);
       
       if (!Number.isFinite(window.localCredits)) {
         debugWarn('Credits not finite, defaulting to 0');
@@ -1246,7 +1506,7 @@
 
       debugLog('✅ Using 1 credit, current balance:', window.localCredits);
       window.localCredits -= 1;
-      localStorage.setItem('tappyCredits', String(window.localCredits));
+      saveLocalCredits(window.localCredits);
       updateCreditDisplay();
       debugLog('✅ Credit used, new balance:', window.localCredits);
       return true;
@@ -1350,9 +1610,8 @@
         }
         
         if (!syncSuccess) {
-          debugWarn('⚠️ Could not sync credits after retries, defaulting to 0');
-          window.localCredits = 0;
-          localStorage.setItem('tappyCredits', '0');
+          debugWarn('⚠️ Could not sync credits after retries, loading from local storage');
+          window.localCredits = loadLocalCredits();
         }
         
         // Update UI
@@ -1417,9 +1676,8 @@
       contract = null;
       window.localCredits = 0;
       
-      // Clear all localStorage
+      // Clear wallet reference but keep wallet-specific credits in localStorage
       localStorage.removeItem('tappyWalletAddress');
-      localStorage.removeItem('tappyCredits');
       
       // Update buttons
       const connectBtn = document.getElementById('connect-btn');
@@ -1481,12 +1739,14 @@
         debugLog('Wallet balance:', ethers.formatEther(balance), 'ETH');
         
         const requiredAmount = BigInt(CREDIT_PRICE_WEI);
-        const hasEnoughBalance = balance >= requiredAmount;
+        // Check if user has 3x the credit price to cover credit + gas + buffer
+        const requiredWithGas = requiredAmount * BigInt(3);
+        const hasEnoughBalance = balance >= requiredWithGas;
         
         if (!hasEnoughBalance) {
-          const needed = ethers.formatEther(requiredAmount);
+          const needed = ethers.formatEther(requiredWithGas);
           const current = ethers.formatEther(balance);
-          throw new Error(`Insufficient balance. Need ${needed} ETH, you have ${current} ETH`);
+          throw new Error(`Insufficient balance. Need ~${needed} ETH (includes gas), you have ${current} ETH`);
         }
 
         // Step 2: Estimate gas
@@ -1546,8 +1806,8 @@
           if (!synced || window.localCredits <= 0) {
             // Fallback: add credit locally
             debugWarn('Using fallback credit increment');
-            window.localCredits = (window.localCredits || 0) + 1;
-            localStorage.setItem('tappyCredits', String(window.localCredits));
+            window.localCredits = (window.localCredits || 0) + quantityInt;
+            saveLocalCredits(window.localCredits);
             updateCreditDisplay();
           }
           
@@ -1716,11 +1976,9 @@
       if (contract && walletAddress) {
         debugLog('🔄 Tab focused - loading credits from localStorage first');
         // Load from localStorage immediately for instant UI update
-        const savedCredits = localStorage.getItem('tappyCredits');
-        if (savedCredits) {
-          window.localCredits = parseInt(savedCredits, 10);
-          updateCreditDisplay();
-        }
+        window.localCredits = loadLocalCredits();
+        updateCreditDisplay();
+        
         // DON'T sync from blockchain if game is active - prevents credit overwrite race condition
         if (!game.started || game.over) {
           debugLog('🔄 Game not active, syncing from blockchain');
@@ -4540,12 +4798,9 @@
       }
 
       // Reload credits from localStorage before starting game
-      const savedCredits = localStorage.getItem('tappyCredits');
-      if (savedCredits) {
-        window.localCredits = parseInt(savedCredits, 10);
-        updateCreditDisplay();
-        debugLog('🎮 Pre-game credit check:', window.localCredits);
-      }
+      window.localCredits = loadLocalCredits();
+      updateCreditDisplay();
+      debugLog('🎮 Pre-game credit check:', window.localCredits);
 
       if (typeof window.useCredit === 'function') {
         const ok = window.useCredit();
