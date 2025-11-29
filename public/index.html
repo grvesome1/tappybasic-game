@@ -2908,6 +2908,9 @@
     async function initAudioLayer() {
       await audioManager.init();
       
+      // Set legacy variable for compatibility
+      audioContext = audioManager.context;
+      
       // Load all sounds
       await audioManager.loadAllSounds();
       
@@ -5411,7 +5414,7 @@
     
     function handleInput() {
       // Resume audio context only if not already running
-      if (audioContext.state !== 'running') {
+      if (audioContext && audioContext.state !== 'running') {
         audioContext.resume().catch(e => debugWarn('Audio resume failed:', e));
       }
       
