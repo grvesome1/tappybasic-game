@@ -1195,9 +1195,24 @@
           debugLog('👛 Wallet changed to:', this.currentAddress);
           
           // Reinitialize ethers v6 objects
+          debugLog('Initializing BrowserProvider...');
           this.provider = new ethers.BrowserProvider(window.ethereum);
+          
+          debugLog('Getting signer...');
           this.signer = await this.provider.getSigner();
+          
+          debugLog('Creating contract instance...');
+          debugLog('  Contract address:', CONTRACT_ADDRESS);
+          debugLog('  ABI entries:', CONTRACT_ABI.length);
           this.contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, this.signer);
+          debugLog('  Contract created:', !!this.contract);
+          
+          // Verify contract has the method
+          if (this.contract.purchaseCreditsWithETH) {
+            debugLog('  ✅ purchaseCreditsWithETH method found');
+          } else {
+            debugWarn('  ⚠️ purchaseCreditsWithETH method NOT found!');
+          }
           
           // Notify credit system
           await CreditManager.onWalletChanged();
@@ -1579,13 +1594,23 @@
         pauseGameTicker('purchase-start');
 
         debugLog('=== STARTING CREDIT PURCHASE ===');
+        debugLog('WalletManager.isConnected():', WalletManager.isConnected());
+        debugLog('WalletManager.getAddress():', WalletManager.getAddress());
+        debugLog('WalletManager.provider:', !!WalletManager.provider);
+        debugLog('WalletManager.signer:', !!WalletManager.signer);
+        debugLog('WalletManager.contract:', !!WalletManager.contract);
         debugLog('Price:', CREDIT_PRICE_WEI.toString(), 'wei');
-        debugLog('Wallet:', WalletManager.getAddress());
+
+        // Verify contract is initialized
+        if (!WalletManager.contract) {
+          throw new Error('Contract not initialized. Try reconnecting your wallet.');
+        }
 
         // Get quantity (default 1)
         const quantity = 1;
         const creditPrice = BigInt(CREDIT_PRICE_WEI);
         const totalCost = creditPrice * BigInt(quantity);
+        debugLog('Quantity:', quantity, 'Total cost:', totalCost.toString(), 'wei');
 
         // Step 1: Check wallet balance
         debugLog('[1/5] Checking balance...');
@@ -1602,6 +1627,11 @@
 
         // Step 2: Estimate gas
         debugLog('[2/5] Estimating gas...');
+        debugLog('Calling contract.purchaseCreditsWithETH.estimateGas with:', {
+          amount: quantity,
+          value: totalCost.toString()
+        });
+        
         let gasEstimate;
         try {
           gasEstimate = await WalletManager.contract.purchaseCreditsWithETH.estimateGas(
@@ -1610,8 +1640,21 @@
           );
           debugLog('Gas estimate:', gasEstimate.toString());
         } catch (gasErr) {
-          console.error('Gas estimation failed:', gasErr);
-          throw new Error('Cannot estimate gas. Contract may be paused or transaction will fail.');
+          console.error('❌ Gas estimation failed:', gasErr);
+          debugLog('Error code:', gasErr.code);
+          debugLog('Error message:', gasErr.message);
+          debugLog('Error reason:', gasErr.reason);
+          
+          // More detailed error
+          let detailMsg = 'Cannot estimate gas. ';
+          if (gasErr.message.includes('execution reverted')) {
+            detailMsg += 'Contract reverted. Check if contract is paused or if you have the correct parameters.';
+          } else if (gasErr.message.includes('insufficient funds')) {
+            detailMsg += 'Insufficient ETH for transaction.';
+          } else {
+            detailMsg += gasErr.message;
+          }
+          throw new Error(detailMsg);
         }
         
         // Add 20% buffer to gas estimate
@@ -1669,25 +1712,34 @@
         
       } catch (err) {
         console.error('❌ Purchase error:', err);
+        debugLog('Full error object:', err);
         
         let errorMsg = 'Purchase failed';
         
         if (err.code === 4001 || err.code === 'ACTION_REJECTED') {
-          errorMsg = 'Transaction cancelled';
+          errorMsg = 'Transaction cancelled by user';
+        } else if (err.code === -32603 || err.message?.includes('internal error')) {
+          errorMsg = 'RPC error. Try again or check your connection.';
         } else if (err.message) {
           const msg = err.message.toLowerCase();
           if (msg.includes('user rejected') || msg.includes('user denied')) {
-            errorMsg = 'Transaction rejected';
+            errorMsg = 'Transaction rejected by user';
           } else if (msg.includes('insufficient')) {
-            errorMsg = 'Insufficient ETH balance';
+            errorMsg = 'Insufficient ETH balance for transaction + gas';
           } else if (msg.includes('cannot estimate')) {
-            errorMsg = 'Contract unavailable or paused';
+            errorMsg = 'Gas estimation failed. Contract may be paused or parameters invalid.';
+          } else if (msg.includes('contract not initialized')) {
+            errorMsg = 'Wallet not properly connected. Please reconnect.';
+          } else if (msg.includes('execution reverted')) {
+            errorMsg = 'Transaction would fail. Contract may be paused or you may not meet requirements.';
           } else {
-            errorMsg = err.message.substring(0, 150);
+            // Show first 200 chars of actual error
+            errorMsg = 'Error: ' + err.message.substring(0, 200);
           }
         }
         
-        alert(errorMsg);
+        alert('❌ ' + errorMsg);
+        debugLog('User-facing error:', errorMsg);
       } finally {
         window.isPurchasing = false;
         if (purchaseBtn) {
