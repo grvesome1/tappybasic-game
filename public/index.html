@@ -1271,23 +1271,35 @@
     // Handles per-wallet credit storage, purchase, and spending
     const CreditManager = {
       currentCredits: 0,  // Current wallet's credits
+      spentCredits: 0,    // Credits spent since last blockchain sync
       
       // Get localStorage key for specific wallet
       getStorageKey(address) {
         return `tappyCredits_${address}`;
       },
       
+      // Get localStorage key for spent credits
+      getSpentKey(address) {
+        return `tappySpent_${address}`;
+      },
+      
       // Load credits from localStorage for current wallet
       loadCredits() {
         if (!WalletManager.isConnected()) {
           this.currentCredits = 0;
+          this.spentCredits = 0;
           return 0;
         }
         
         const key = this.getStorageKey(WalletManager.getAddress());
         const saved = localStorage.getItem(key);
         this.currentCredits = saved ? parseInt(saved, 10) : 0;
-        debugLog('💾 Loaded', this.currentCredits, 'credits for', WalletManager.getAddress());
+        
+        const spentKey = this.getSpentKey(WalletManager.getAddress());
+        const savedSpent = localStorage.getItem(spentKey);
+        this.spentCredits = savedSpent ? parseInt(savedSpent, 10) : 0;
+        
+        debugLog('💾 Loaded', this.currentCredits, 'credits and', this.spentCredits, 'spent for', WalletManager.getAddress());
         return this.currentCredits;
       },
       
@@ -1301,7 +1313,11 @@
         this.currentCredits = amount;
         const key = this.getStorageKey(WalletManager.getAddress());
         localStorage.setItem(key, String(amount));
-        debugLog('💾 Saved', amount, 'credits for', WalletManager.getAddress());
+        
+        const spentKey = this.getSpentKey(WalletManager.getAddress());
+        localStorage.setItem(spentKey, String(this.spentCredits));
+        
+        debugLog('💾 Saved', amount, 'credits and', this.spentCredits, 'spent for', WalletManager.getAddress());
         this.updateUI();
       },
       
@@ -1334,7 +1350,7 @@
           const lastKnownKey = `tappyLastBlockchainTotal_${WalletManager.getAddress().toLowerCase()}`;
           const lastKnownTotal = parseInt(localStorage.getItem(lastKnownKey) || '0');
           
-          debugLog('Blockchain:', chainTotal, 'Local:', this.currentCredits, 'LastKnown:', lastKnownTotal);
+          debugLog('Blockchain:', chainTotal, 'Local:', this.currentCredits, 'LastKnown:', lastKnownTotal, 'Spent:', this.spentCredits);
           
           // If blockchain increased (new purchase), add the difference
           if (chainTotal > lastKnownTotal) {
@@ -1342,12 +1358,23 @@
             debugLog('✅ New purchase detected! Adding', newCredits, 'credits');
             this.saveCredits(this.currentCredits + newCredits);
             localStorage.setItem(lastKnownKey, chainTotal.toString());
+            // Reset spent counter after purchase
+            this.spentCredits = 0;
+            const spentKey = this.getSpentKey(WalletManager.getAddress());
+            localStorage.setItem(spentKey, '0');
             return true;
           } else if (lastKnownTotal === 0 && chainTotal > 0) {
-            // First time connecting - initialize to blockchain value
-            debugLog('✅ First sync - initializing to', chainTotal);
-            this.saveCredits(chainTotal);
+            // First time connecting - calculate spent credits and restore local total
+            const expectedLocal = chainTotal - this.spentCredits;
+            debugLog('✅ First sync - blockchain has', chainTotal, ', spent', this.spentCredits, ', restoring to', expectedLocal);
+            this.saveCredits(expectedLocal);
             localStorage.setItem(lastKnownKey, chainTotal.toString());
+            return true;
+          } else if (chainTotal === lastKnownTotal && this.spentCredits > 0) {
+            // Page reload scenario - blockchain unchanged but we have spent credits
+            const expectedLocal = chainTotal - this.spentCredits;
+            debugLog('✅ Page reload - blockchain', chainTotal, ', spent', this.spentCredits, ', restoring to', expectedLocal);
+            this.saveCredits(expectedLocal);
             return true;
           } else {
             debugLog('⚠️ No new purchases (blockchain hasn\'t changed)');
@@ -1374,10 +1401,11 @@
           return false;
         }
         
-        // Decrement and save
+        // Decrement and save, increment spent counter
         debugLog('✅ Using 1 credit, current balance:', this.currentCredits);
+        this.spentCredits++;
         this.saveCredits(this.currentCredits - 1);
-        debugLog('✅ Credit used, new balance:', this.currentCredits);
+        debugLog('✅ Credit used, new balance:', this.currentCredits, 'total spent:', this.spentCredits);
         return true;
       },
       
