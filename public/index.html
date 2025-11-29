@@ -1786,9 +1786,13 @@
       // Add both click and touchstart handlers for mobile reliability
       if (connectBtn) {
         const handleConnect = () => {
-          // Unlock audio on mobile
-          if (audioManager && audioManager.resume) {
-            audioManager.resume();
+          // Unlock audio on mobile - force init if needed
+          if (typeof audioManager !== 'undefined' && audioManager) {
+            if (!audioManager.context) {
+              audioManager.init().then(() => audioManager.resume()).catch(err => debugWarn('Audio init failed:', err));
+            } else if (audioManager.context.state === 'suspended') {
+              audioManager.resume();
+            }
           }
           connectWallet();
         };
@@ -1816,9 +1820,13 @@
       
       if (purchaseBtn) {
         const handlePurchase = () => {
-          // Unlock audio on mobile
-          if (audioManager && audioManager.resume) {
-            audioManager.resume();
+          // Unlock audio on mobile - force init if needed
+          if (typeof audioManager !== 'undefined' && audioManager) {
+            if (!audioManager.context) {
+              audioManager.init().then(() => audioManager.resume()).catch(err => debugWarn('Audio init failed:', err));
+            } else if (audioManager.context.state === 'suspended') {
+              audioManager.resume();
+            }
           }
           purchaseCredit();
         };
@@ -1848,7 +1856,7 @@
       
       // Handle wallet events for mobile reconnection
       if (window.ethereum) {
-        window.ethereum.on('accountsChanged', async (accounts) => {
+        const handleAccountsChanged = async (accounts) => {
           debugLog('=== ACCOUNT CHANGED ===');
           debugLog('New accounts:', accounts);
           
@@ -1921,7 +1929,19 @@
               }
             }
           }
-        });
+        };
+        
+        // Register with both event patterns for mobile compatibility
+        try {
+          window.ethereum.on('accountsChanged', handleAccountsChanged);
+        } catch (err) {
+          debugWarn('EventEmitter pattern failed, trying addEventListener:', err);
+        }
+        
+        // Fallback for mobile wallets that use standard event listeners
+        if (window.ethereum.addEventListener) {
+          window.ethereum.addEventListener('accountsChanged', handleAccountsChanged);
+        }
         
         window.ethereum.on('chainChanged', () => {
           // Don't reload if currently purchasing - prevents losing credits
@@ -1940,8 +1960,13 @@
           e.preventDefault();
           e.stopPropagation();
           debugLog('=== START MENU POINTERDOWN ===');
-          if (typeof audioContext !== 'undefined' && audioContext && audioContext.state !== 'running') {
-            audioContext.resume().catch(err => debugWarn('Audio resume failed:', err));
+          // Unlock audio on mobile
+          if (typeof audioManager !== 'undefined' && audioManager) {
+            if (!audioManager.context) {
+              audioManager.init().then(() => audioManager.resume()).catch(err => debugWarn('Audio init failed:', err));
+            } else if (audioManager.context.state === 'suspended') {
+              audioManager.resume();
+            }
           }
           startGame();
         });
@@ -1952,8 +1977,13 @@
           e.preventDefault();
           e.stopPropagation();
           debugLog('=== RESTART POINTERDOWN ===');
-          if (typeof audioContext !== 'undefined' && audioContext && audioContext.state !== 'running') {
-            audioContext.resume().catch(err => debugWarn('Audio resume failed:', err));
+          // Unlock audio on mobile
+          if (typeof audioManager !== 'undefined' && audioManager) {
+            if (!audioManager.context) {
+              audioManager.init().then(() => audioManager.resume()).catch(err => debugWarn('Audio init failed:', err));
+            } else if (audioManager.context.state === 'suspended') {
+              audioManager.resume();
+            }
           }
           startGame();
         });
