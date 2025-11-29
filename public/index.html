@@ -1324,15 +1324,27 @@
           const onChainCredits = await WalletManager.contract.credits(WalletManager.getAddress());
           const chainTotal = Number(onChainCredits);
           
-          debugLog('Blockchain:', chainTotal, 'Local:', this.currentCredits);
+          // Get last known blockchain total from localStorage
+          const lastKnownKey = `tappyLastBlockchainTotal_${WalletManager.getAddress().toLowerCase()}`;
+          const lastKnownTotal = parseInt(localStorage.getItem(lastKnownKey) || '0');
           
-          // Only sync UP (blockchain tracks purchases, not spends)
-          if (chainTotal > this.currentCredits) {
-            debugLog('✅ Blockchain has more, syncing up to', chainTotal);
+          debugLog('Blockchain:', chainTotal, 'Local:', this.currentCredits, 'LastKnown:', lastKnownTotal);
+          
+          // If blockchain increased (new purchase), add the difference
+          if (chainTotal > lastKnownTotal) {
+            const newCredits = chainTotal - lastKnownTotal;
+            debugLog('✅ New purchase detected! Adding', newCredits, 'credits');
+            this.saveCredits(this.currentCredits + newCredits);
+            localStorage.setItem(lastKnownKey, chainTotal.toString());
+            return true;
+          } else if (lastKnownTotal === 0 && chainTotal > 0) {
+            // First time connecting - initialize to blockchain value
+            debugLog('✅ First sync - initializing to', chainTotal);
             this.saveCredits(chainTotal);
+            localStorage.setItem(lastKnownKey, chainTotal.toString());
             return true;
           } else {
-            debugLog('⚠️ Keeping local credits (already spent some)');
+            debugLog('⚠️ No new purchases (blockchain hasn\'t changed)');
             return true;
           }
         } catch (err) {
@@ -4258,7 +4270,7 @@
     }
 
     async function submitScoreToLeaderboard(score, tbags) {
-      if (!walletAddress) return;
+      if (!WalletManager.isConnected()) return;
       
       const initials = prompt("Enter initials (optional, max 3 letters):");
       
@@ -4270,7 +4282,7 @@
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            wallet: walletAddress,
+            wallet: WalletManager.getAddress(),
             score,
             tbags: tbags || 0,
             initials: initials || ""
@@ -4676,7 +4688,7 @@
     function startGame() {
       debugLog('=== START GAME CALLED ===');
 
-      if (!walletAddress) {
+      if (!WalletManager.isConnected()) {
         alert('Connect your wallet first.');
         return;
       }
