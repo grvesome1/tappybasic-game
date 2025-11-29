@@ -1197,6 +1197,12 @@
         if (changed) {
           debugLog('👛 Wallet changed to:', this.currentAddress);
           
+          // Check if window.ethereum is available
+          if (!window.ethereum) {
+            debugWarn('⚠️ window.ethereum not available');
+            return;
+          }
+          
           // Reinitialize ethers v6 objects
           debugLog('Initializing BrowserProvider...');
           this.provider = new ethers.BrowserProvider(window.ethereum);
@@ -1757,6 +1763,9 @@
         alert('❌ ' + errorMsg);
         debugLog('User-facing error:', errorMsg);
       } finally {
+        // Clear timeout
+        clearTimeout(timeoutId);
+        
         // Safety reset in case catch block had issues
         window.isPurchasing = false;
         if (purchaseBtn) {
@@ -1835,10 +1844,16 @@
           debugLog('=== ACCOUNT CHANGED ===');
           debugLog('New accounts:', accounts);
           
+          // Prevent handling during active purchase
+          if (window.isPurchasing) {
+            debugLog('⚠️ Purchase in progress, deferring account change...');
+            return;
+          }
+          
           if (accounts.length === 0) {
             // Disconnected
             debugLog('No accounts, disconnecting...');
-            if (WalletManager.setAddress) {
+            if (WalletManager && WalletManager.setAddress) {
               await WalletManager.setAddress(null);
               WalletManager.updateUI();
               CreditManager.updateUI();
@@ -1848,27 +1863,35 @@
             try {
               debugLog('Switching to new account:', accounts[0]);
               
-              // Wait for WalletManager to be ready
-              if (!WalletManager.setAddress) {
-                debugLog('WalletManager not ready yet, initializing...');
-                await new Promise(resolve => setTimeout(resolve, 500));
+              // Wait for WalletManager to be ready (important on mobile)
+              let retries = 10;
+              while ((!WalletManager || !WalletManager.setAddress) && retries > 0) {
+                debugLog('WalletManager not ready, waiting...', retries);
+                await new Promise(resolve => setTimeout(resolve, 200));
+                retries--;
+              }
+              
+              if (!WalletManager || !WalletManager.setAddress) {
+                throw new Error('WalletManager failed to initialize');
               }
               
               await WalletManager.setAddress(accounts[0]);
               
-              // Wait a bit for contract to reinitialize
-              await new Promise(resolve => setTimeout(resolve, 300));
+              // Wait for contract to reinitialize
+              await new Promise(resolve => setTimeout(resolve, 500));
               
               // Sync credits with retry
               let synced = false;
-              let retries = 3;
+              let syncRetries = 3;
               
-              while (!synced && retries > 0) {
-                synced = await CreditManager.syncFromBlockchain();
+              while (!synced && syncRetries > 0) {
+                if (CreditManager && CreditManager.syncFromBlockchain) {
+                  synced = await CreditManager.syncFromBlockchain();
+                }
                 if (!synced) {
-                  retries--;
-                  if (retries > 0) {
-                    debugLog(`Sync failed, retrying... (${retries} left)`);
+                  syncRetries--;
+                  if (syncRetries > 0) {
+                    debugLog(`Sync failed, retrying... (${syncRetries} left)`);
                     await new Promise(resolve => setTimeout(resolve, 1000));
                   }
                 }
@@ -1876,13 +1899,15 @@
               
               if (!synced) {
                 debugWarn('⚠️ Could not sync credits for new account');
-                alert('⚠️ Could not sync credits from blockchain. Click refresh button to retry.');
               }
               
-              WalletManager.updateUI();
-              CreditManager.updateUI();
+              if (WalletManager && WalletManager.updateUI) WalletManager.updateUI();
+              if (CreditManager && CreditManager.updateUI) CreditManager.updateUI();
+              
+              debugLog('✅ Account switch complete');
             } catch (err) {
               console.error('❌ Account switch failed:', err);
+              alert('⚠️ Failed to switch account. Please reconnect your wallet.');
               if (typeof disconnectWallet === 'function') {
                 await disconnectWallet();
               }
