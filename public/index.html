@@ -1787,16 +1787,16 @@
       if (connectBtn) {
         connectBtn.addEventListener('click', () => {
           // Unlock audio on mobile
-          if (audioManager && audioManager.audioContext) {
-            audioManager.audioContext.resume().catch(err => debugWarn('Audio unlock failed:', err));
+          if (audioManager && audioManager.resume) {
+            audioManager.resume();
           }
           connectWallet();
         });
         connectBtn.addEventListener('touchstart', (e) => {
           e.stopPropagation();
           // Unlock audio on mobile
-          if (audioManager && audioManager.audioContext) {
-            audioManager.audioContext.resume().catch(err => debugWarn('Audio unlock failed:', err));
+          if (audioManager && audioManager.resume) {
+            audioManager.resume();
           }
           connectWallet();
         }, { passive: false });
@@ -1813,16 +1813,16 @@
       if (purchaseBtn) {
         purchaseBtn.addEventListener('click', () => {
           // Unlock audio on mobile
-          if (audioManager && audioManager.audioContext) {
-            audioManager.audioContext.resume().catch(err => debugWarn('Audio unlock failed:', err));
+          if (audioManager && audioManager.resume) {
+            audioManager.resume();
           }
           purchaseCredit();
         });
         purchaseBtn.addEventListener('touchstart', (e) => {
           e.stopPropagation();
           // Unlock audio on mobile
-          if (audioManager && audioManager.audioContext) {
-            audioManager.audioContext.resume().catch(err => debugWarn('Audio unlock failed:', err));
+          if (audioManager && audioManager.resume) {
+            audioManager.resume();
           }
           purchaseCredit();
         }, { passive: false });
