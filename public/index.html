@@ -1,7 +1,10 @@
 <html lang="en">
 <head>
-  <!-- built by gruesÃ¸me - Pixi.js Migration -->
+  <!-- built by gruesÃ¸me - Pixi.js Migration v1.4.1 -->
   <meta charset="UTF-8" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>$TBAG's Tappy Rocket - Pixi.js Edition</title>
 
@@ -1386,30 +1389,6 @@
       window.localCredits = CreditManager.getCredits();
       return result;
     };
-
-    const CONTRACT_ABI = [
-      {
-        inputs: [ { internalType: 'uint256', name: 'amount', type: 'uint256' } ],
-        name: 'purchaseCreditsWithETH',
-        outputs: [],
-        stateMutability: 'payable',
-        type: 'function',
-      },
-      {
-        inputs: [],
-        name: 'creditPriceETH',
-        outputs: [ { internalType: 'uint256', name: '', type: 'uint256' } ],
-        stateMutability: 'view',
-        type: 'function',
-      },
-      {
-        inputs: [ { internalType: 'address', name: '', type: 'address' } ],
-        name: 'credits',
-        outputs: [ { internalType: 'uint256', name: '', type: 'uint256' } ],
-        stateMutability: 'view',
-        type: 'function',
-      },
-    ];
 
     // ========== WALLET CONNECTION FUNCTIONS ==========
     // Old global variables and helper functions removed - state now managed by WalletManager/CreditManager
