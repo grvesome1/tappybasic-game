@@ -1625,34 +1625,30 @@
           throw new Error(`Insufficient balance. Need ~${needed} ETH (includes gas), you have ${current} ETH`);
         }
 
-        // Step 2: Estimate gas
+        // Step 2: Estimate gas (ethers v6 syntax)
         debugLog('[2/5] Estimating gas...');
-        debugLog('Calling contract.purchaseCreditsWithETH.estimateGas with:', {
-          amount: quantity,
-          value: totalCost.toString()
-        });
         
         let gasEstimate;
         try {
-          gasEstimate = await WalletManager.contract.purchaseCreditsWithETH.estimateGas(
-            quantity,
-            { value: totalCost }
-          );
+          // In ethers v6, use getFunction() then estimateGas()
+          const func = WalletManager.contract.getFunction('purchaseCreditsWithETH');
+          gasEstimate = await func.estimateGas(quantity, { value: totalCost });
           debugLog('Gas estimate:', gasEstimate.toString());
         } catch (gasErr) {
           console.error('❌ Gas estimation failed:', gasErr);
           debugLog('Error code:', gasErr.code);
           debugLog('Error message:', gasErr.message);
-          debugLog('Error reason:', gasErr.reason);
           
           // More detailed error
           let detailMsg = 'Cannot estimate gas. ';
-          if (gasErr.message.includes('execution reverted')) {
+          if (gasErr.code === 'INVALID_ARGUMENT') {
+            detailMsg += 'Contract method call syntax error. Please report this bug.';
+          } else if (gasErr.message?.includes('execution reverted')) {
             detailMsg += 'Contract reverted. Check if contract is paused or if you have the correct parameters.';
-          } else if (gasErr.message.includes('insufficient funds')) {
+          } else if (gasErr.message?.includes('insufficient funds')) {
             detailMsg += 'Insufficient ETH for transaction.';
           } else {
-            detailMsg += gasErr.message;
+            detailMsg += gasErr.message || 'Unknown error';
           }
           throw new Error(detailMsg);
         }
@@ -1661,11 +1657,12 @@
         const gasLimit = (gasEstimate * BigInt(120)) / BigInt(100);
         debugLog('Gas limit with buffer:', gasLimit.toString());
 
-        // Step 3: Send transaction
+        // Step 3: Send transaction (ethers v6 syntax)
         debugLog('[3/5] Sending transaction...');
         if (purchaseBtn) purchaseBtn.textContent = '⏳ Confirm in wallet...';
         
-        const tx = await WalletManager.contract.purchaseCreditsWithETH(quantity, {
+        const func = WalletManager.contract.getFunction('purchaseCreditsWithETH');
+        const tx = await func(quantity, {
           value: totalCost,
           gasLimit: gasLimit
         });
