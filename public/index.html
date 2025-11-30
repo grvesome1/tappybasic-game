@@ -1129,6 +1129,10 @@
     // Vertical offset (usually fine at 0)
     const ROCKET_COLLISION_OFFSET_Y_FACTOR = 0.0;
     
+    // Candle collision area insets (shrink hit area smaller than visual sprite)
+    const CANDLE_COLLISION_INSET_HORIZONTAL = 15; // Shrink width by 15px each side
+    const CANDLE_COLLISION_INSET_VERTICAL = 10;   // Shrink vertical edges by 10px
+    
     // Debug collision visualization (set to true to see collision circle)
     const SHOW_COLLISION_DEBUG = true;
     
@@ -2871,13 +2875,13 @@
         const top    = cy - r;
         const bottom = cy + r;
 
-        // Pipe bounds
-        const pipeLeft   = pipe.x;
-        const pipeRight  = pipe.x + pipe.w;
+        // Pipe bounds with insets applied
+        const pipeLeft   = pipe.collisionLeft || pipe.x;
+        const pipeRight  = pipe.collisionRight || (pipe.x + pipe.w);
         const pipeTop    = pipe.collisionTop || pipe.top;
         const pipeBottom = pipe.collisionBottom || pipe.bottom;
 
-        // 1) Horizontal overlap with the candle
+        // 1) Horizontal overlap with the candle (using inset bounds)
         const horizontallyAligned = right > pipeLeft && left < pipeRight;
 
         // 2) Vertical overlap with the solid parts:
@@ -2948,9 +2952,11 @@
         this.bottomSprite.x = this.x;
         this.bottomSprite.y = this.bottom;
         
-        // Collision boundaries match visual sprite edges exactly
-        this.collisionTop = this.top;
-        this.collisionBottom = this.bottom;
+        // Collision boundaries with insets for tighter, fairer collision
+        this.collisionTop = this.top + CANDLE_COLLISION_INSET_VERTICAL;
+        this.collisionBottom = this.bottom - CANDLE_COLLISION_INSET_VERTICAL;
+        this.collisionLeft = this.x + CANDLE_COLLISION_INSET_HORIZONTAL;
+        this.collisionRight = this.x + this.w - CANDLE_COLLISION_INSET_HORIZONTAL;
       }
 
       update() {
