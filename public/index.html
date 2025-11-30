@@ -1120,6 +1120,18 @@
     // Game balance constants
     const BIRD_COLLISION_RADIUS = 0.4; // Adjusted to match 1.6x visual sprite size
     const ROCKET_SIZE_MULTIPLIER = 1.6; // Matches backup display size (32 * 1.6 = 51.2px)
+    
+    // Collision tuning for rocket vs candles
+    // Fraction of the *visible* rocket width used as collision radius
+    const ROCKET_COLLISION_RADIUS_FACTOR = 0.32;   // 0.30–0.36 is a good range to test
+    // Horizontal offset of collision circle, as fraction of rocket width (toward the nose)
+    const ROCKET_COLLISION_OFFSET_X_FACTOR = 0.06; // push hit circle ~6% forward
+    // Vertical offset (usually fine at 0)
+    const ROCKET_COLLISION_OFFSET_Y_FACTOR = 0.0;
+    
+    // Debug collision visualization (set to true to see collision circle)
+    const SHOW_COLLISION_DEBUG = true;
+    
     const GRAVITY = 0.25;
     const BASE_SPEED = 3.21;
     const SPEED_INCREMENT_MIN = 0.03;
@@ -2684,6 +2696,12 @@
         this.sherkSprite.visible = false;
         gameContainer.addChild(this.sherkSprite);
         
+        // Debug: collision circle visualization
+        if (SHOW_COLLISION_DEBUG) {
+          this.debugCircle = new PIXI.Graphics();
+          gameContainer.addChild(this.debugCircle);
+        }
+        
         this.flameTimer = 0;
         this.reset();
       }
@@ -2814,32 +2832,61 @@
         } else {
           this.sherkSprite.visible = false;
         }
+        
+        // Debug: draw collision circle
+        if (SHOW_COLLISION_DEBUG && this.debugCircle) {
+          const circle = this.getCollisionCircle();
+          this.debugCircle.clear();
+          this.debugCircle.lineStyle(2, 0x00FF00, 1); // Green circle, 2px line
+          this.debugCircle.drawCircle(circle.x, circle.y, circle.r);
+        }
+      }
+
+      getCollisionCircle() {
+        // Visible rocket size on screen
+        const displaySize = this.size * ROCKET_SIZE_MULTIPLIER;
+
+        const r = displaySize * ROCKET_COLLISION_RADIUS_FACTOR;
+
+        // Compute offsets to align circle with the actual rocket body
+        const offsetX = displaySize * ROCKET_COLLISION_OFFSET_X_FACTOR;
+        const offsetY = displaySize * ROCKET_COLLISION_OFFSET_Y_FACTOR;
+
+        return {
+          x: this.sprite.x + offsetX,
+          y: this.sprite.y + offsetY,
+          r
+        };
       }
 
       checkCollision(pipe) {
-        // Pixel-perfect collision using actual sprite bounds
-        // Rocket sprite bounds (centered anchor at 0.5)
-        const rocketHalfWidth = (this.size * ROCKET_SIZE_MULTIPLIER) / 2;
-        const rocketHalfHeight = (this.size * ROCKET_SIZE_MULTIPLIER) / 2;
-        const rocketLeft = this.x - rocketHalfWidth;
-        const rocketRight = this.x + rocketHalfWidth;
-        const rocketTop = this.y - rocketHalfHeight;
-        const rocketBottom = this.y + rocketHalfHeight;
-        
+        const circle = this.getCollisionCircle();
+        const cx = circle.x;
+        const cy = circle.y;
+        const r  = circle.r;
+
+        // Circle bounds
+        const left   = cx - r;
+        const right  = cx + r;
+        const top    = cy - r;
+        const bottom = cy + r;
+
         // Pipe bounds
-        const pipeLeft = pipe.x;
-        const pipeRight = pipe.x + pipe.w;
-        const pipeTop = pipe.collisionTop || pipe.top;
+        const pipeLeft   = pipe.x;
+        const pipeRight  = pipe.x + pipe.w;
+        const pipeTop    = pipe.collisionTop || pipe.top;
         const pipeBottom = pipe.collisionBottom || pipe.bottom;
-        
-        // Check horizontal overlap
-        const horizontalOverlap = rocketRight > pipeLeft && rocketLeft < pipeRight;
-        
-        // Check if rocket touches top or bottom candle
-        const touchingTopCandle = rocketTop < pipeTop;
-        const touchingBottomCandle = rocketBottom > pipeBottom;
-        
-        return horizontalOverlap && (touchingTopCandle || touchingBottomCandle);
+
+        // 1) Horizontal overlap with the candle
+        const horizontallyAligned = right > pipeLeft && left < pipeRight;
+
+        // 2) Vertical overlap with the solid parts:
+        //    - hit the *top* candle if our top crosses into its area
+        //    - hit the *bottom* candle if our bottom crosses into its area
+        const hitsTop    = top    < pipeTop;
+        const hitsBottom = bottom > pipeBottom;
+
+        return horizontallyAligned && (hitsTop || hitsBottom);
       }
     }
 
@@ -5179,17 +5226,7 @@
     musicMuteButton.addEventListener('click', (e) => {
       e.stopPropagation();
       game.musicMuted = !game.musicMuted;
-      
-      if (audioConfig.mode === AudioMode.HTML5) {
-        setMusicMuted(game.musicMuted);
-      } else if (audioConfig.mode === AudioMode.WEBAUDIO) {
-        if (bgMusicGain) {
-          bgMusicGain.gain.value = game.musicMuted ? 0 : 0.2;
-        }
-        if (!game.musicMuted && !bgMusicSource && sounds.background) {
-          createBackgroundMusic();
-        }
-      }
+      audioManager.setMusicMuted(game.musicMuted);
       
       musicMuteButton.classList.toggle('muted', game.musicMuted);
       startMusicBtn.classList.toggle('muted', game.musicMuted);
@@ -5202,10 +5239,7 @@
     sfxMuteButton.addEventListener('click', (e) => {
       e.stopPropagation();
       game.muted = !game.muted;
-      
-      if (audioConfig.mode === AudioMode.HTML5) {
-        setSfxMuted(game.muted);
-      }
+      audioManager.setSfxMuted(game.muted);
       
       sfxMuteButton.classList.toggle('muted', game.muted);
       startSfxBtn.classList.toggle('muted', game.muted);
@@ -5220,16 +5254,7 @@
     startMusicBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       game.musicMuted = !game.musicMuted;
-      
-      if (audioConfig.mode === AudioMode.HTML5) {
-        setMusicMuted(game.musicMuted);
-      } else if (audioConfig.mode === AudioMode.WEBAUDIO) {
-        if (!game.musicMuted && !bgMusicSource && sounds.background) {
-          createBackgroundMusic();
-        } else if (bgMusicGain) {
-          bgMusicGain.gain.value = game.musicMuted ? 0 : 0.2;
-        }
-      }
+      audioManager.setMusicMuted(game.musicMuted);
       
       startMusicBtn.classList.toggle('muted', game.musicMuted);
       gameoverMusicBtn.classList.toggle('muted', game.musicMuted);
@@ -5239,10 +5264,7 @@
     startSfxBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       game.muted = !game.muted;
-      
-      if (audioConfig.mode === AudioMode.HTML5) {
-        setSfxMuted(game.muted);
-      }
+      audioManager.setSfxMuted(game.muted);
       
       startSfxBtn.classList.toggle('muted', game.muted);
       gameoverSfxBtn.classList.toggle('muted', game.muted);
@@ -5256,16 +5278,7 @@
     gameoverMusicBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       game.musicMuted = !game.musicMuted;
-      
-      if (audioConfig.mode === AudioMode.HTML5) {
-        setMusicMuted(game.musicMuted);
-      } else if (audioConfig.mode === AudioMode.WEBAUDIO) {
-        if (!game.musicMuted && !bgMusicSource && sounds.background) {
-          createBackgroundMusic();
-        } else if (bgMusicGain) {
-          bgMusicGain.gain.value = game.musicMuted ? 0 : 0.2;
-        }
-      }
+      audioManager.setMusicMuted(game.musicMuted);
       
       gameoverMusicBtn.classList.toggle('muted', game.musicMuted);
       startMusicBtn.classList.toggle('muted', game.musicMuted);
@@ -5275,10 +5288,7 @@
     gameoverSfxBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       game.muted = !game.muted;
-      
-      if (audioConfig.mode === AudioMode.HTML5) {
-        setSfxMuted(game.muted);
-      }
+      audioManager.setSfxMuted(game.muted);
       
       gameoverSfxBtn.classList.toggle('muted', game.muted);
       startSfxBtn.classList.toggle('muted', game.muted);
