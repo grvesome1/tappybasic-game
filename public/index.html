@@ -2414,10 +2414,8 @@
       }
       
       async loadAllSounds() {
-        // Mobile: Skip Web Audio API loading entirely (uses HTML5 Audio)
-        if (this.isMobile) return;
-        
-        // Desktop: Load all sounds via Web Audio API
+        // Load sounds via Web Audio API for both mobile and desktop
+        // (HTML5 Audio removed - unified approach with proper unlock)
         const soundMap = {
           score: './assets/audio/score.mp3',
           lift: './assets/audio/lift.mp3',
