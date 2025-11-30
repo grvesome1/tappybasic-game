@@ -3186,8 +3186,8 @@
       }
 
       checkCollision(pipe) {
-        // Increased collision radius for better feel with 1.6x visual sprite
-        const collisionRadius = this.size * 0.35; // 32 * 0.35 = 11.2px (more forgiving)
+        // Very tight collision - rocket must physically touch candle
+        const collisionRadius = this.size * 0.15; // 32 * 0.15 = 4.8px (very tight)
         
         const horizontallyAligned =
           this.x + collisionRadius > pipe.x &&
@@ -3257,10 +3257,10 @@
         this.bottomSprite.x = this.x;
         this.bottomSprite.y = this.bottom;
         
-        // Collision boundaries with 8px inset for safety margin
+        // Tight collision boundaries with 18px inset - rocket must physically touch
         // Top candle: inset the bottom edge upward (make gap larger)
         // Bottom candle: inset the top edge downward (make gap larger)
-        const COLLISION_INSET = 8;
+        const COLLISION_INSET = 18;
         this.collisionTop = this.top - COLLISION_INSET;
         this.collisionBottom = this.bottom + COLLISION_INSET;
       }
@@ -5186,7 +5186,7 @@
         
         // Near-miss detection (tight squeeze past pipes)
         if (!pipe.nearMissChecked && game.bird.x > pipe.x && game.bird.x < pipe.x + pipe.w) {
-          const collisionRadius = game.bird.size * 0.35; // Match updated collision detection
+          const collisionRadius = game.bird.size * 0.15; // Match updated tight collision
           const topClearance = game.bird.y - collisionRadius - pipe.collisionTop;
           const bottomClearance = pipe.collisionBottom - (game.bird.y + collisionRadius);
           
