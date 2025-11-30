@@ -1278,6 +1278,7 @@
 
     // ========== WALLET CONNECT ==========
     async function connectWallet() {
+      console.log('[DEBUG] connectWallet called');
       if (!window.ethereum) {
         const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
         if (isMobileDevice) {
@@ -1294,6 +1295,7 @@
       if (connectBtn) connectBtn.disabled = true;
 
       try {
+        console.log('[DEBUG] Requesting accounts...');
         // Request accounts
         const provider = new ethers.BrowserProvider(window.ethereum);
         const accounts = await provider.send('eth_requestAccounts', []);
@@ -1352,7 +1354,7 @@
 
         if (connectBtn) connectBtn.disabled = false;
       } catch (err) {
-        console.error('Wallet connection error:', err);
+        console.error('[DEBUG] Wallet connection error:', err);
         alert('Connection failed: ' + (err.message || 'Unknown error'));
         if (connectBtn) connectBtn.disabled = false;
       }
@@ -1376,6 +1378,7 @@
 
     // ========== BUY CREDIT ==========
     async function buyOneCredit() {
+      console.log('[DEBUG] buyOneCredit called');
       if (!WalletState.contract || !WalletState.address) {
         alert('Connect your wallet first.');
         return;
