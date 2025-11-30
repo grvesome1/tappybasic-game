@@ -1520,6 +1520,7 @@
 
     // ========== DOM EVENT BINDINGS ==========
     window.addEventListener('DOMContentLoaded', () => {
+      console.log('[DEBUG] DOMContentLoaded fired');
       const connectBtn = document.getElementById('connect-btn');
       const disconnectBtn = document.getElementById('disconnect-btn');
       const purchaseBtn = document.getElementById('purchase-btn');
@@ -1527,7 +1528,9 @@
       
       // Connect button
       if (connectBtn) {
+        console.log('[DEBUG] Connect button found, adding handlers');
         const handleConnect = async () => {
+          console.log('[DEBUG] Connect button clicked!');
           // Unlock audio on mobile - do this synchronously
           if (audioManager && !audioManager.context) {
             await audioManager.init();
@@ -1560,7 +1563,9 @@
       
       // Purchase button
       if (purchaseBtn) {
+        console.log('[DEBUG] Purchase button found, adding handlers');
         const handlePurchase = async () => {
+          console.log('[DEBUG] Purchase button clicked!');
           // Unlock audio on mobile - do this synchronously
           if (audioManager && !audioManager.context) {
             await audioManager.init();
@@ -1594,7 +1599,6 @@
       // Initialize UI
       updateWalletUI();
       updateCreditsUI();
-    });
       
       // Attach start menu and restart button handlers (MUST be in DOMContentLoaded)
       if (dom.startMenu) {
