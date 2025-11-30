@@ -2758,11 +2758,11 @@
         safePlay('lift', 0.3, pitch);
       }
 
-      update() {
+      update(delta = 1.0) {
         if (!game.started || game.over) return;
 
-        // Add motion trail when moving fast
-        if (Math.abs(this.vy) > 3 && frameCount % 3 === 0) {
+        // Add motion trail when moving fast (reduce on mobile)
+        if (!isMobile && Math.abs(this.vy) > 3 && frameCount % 3 === 0) {
           createParticles(this.x - 10, this.y, 1, 0x00AAFF, { 
             speedMin: 0.5, 
             speedMax: 1, 
