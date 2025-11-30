@@ -1352,6 +1352,7 @@
           contract,
           address: ethers.getAddress(address),
           chainId: network.chainId,
+          creditsSpentThisSession: 0
         });
 
         debugLog('Wallet connected:', WalletState.address);
@@ -1377,6 +1378,7 @@
         address: null,
         chainId: null,
         creditsRemaining: 0,
+        creditsSpentThisSession: 0,
       });
       window.localCredits = 0;
       updateWalletUI();
