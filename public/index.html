@@ -1390,8 +1390,6 @@
       const purchaseBtn = document.getElementById('purchase-btn');
       const originalText = purchaseBtn ? purchaseBtn.textContent : '';
 
-      pauseGameTicker('purchase');
-
       try {
         if (purchaseBtn) {
           purchaseBtn.disabled = true;
@@ -1424,6 +1422,7 @@
           purchaseBtn.textContent = originalText;
           purchaseBtn.disabled = false;
         }
+        resumeGameTicker('purchase-success');
       } catch (err) {
         console.error('Purchase error:', err);
         
@@ -1447,6 +1446,7 @@
           purchaseBtn.textContent = originalText;
           purchaseBtn.disabled = false;
         }
+        resumeGameTicker('purchase-error');
       }
     }
 
