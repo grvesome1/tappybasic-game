@@ -1531,14 +1531,18 @@
         console.log('[DEBUG] Connect button found, adding handlers');
         const handleConnect = async () => {
           console.log('[DEBUG] Connect button clicked!');
-          // Unlock audio on mobile - do this synchronously
-          if (audioManager && !audioManager.context) {
-            await audioManager.init();
+          try {
+            // Unlock audio on mobile - do this synchronously
+            if (audioManager && !audioManager.context) {
+              await audioManager.init();
+            }
+            if (audioManager && audioManager.context && audioManager.context.state === 'suspended') {
+              audioManager.resume();
+            }
+            await connectWallet();
+          } catch (err) {
+            console.error('[DEBUG] Error in handleConnect:', err);
           }
-          if (audioManager && audioManager.context.state === 'suspended') {
-            audioManager.resume();
-          }
-          connectWallet();
         };
         
         connectBtn.addEventListener('click', handleConnect);
@@ -1566,14 +1570,18 @@
         console.log('[DEBUG] Purchase button found, adding handlers');
         const handlePurchase = async () => {
           console.log('[DEBUG] Purchase button clicked!');
-          // Unlock audio on mobile - do this synchronously
-          if (audioManager && !audioManager.context) {
-            await audioManager.init();
+          try {
+            // Unlock audio on mobile - do this synchronously
+            if (audioManager && !audioManager.context) {
+              await audioManager.init();
+            }
+            if (audioManager && audioManager.context && audioManager.context.state === 'suspended') {
+              audioManager.resume();
+            }
+            await buyOneCredit();
+          } catch (err) {
+            console.error('[DEBUG] Error in handlePurchase:', err);
           }
-          if (audioManager && audioManager.context.state === 'suspended') {
-            audioManager.resume();
-          }
-          buyOneCredit();
         };
         
         purchaseBtn.addEventListener('click', handlePurchase);
