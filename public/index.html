@@ -965,7 +965,7 @@
     
     // Performance profiles for different contexts
     const PERF_PROFILE = isMetaMaskMobile ? {
-      resolution: 1, // Fixed 1x resolution for WebView performance
+      resolution: 2, // Increase to 2x for sharper rendering
       antialias: true, // Enable smooth antialiasing
       maxFPS: 60,
       effectScale: 0.5,
@@ -974,7 +974,7 @@
       cullDistance: 100, // Cull objects 100px off-screen
       skipRenderThreshold: 0.8 // Skip heavy updates if frame time > 13.3ms (80% of 16.67ms budget)
     } : isMobile ? {
-      resolution: Math.min(window.devicePixelRatio || 1, 2), // Cap at 2x for mobile
+      resolution: 2, // Use 2x for crisp mobile rendering
       antialias: true, // Enable smooth antialiasing
       maxFPS: 45,
       effectScale: 0.6,
@@ -983,7 +983,7 @@
       cullDistance: 80,
       skipRenderThreshold: 0.85
     } : {
-      resolution: Math.min(window.devicePixelRatio || 1, 2), // Cap at 2x even on desktop
+      resolution: 2, // Fixed 2x for desktop
       antialias: true,
       maxFPS: 60,
       effectScale: 1.0,
@@ -1822,11 +1822,11 @@
     // Set global app reference for ticker management
     pixiApp = app;
     
-    // Global texture behaviour for smooth visuals
-    PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.LINEAR; // Always use linear filtering for smooth sprites
-    PIXI.settings.ROUND_PIXELS = false; // Disable pixel rounding for smoother animations
-    PIXI.settings.MIPMAP_TEXTURES = PIXI.MIPMAP_MODES.ON; // Enable mipmaps for smoother scaling
-    PIXI.settings.ANISOTROPIC_LEVEL = 16; // Max anisotropic filtering for sharp textures at angles
+    // Global texture behaviour for crisp, sharp visuals
+    PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.NEAREST; // Crisp pixel-perfect rendering
+    PIXI.settings.ROUND_PIXELS = true; // Snap to whole pixels for sharpness
+    PIXI.settings.MIPMAP_TEXTURES = PIXI.MIPMAP_MODES.OFF; // Disable mipmaps for crispness
+    PIXI.settings.ANISOTROPIC_LEVEL = 0; // Disable for pixel-perfect rendering
     
     // Configure ticker based on performance profile
     app.ticker.maxFPS = PERF_PROFILE.maxFPS;
