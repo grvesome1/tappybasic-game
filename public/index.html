@@ -1207,16 +1207,24 @@
         // Read local credits
         let local = loadLocalCredits(WalletState.address);
 
-        // Clamp local to be at most onChain (in case of new purchases)
-        if (local > onChain) {
-          debugLog(`Local credits (${local}) exceed on-chain (${onChain}), clamping down`);
-          local = onChain;
-        }
-
-        // If on-chain increased, update local to match
-        if (onChain > local) {
+        // Account for credits spent this session
+        const adjustedOnChain = onChain - WalletState.creditsSpentThisSession;
+        
+        // If local is less than adjusted on-chain, it means credits were spent
+        // Don't overwrite with higher on-chain value during active session
+        if (local < adjustedOnChain && WalletState.creditsSpentThisSession > 0) {
+          debugLog(`Preserving spent credits: local ${local}, on-chain ${onChain}, spent this session ${WalletState.creditsSpentThisSession}`);
+          // Keep local value, it's correct
+        } else if (onChain > local) {
+          // New purchase detected
           debugLog(`New purchase detected: on-chain ${onChain} > local ${local}`);
           local = onChain;
+          WalletState.creditsSpentThisSession = 0; // Reset spent counter on new purchase
+        } else if (local > onChain) {
+          // Local exceeds on-chain, clamp down
+          debugLog(`Local credits (${local}) exceed on-chain (${onChain}), clamping down`);
+          local = onChain;
+          WalletState.creditsSpentThisSession = 0;
         }
 
         WalletState.creditsRemaining = local;
@@ -1482,9 +1490,10 @@
       }
 
       WalletState.creditsRemaining -= 1;
+      WalletState.creditsSpentThisSession += 1;
       saveLocalCredits(WalletState.address, WalletState.creditsRemaining);
       updateCreditsUI();
-      console.log('[DEBUG] Credit used! New balance:', WalletState.creditsRemaining);
+      console.log('[DEBUG] Credit used! New balance:', WalletState.creditsRemaining, 'Spent this session:', WalletState.creditsSpentThisSession);
       debugLog('Credit used, remaining:', WalletState.creditsRemaining);
       return true;
     }
