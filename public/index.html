@@ -965,8 +965,8 @@
     
     // Performance profiles for different contexts
     const PERF_PROFILE = isMetaMaskMobile ? {
-      resolution: window.devicePixelRatio || 2, // Match device pixel ratio for crisp sprites
-      antialias: true, // Enable smooth sprites
+      resolution: 1, // Fixed 1x resolution for WebView performance
+      antialias: false, // Disable MSAA on mobile WebView
       maxFPS: 60,
       effectScale: 0.5,
       particleScale: 0.4,
@@ -974,8 +974,8 @@
       cullDistance: 100, // Cull objects 100px off-screen
       skipRenderThreshold: 0.8 // Skip heavy updates if frame time > 13.3ms (80% of 16.67ms budget)
     } : isMobile ? {
-      resolution: window.devicePixelRatio || 2, // Match device pixel ratio for crisp sprites
-      antialias: true, // Enable smooth sprites
+      resolution: Math.min(window.devicePixelRatio || 1, 2), // Cap at 2x for mobile
+      antialias: false, // Disable MSAA on mobile
       maxFPS: 45,
       effectScale: 0.6,
       particleScale: 0.5,
@@ -983,7 +983,7 @@
       cullDistance: 80,
       skipRenderThreshold: 0.85
     } : {
-      resolution: window.devicePixelRatio || 1,
+      resolution: Math.min(window.devicePixelRatio || 1, 2), // Cap at 2x even on desktop
       antialias: true,
       maxFPS: 60,
       effectScale: 1.0,
