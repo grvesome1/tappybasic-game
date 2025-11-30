@@ -2324,17 +2324,26 @@
         this.isMobile = isMobile;
         this.isMetaMask = isMetaMaskMobile;
         
-        // Mobile SFX whitelist (only these sounds play on mobile)
-        this.mobileWhitelist = new Set(['score', 'flap']);
+        // Mobile SFX whitelist - ALL sounds now enabled on mobile
+        this.mobileWhitelist = new Set(['score', 'flap', 'lift', 'tbagsecured', 'explosion', 'sherk', 'slow', 'shoot', 'invincibility', 'powerup']);
         
         // HTML5 Audio fallback for mobile
         this.html5Audio = {};
         if (this.isMobile) {
-          // Create HTML5 audio elements for whitelisted sounds
+          // Create HTML5 audio elements for all sounds
           this.html5Audio.score = new Audio('./assets/audio/score.mp3');
           this.html5Audio.flap = new Audio('./assets/audio/flap.mp3');
-          this.html5Audio.score.preload = 'auto';
-          this.html5Audio.flap.preload = 'auto';
+          this.html5Audio.lift = new Audio('./assets/audio/lift.mp3');
+          this.html5Audio.tbagsecured = new Audio('./assets/audio/tbagsecured.mp3');
+          this.html5Audio.explosion = new Audio('./assets/audio/explosion.mp3');
+          this.html5Audio.sherk = new Audio('./assets/audio/sherk.mp3');
+          this.html5Audio.slow = new Audio('./assets/audio/slow.mp3');
+          this.html5Audio.shoot = new Audio('./assets/audio/gun.mp3');
+          this.html5Audio.invincibility = new Audio('./assets/audio/invincibility.mp3');
+          this.html5Audio.powerup = new Audio('./assets/audio/tbagburst.mp3');
+          
+          // Preload all
+          Object.values(this.html5Audio).forEach(audio => audio.preload = 'auto');
         }
       }
       
