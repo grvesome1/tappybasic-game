@@ -1185,12 +1185,19 @@
       address: null,
       chainId: null,
       creditsRemaining: 0, // Local playable credits
+      creditsSpentThisSession: 0 // Track credits spent this session for blockchain sync
     };
 
     // ========== LOCALSTORAGE HELPERS ==========
     function getCreditStorageKey(address) {
       if (!address) return null;
-      return `tappyCredits_${address.toLowerCase()}`;
+      try {
+        // Normalize address with ethers checksum to prevent mismatch
+        return `tappyCredits_${ethers.getAddress(address).toLowerCase()}`;
+      } catch (err) {
+        // Fallback if invalid address format
+        return `tappyCredits_${address.toLowerCase()}`;
+      }
     }
 
     function loadLocalCredits(address) {
@@ -2236,18 +2243,19 @@
           layer.y = layer.baseY;
         }
         
-        // PERFORMANCE: Only update visible layers (culling)
-        if (layer.x > -500 && layer.x < GAME_WIDTH + 500) {
-          // Only vertical drift - no pulsing animations
-          if (layer.baseY !== undefined) {
-            const drift1 = Math.sin(time * 0.15 + layer.colorPhase) * 20;
-            const drift2 = Math.sin(time * 0.25 + layer.colorPhase * 1.3) * 8;
-            layer.y = layer.baseY + drift1 + drift2;
-          }
-          layer.visible = true;
-        } else {
-          layer.visible = false; // Hide off-screen layers
+        // PERFORMANCE: Early culling - skip expensive calculations for off-screen layers
+        if (layer.x <= -500 || layer.x >= GAME_WIDTH + 500) {
+          layer.visible = false;
+          continue; // Skip drift calculations entirely
         }
+        
+        // Only vertical drift - no pulsing animations
+        if (layer.baseY !== undefined) {
+          const drift1 = Math.sin(time * 0.15 + layer.colorPhase) * 20;
+          const drift2 = Math.sin(time * 0.25 + layer.colorPhase * 1.3) * 8;
+          layer.y = layer.baseY + drift1 + drift2;
+        }
+        layer.visible = true;
       }
     }
 
@@ -2326,28 +2334,6 @@
         
         // Mobile SFX whitelist - ALL sounds now enabled on mobile
         this.mobileWhitelist = new Set(['score', 'flap', 'lift', 'tbagsecured', 'explosion', 'sherk', 'slow', 'shoot', 'invincibility', 'powerup']);
-        
-        // HTML5 Audio fallback for mobile
-        this.html5Audio = {};
-        if (this.isMobile) {
-          // Create HTML5 audio elements for all sounds (lazy load, no preload)
-          this.html5Audio.score = new Audio('./assets/audio/score.mp3');
-          this.html5Audio.flap = new Audio('./assets/audio/flap.mp3');
-          this.html5Audio.lift = new Audio('./assets/audio/lift.mp3');
-          this.html5Audio.tbagsecured = new Audio('./assets/audio/tbagsecured.mp3');
-          this.html5Audio.explosion = new Audio('./assets/audio/explosion.mp3');
-          this.html5Audio.sherk = new Audio('./assets/audio/sherk.mp3');
-          this.html5Audio.slow = new Audio('./assets/audio/slow.mp3');
-          this.html5Audio.shoot = new Audio('./assets/audio/gun.mp3');
-          this.html5Audio.invincibility = new Audio('./assets/audio/invincibility.mp3');
-          this.html5Audio.powerup = new Audio('./assets/audio/tbagburst.mp3');
-          
-          // Set preload to 'none' for lazy loading - only load when first played
-          Object.values(this.html5Audio).forEach(audio => {
-            audio.preload = 'none';
-            audio.volume = 0.5; // Lower default volume for mobile
-          });
-        }
       }
       
       // Lazy init - only creates context when needed
@@ -2468,18 +2454,8 @@
       }
       
       playSfx(name, volume = 1.0, rate = 1.0) {
-        // Mobile HTML5 Audio fallback (simpler, more reliable)
-        if (this.isMobile && this.html5Audio[name]) {
-          if (this.sfxMuted) return;
-          
-          const audio = this.html5Audio[name];
-          audio.volume = volume;
-          audio.currentTime = 0; // Reset to start
-          audio.play().catch(() => {});
-          return;
-        }
-        
-        // Desktop Web Audio API path
+        // Unified Web Audio API path for both mobile and desktop
+        if (this.sfxMuted) return;
         if (!this.shouldPlaySound(name)) return;
         if (!this.buffers[name]) return;
         
@@ -2571,13 +2547,19 @@
       
       // MetaMask pause/resume (only if context exists)
       pause() {
-        if (!this.context || this.context.state !== 'running') return;
-        this.context.suspend().catch(() => {});
+        if (!this.context) return;
+        // Handle iOS 'interrupted' state and 'running' state
+        if (this.context.state === 'running' || this.context.state === 'interrupted') {
+          this.context.suspend().catch(() => {});
+        }
       }
       
       resume() {
-        if (!this.context || this.context.state !== 'suspended') return;
-        this.context.resume().catch(() => {});
+        if (!this.context) return;
+        // Resume from 'suspended' or 'interrupted' states
+        if (this.context.state === 'suspended' || this.context.state === 'interrupted') {
+          this.context.resume().catch(() => {});
+        }
       }
     }
     
@@ -3902,7 +3884,14 @@
         lifeMax *= 0.6;
       }
       
-      for (let i = 0; i < count && particlePool.active.length < MAX_PARTICLES; i++) {
+      // Early exit if pool is full - avoid wasted iterations
+      if (particlePool.active.length >= MAX_PARTICLES) return;
+      
+      // Cap count to available slots
+      const availableSlots = MAX_PARTICLES - particlePool.active.length;
+      count = Math.min(count, availableSlots);
+      
+      for (let i = 0; i < count; i++) {
         const angle = direction + (Math.random() - 0.5) * spread;
         const speed = Math.random() * (speedMax - speedMin) + speedMin;
         const particle = particlePool.get();
@@ -5030,12 +5019,17 @@
         }
       }
       
-      // Update particles
-      for (let i = game.particles.length - 1; i >= 0; i--) {
-        const particle = game.particles[i];
-        if (particle.update()) {
-          particlePool.release(particle);
-          game.particles.splice(i, 1);
+      // Update particles (throttle on frame budget stress)
+      const frameBudget = 16.67 * PERF_PROFILE.skipRenderThreshold;
+      const shouldThrottle = frameTimeAvg > frameBudget;
+      
+      if (!shouldThrottle || frameCount % 2 === 0) {
+        for (let i = game.particles.length - 1; i >= 0; i--) {
+          const particle = game.particles[i];
+          if (particle.update()) {
+            particlePool.release(particle);
+            game.particles.splice(i, 1);
+          }
         }
       }
       
