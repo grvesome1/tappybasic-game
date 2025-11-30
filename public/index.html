@@ -1207,25 +1207,25 @@
         // Read local credits
         let local = loadLocalCredits(WalletState.address);
 
-        // Account for credits spent this session
-        const adjustedOnChain = onChain - WalletState.creditsSpentThisSession;
+        console.log('[DEBUG] refreshCreditsFromChainAndLocal:', { onChain, local, spent: WalletState.creditsSpentThisSession });
+
+        // Check if there's a new purchase
+        // A purchase is detected when on-chain credits exceed what we started with
+        const expectedOnChain = local + WalletState.creditsSpentThisSession;
         
-        // If local is less than adjusted on-chain, it means credits were spent
-        // Don't overwrite with higher on-chain value during active session
-        if (local < adjustedOnChain && WalletState.creditsSpentThisSession > 0) {
-          debugLog(`Preserving spent credits: local ${local}, on-chain ${onChain}, spent this session ${WalletState.creditsSpentThisSession}`);
-          // Keep local value, it's correct
-        } else if (onChain > local) {
+        if (onChain > expectedOnChain) {
           // New purchase detected
-          debugLog(`New purchase detected: on-chain ${onChain} > local ${local}`);
-          local = onChain;
-          WalletState.creditsSpentThisSession = 0; // Reset spent counter on new purchase
+          const purchasedAmount = onChain - expectedOnChain;
+          console.log(`[DEBUG] New purchase detected: ${purchasedAmount} credits bought`);
+          local += purchasedAmount;
+          WalletState.creditsSpentThisSession = 0; // Reset spent counter
         } else if (local > onChain) {
-          // Local exceeds on-chain, clamp down
-          debugLog(`Local credits (${local}) exceed on-chain (${onChain}), clamping down`);
+          // Local exceeds on-chain (shouldn't happen but handle it)
+          console.log('[DEBUG] Local exceeds on-chain, clamping down');
           local = onChain;
           WalletState.creditsSpentThisSession = 0;
         }
+        // Otherwise, keep local as is (credits were spent locally)
 
         WalletState.creditsRemaining = local;
         saveLocalCredits(WalletState.address, local);
