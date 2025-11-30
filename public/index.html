@@ -2327,6 +2327,17 @@
         // Mobile SFX whitelist (only these sounds play on mobile)
         this.mobileWhitelist = new Set(['score', 'flap']);
         
+        // HTML5 Audio fallback for mobile
+        this.html5Audio = {};
+        if (this.isMobile) {
+          // Create HTML5 audio elements for whitelisted sounds
+          this.html5Audio.score = new Audio('./assets/audio/score.mp3');
+          this.html5Audio.flap = new Audio('./assets/audio/flap.mp3');
+          this.html5Audio.score.preload = 'auto';
+          this.html5Audio.flap.preload = 'auto';
+          console.log('[Audio] HTML5 Audio fallback created for mobile');
+        }
+        
         console.log('[Audio] Manager created:', { 
           isMobile: this.isMobile, 
           isMetaMask: this.isMetaMask 
@@ -2493,6 +2504,18 @@
       }
       
       playSfx(name, volume = 1.0, rate = 1.0) {
+        // Mobile HTML5 Audio fallback (simpler, more reliable)
+        if (this.isMobile && this.html5Audio[name]) {
+          if (this.sfxMuted) return;
+          
+          const audio = this.html5Audio[name];
+          audio.volume = volume;
+          audio.currentTime = 0; // Reset to start
+          audio.play().catch(err => console.warn(`[Audio] HTML5 play failed for ${name}:`, err));
+          return;
+        }
+        
+        // Desktop Web Audio API path
         if (!this.shouldPlaySound(name)) {
           console.log(`[Audio] playSfx('${name}') - shouldPlaySound returned false`);
           return;
@@ -5173,6 +5196,9 @@
     }
     
     function handleInput() {
+      // Force audio unlock on every interaction (mobile requirement)
+      forceAudioUnlock().catch(err => console.warn('[Audio] Unlock failed:', err));
+      
       // Resume audio context only if not already running
       if (audioContext && audioContext.state !== 'running') {
         audioContext.resume().catch(e => debugWarn('Audio resume failed:', e));
