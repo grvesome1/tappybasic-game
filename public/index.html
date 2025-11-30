@@ -2428,11 +2428,11 @@
       }
       
       async loadAllSounds() {
-        // Mobile gets minimal sounds, desktop gets everything
-        const soundMap = this.isMobile ? {
-          score: './assets/audio/score.mp3',
-          flap: './assets/audio/flap.mp3',
-        } : {
+        // Mobile: Skip Web Audio API loading entirely (uses HTML5 Audio)
+        if (this.isMobile) return;
+        
+        // Desktop: Load all sounds via Web Audio API
+        const soundMap = {
           score: './assets/audio/score.mp3',
           lift: './assets/audio/lift.mp3',
           tbagsecured: './assets/audio/tbagsecured.mp3',
