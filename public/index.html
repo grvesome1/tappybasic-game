@@ -1470,6 +1470,7 @@
 
     // ========== CREDIT USAGE ==========
     function tryUseCredit() {
+      console.log('[DEBUG] tryUseCredit called, current credits:', WalletState.creditsRemaining);
       if (!WalletState.address) {
         alert('Connect your wallet first.');
         return false;
@@ -1483,6 +1484,7 @@
       WalletState.creditsRemaining -= 1;
       saveLocalCredits(WalletState.address, WalletState.creditsRemaining);
       updateCreditsUI();
+      console.log('[DEBUG] Credit used! New balance:', WalletState.creditsRemaining);
       debugLog('Credit used, remaining:', WalletState.creditsRemaining);
       return true;
     }
@@ -2343,14 +2345,21 @@
       setupAutoResume() {
         const resumeContext = () => {
           if (this.context && this.context.state === 'suspended') {
-            this.context.resume().catch(err => {
+            this.context.resume().then(() => {
+              console.log('[Audio] Context resumed');
+            }).catch(err => {
               debugWarn('[Audio] Resume failed:', err);
             });
           }
         };
         
-        ['touchstart', 'touchend', 'mousedown', 'click'].forEach(event => {
-          document.addEventListener(event, resumeContext, { passive: true, once: true });
+        // For MetaMask mobile, be more aggressive
+        const events = this.isMetaMask 
+          ? ['touchstart', 'touchend', 'mousedown', 'click', 'pointerdown', 'pointerup']
+          : ['touchstart', 'touchend', 'mousedown', 'click'];
+        
+        events.forEach(event => {
+          document.addEventListener(event, resumeContext, { passive: true, capture: true });
         });
       }
       
