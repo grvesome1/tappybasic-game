@@ -1129,9 +1129,8 @@
     const POWERUP_MIN_SPAWN_CHANCE = 0.30;
 
     // ==================== WEB3 INTEGRATION ====================
-    // Signature: YnVpbHQgYnkgZ3J1ZXPDuG1l
-    // COMPLETE REWRITE: Robust wallet connection + per-wallet credit system
-    // Uses ethers v6 + BigInt throughout, handles account switching correctly
+    // Clean, simple wallet + credit system for MetaMask mobile
+    // Uses ethers v6 with native bigint, per-wallet localStorage
     
     const CONTRACT_ADDRESS = '0xB670AB661c91081A44DEE43D9f0c79CEa5930dDf';
     const CONTRACT_ABI = [
@@ -1158,338 +1157,162 @@
       },
     ];
 
-    // Fixed credit price: 0.000005 ETH (~$0.01 when ETH ≈ $2,000)
-    const CREDIT_PRICE_WEI = 5000000000000n;
+    const EXPECTED_CHAIN_ID = 59141n; // Linea Sepolia
+    const CREDIT_PRICE_WEI = 5000000000000n; // 0.000005 ETH
 
-    // ========== WALLET MANAGER ==========
-    // Single source of truth for wallet connection state
-    const WalletManager = {
-      currentAddress: null,  // Always lowercase, or null if disconnected
+    const EXPECTED_CHAIN_ID = 59141n; // Linea Sepolia
+    const CREDIT_PRICE_WEI = 5000000000000n; // 0.000005 ETH
+
+    // ========== WALLET STATE ==========
+    // Single source of truth for wallet connection
+    const WalletState = {
       provider: null,
       signer: null,
       contract: null,
-      
-      // Get current wallet address (always lowercase)
-      getAddress() {
-        return this.currentAddress;
-      },
-      
-      // Check if wallet is connected
-      isConnected() {
-        return this.currentAddress !== null;
-      },
-      
-      // Update wallet address and reinitialize provider/signer/contract
-      async setAddress(address) {
-        if (!address) {
-          this.currentAddress = null;
-          this.provider = null;
-          this.signer = null;
-          this.contract = null;
-          debugLog('🔌 Wallet disconnected');
-          return;
-        }
-        
-        const normalized = address.toLowerCase();
-        const changed = this.currentAddress !== normalized;
-        this.currentAddress = normalized;
-        
-        if (changed) {
-          debugLog('👛 Wallet changed to:', this.currentAddress);
-          
-          // Check if window.ethereum is available
-          if (!window.ethereum) {
-            debugWarn('⚠️ window.ethereum not available');
-            return;
-          }
-          
-          // Reinitialize ethers v6 objects
-          debugLog('Initializing BrowserProvider...');
-          this.provider = new ethers.BrowserProvider(window.ethereum);
-          
-          debugLog('Getting signer...');
-          this.signer = await this.provider.getSigner();
-          
-          debugLog('Creating contract instance...');
-          debugLog('  Contract address:', CONTRACT_ADDRESS);
-          debugLog('  ABI entries:', CONTRACT_ABI.length);
-          this.contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, this.signer);
-          debugLog('  Contract created:', !!this.contract);
-          
-          // Verify contract has the method
-          if (this.contract.purchaseCreditsWithETH) {
-            debugLog('  ✅ purchaseCreditsWithETH method found');
-          } else {
-            debugWarn('  ⚠️ purchaseCreditsWithETH method NOT found!');
-          }
-          
-          // Notify credit system
-          await CreditManager.onWalletChanged();
-        }
-      },
-      
-      // Update UI to reflect current wallet state
-      updateUI() {
-        const addrSpan = document.getElementById('wallet-address');
-        const connectBtn = document.getElementById('connect-btn');
-        const disconnectBtn = document.getElementById('disconnect-btn');
-        const purchaseBtn = document.getElementById('purchase-btn');
-        const refreshBtn = document.getElementById('refresh-btn');
-        
-        if (this.isConnected()) {
-          // Connected state
-          const short = this.currentAddress.slice(0, 6) + '...' + this.currentAddress.slice(-4);
-          if (addrSpan) addrSpan.textContent = short;
-          if (connectBtn) connectBtn.style.display = 'none';
-          if (disconnectBtn) disconnectBtn.style.display = 'inline-block';
-          if (purchaseBtn) purchaseBtn.disabled = false;
-          if (refreshBtn) refreshBtn.style.display = 'inline-block';
-          
-          // Show admin button if admin wallet
-          if (this.currentAddress === "0x3100ff9597b87e791e5bb8c0d57c94336a432089") {
-            const adminBtn = document.getElementById("adminResetBtn");
-            if (adminBtn) adminBtn.style.display = "block";
-          }
-        } else {
-          // Disconnected state
-          if (addrSpan) addrSpan.textContent = '';
-          if (connectBtn) {
-            connectBtn.style.display = 'inline-block';
-            connectBtn.disabled = false;
-          }
-          if (disconnectBtn) disconnectBtn.style.display = 'none';
-          if (purchaseBtn) purchaseBtn.disabled = true;
-          if (refreshBtn) refreshBtn.style.display = 'none';
-          
-          const adminBtn = document.getElementById("adminResetBtn");
-          if (adminBtn) adminBtn.style.display = "none";
-        }
-      }
+      address: null,
+      chainId: null,
+      creditsRemaining: 0, // Local playable credits
     };
 
-    // ========== CREDIT MANAGER ==========
-    // Handles per-wallet credit storage, purchase, and spending
-    const CreditManager = {
-      currentCredits: 0,  // Current wallet's credits
-      spentCredits: 0,    // Credits spent since last blockchain sync
-      
-      // Get localStorage key for specific wallet
-      getStorageKey(address) {
-        return `tappyCredits_${address}`;
-      },
-      
-      // Get localStorage key for spent credits
-      getSpentKey(address) {
-        return `tappySpent_${address}`;
-      },
-      
-      // Load credits from localStorage for current wallet
-      loadCredits() {
-        if (!WalletManager.isConnected()) {
-          this.currentCredits = 0;
-          this.spentCredits = 0;
-          return 0;
-        }
-        
-        const key = this.getStorageKey(WalletManager.getAddress());
-        const saved = localStorage.getItem(key);
-        this.currentCredits = saved ? parseInt(saved, 10) : 0;
-        
-        const spentKey = this.getSpentKey(WalletManager.getAddress());
-        const savedSpent = localStorage.getItem(spentKey);
-        this.spentCredits = savedSpent ? parseInt(savedSpent, 10) : 0;
-        
-        debugLog('💾 Loaded', this.currentCredits, 'credits and', this.spentCredits, 'spent for', WalletManager.getAddress());
-        return this.currentCredits;
-      },
-      
-      // Save credits to localStorage for current wallet
-      saveCredits(amount) {
-        if (!WalletManager.isConnected()) {
-          debugWarn('Cannot save credits: no wallet connected');
-          return;
-        }
-        
-        this.currentCredits = amount;
-        const key = this.getStorageKey(WalletManager.getAddress());
-        localStorage.setItem(key, String(amount));
-        
-        const spentKey = this.getSpentKey(WalletManager.getAddress());
-        localStorage.setItem(spentKey, String(this.spentCredits));
-        
-        debugLog('💾 Saved', amount, 'credits and', this.spentCredits, 'spent for', WalletManager.getAddress());
-        this.updateUI();
-      },
-      
-      // Get current credit count
-      getCredits() {
-        return this.currentCredits;
-      },
-      
-      // Called when wallet changes - load that wallet's credits
-      async onWalletChanged() {
-        this.loadCredits();
-        this.updateUI();
-        
-        // Try to sync from blockchain
-        await this.syncFromBlockchain();
-      },
-      
-      // Sync credits from blockchain (only increases local count, never decreases)
-      async syncFromBlockchain() {
-        if (!WalletManager.isConnected() || !WalletManager.contract) {
-          return false;
-        }
-        
-        try {
-          debugLog('🔄 Syncing credits from blockchain...');
-          const onChainCredits = await WalletManager.contract.credits(WalletManager.getAddress());
-          const chainTotal = Number(onChainCredits);
-          
-          // Get last known blockchain total from localStorage
-          const lastKnownKey = `tappyLastBlockchainTotal_${WalletManager.getAddress().toLowerCase()}`;
-          const lastKnownTotal = parseInt(localStorage.getItem(lastKnownKey) || '0');
-          
-          debugLog('Blockchain:', chainTotal, 'Local:', this.currentCredits, 'LastKnown:', lastKnownTotal, 'Spent:', this.spentCredits);
-          
-          // If blockchain increased (new purchase), add the difference
-          if (chainTotal > lastKnownTotal) {
-            const newCredits = chainTotal - lastKnownTotal;
-            debugLog('✅ New purchase detected! Adding', newCredits, 'credits');
-            this.saveCredits(this.currentCredits + newCredits);
-            localStorage.setItem(lastKnownKey, chainTotal.toString());
-            // Reset spent counter after purchase
-            this.spentCredits = 0;
-            const spentKey = this.getSpentKey(WalletManager.getAddress());
-            localStorage.setItem(spentKey, '0');
-            return true;
-          } else if (lastKnownTotal === 0 && chainTotal > 0) {
-            // First time connecting - calculate spent credits and restore local total
-            const expectedLocal = chainTotal - this.spentCredits;
-            debugLog('✅ First sync - blockchain has', chainTotal, ', spent', this.spentCredits, ', restoring to', expectedLocal);
-            this.saveCredits(expectedLocal);
-            localStorage.setItem(lastKnownKey, chainTotal.toString());
-            return true;
-          } else if (chainTotal === lastKnownTotal && this.spentCredits > 0) {
-            // Page reload scenario - blockchain unchanged but we have spent credits
-            const expectedLocal = chainTotal - this.spentCredits;
-            debugLog('✅ Page reload - blockchain', chainTotal, ', spent', this.spentCredits, ', restoring to', expectedLocal);
-            this.saveCredits(expectedLocal);
-            return true;
-          } else {
-            debugLog('⚠️ No new purchases (blockchain hasn\'t changed)');
-            return true;
-          }
-        } catch (err) {
-          console.error('❌ Blockchain sync failed:', err);
-          return false;
-        }
-      },
-      
-      // Use one credit for game (returns true if successful, false if not enough)
-      useCredit() {
-        if (!WalletManager.isConnected()) {
-          alert('Connect your wallet first.');
-          return false;
-        }
-        
-        // Reload from localStorage to ensure we have latest value
-        this.loadCredits();
-        
-        if (this.currentCredits <= 0) {
-          alert(`You need credits to play. You have ${this.currentCredits} credits. Please buy a credit first.`);
-          return false;
-        }
-        
-        // Decrement and save, increment spent counter
-        debugLog('✅ Using 1 credit, current balance:', this.currentCredits);
-        this.spentCredits++;
-        this.saveCredits(this.currentCredits - 1);
-        debugLog('✅ Credit used, new balance:', this.currentCredits, 'total spent:', this.spentCredits);
-        return true;
-      },
-      
-      // Update credit count display
-      updateUI() {
-        const creditSpan = document.getElementById('credit-count');
-        if (creditSpan) {
-          creditSpan.textContent = '🎮 ' + this.currentCredits;
-        }
-      }
-    };
-
-    // Initialize - credits start at 0 until wallet connects
-    window.localCredits = 0; // Keep for backward compatibility
-    debugLog('💾 Wallet + Credit system initialized');
-
-    // Legacy compatibility functions (redirect to new managers)
-    function updateCreditDisplay() {
-      CreditManager.updateUI();
-      WalletManager.updateUI();
-      // Also update window.localCredits for backward compatibility
-      window.localCredits = CreditManager.getCredits();
+    // ========== LOCALSTORAGE HELPERS ==========
+    function getCreditStorageKey(address) {
+      if (!address) return null;
+      return `tappyCredits_${address.toLowerCase()}`;
     }
 
-    window.useCredit = function() {
-      const result = CreditManager.useCredit();
-      window.localCredits = CreditManager.getCredits();
-      return result;
-    };
+    function loadLocalCredits(address) {
+      const key = getCreditStorageKey(address);
+      if (!key) return 0;
+      const raw = localStorage.getItem(key);
+      const parsed = raw ? parseInt(raw, 10) : 0;
+      return Number.isNaN(parsed) || parsed < 0 ? 0 : parsed;
+    }
 
-    // ========== WALLET CONNECTION FUNCTIONS ==========
-    // Old global variables and helper functions removed - state now managed by WalletManager/CreditManager
+    function saveLocalCredits(address, value) {
+      const key = getCreditStorageKey(address);
+      if (!key) return;
+      localStorage.setItem(key, String(Math.max(0, value)));
+    }
 
-    // Connect wallet handler with MetaMask mobile deep link support
-    async function connectWallet() {
-      debugLog('=== WALLET CONNECT START ===');
-      const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      debugLog('Mobile device:', isMobileDevice);
-      debugLog('window.ethereum present:', !!window.ethereum);
-      
-      // Pause game during wallet interaction
-      pauseGameTicker('wallet-connect');
-      
+    // ========== CREDIT REFRESH ==========
+    async function refreshCreditsFromChainAndLocal() {
+      if (!WalletState.address || !WalletState.contract) {
+        WalletState.creditsRemaining = 0;
+        updateCreditsUI();
+        return;
+      }
+
+      try {
+        // Read on-chain credits
+        const onChainBigInt = await WalletState.contract.credits(WalletState.address);
+        const onChain = Number(onChainBigInt);
+
+        // Read local credits
+        let local = loadLocalCredits(WalletState.address);
+
+        // Clamp local to be at most onChain (in case of new purchases)
+        if (local > onChain) {
+          debugLog(`Local credits (${local}) exceed on-chain (${onChain}), clamping down`);
+          local = onChain;
+        }
+
+        // If on-chain increased, update local to match
+        if (onChain > local) {
+          debugLog(`New purchase detected: on-chain ${onChain} > local ${local}`);
+          local = onChain;
+        }
+
+        WalletState.creditsRemaining = local;
+        saveLocalCredits(WalletState.address, local);
+        updateCreditsUI();
+        debugLog(`Credits refreshed: ${local} (on-chain: ${onChain})`);
+      } catch (err) {
+        console.error('Failed to refresh credits:', err);
+        // Fallback to local only
+        WalletState.creditsRemaining = loadLocalCredits(WalletState.address);
+        updateCreditsUI();
+      }
+    }
+
+    function updateCreditsUI() {
+      const creditSpan = document.getElementById('credit-count');
+      if (creditSpan) {
+        creditSpan.textContent = '🎮 ' + WalletState.creditsRemaining;
+      }
+      window.localCredits = WalletState.creditsRemaining; // Legacy compat
+    }
+
+    function updateWalletUI() {
+      const addrSpan = document.getElementById('wallet-address');
       const connectBtn = document.getElementById('connect-btn');
-      
+      const disconnectBtn = document.getElementById('disconnect-btn');
+      const purchaseBtn = document.getElementById('purchase-btn');
+      const refreshBtn = document.getElementById('refresh-btn');
+
+      if (WalletState.address) {
+        // Connected
+        const short = WalletState.address.slice(0, 6) + '...' + WalletState.address.slice(-4);
+        if (addrSpan) addrSpan.textContent = short;
+        if (connectBtn) connectBtn.style.display = 'none';
+        if (disconnectBtn) disconnectBtn.style.display = 'inline-block';
+        if (purchaseBtn) purchaseBtn.disabled = false;
+        if (refreshBtn) refreshBtn.style.display = 'inline-block';
+
+        // Admin button
+        if (WalletState.address === '0x3100ff9597b87e791e5bb8c0d57c94336a432089') {
+          const adminBtn = document.getElementById('adminResetBtn');
+          if (adminBtn) adminBtn.style.display = 'block';
+        }
+      } else {
+        // Disconnected
+        if (addrSpan) addrSpan.textContent = '';
+        if (connectBtn) {
+          connectBtn.style.display = 'inline-block';
+          connectBtn.disabled = false;
+        }
+        if (disconnectBtn) disconnectBtn.style.display = 'none';
+        if (purchaseBtn) purchaseBtn.disabled = true;
+        if (refreshBtn) refreshBtn.style.display = 'none';
+
+        const adminBtn = document.getElementById('adminResetBtn');
+        if (adminBtn) adminBtn.style.display = 'none';
+      }
+    }
+
+    // ========== WALLET CONNECT ==========
+    async function connectWallet() {
       if (!window.ethereum) {
-        resumeGameTicker('wallet-connect-no-provider');
+        const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
         if (isMobileDevice) {
-          const deepLink = `https://metamask.app.link/dapp/${window.location.host}${window.location.pathname}${window.location.search}`;
-          debugLog('No wallet detected, opening MetaMask:', deepLink);
+          const deepLink = `https://metamask.app.link/dapp/${window.location.host}${window.location.pathname}`;
           alert('Opening MetaMask mobile app...');
           window.location.href = deepLink;
-          return;
         } else {
           alert('Please install MetaMask browser extension.');
-          return;
         }
+        return;
       }
-      
+
+      pauseGameTicker('wallet-connect');
+      const connectBtn = document.getElementById('connect-btn');
+      if (connectBtn) connectBtn.disabled = true;
+
       try {
-        if (connectBtn) connectBtn.disabled = true;
-        
-        debugLog('[1/5] Initializing provider...');
+        // Request accounts
         const provider = new ethers.BrowserProvider(window.ethereum);
-        
-        debugLog('[2/5] Requesting account access...');
         const accounts = await provider.send('eth_requestAccounts', []);
-        debugLog('Accounts returned:', accounts);
         
         if (accounts.length === 0) {
           throw new Error('No accounts returned');
         }
-        
-        debugLog('[3/5] Getting signer...');
+
+        // Get signer and address
         const signer = await provider.getSigner();
         const address = await signer.getAddress();
-        debugLog('Connected wallet:', address);
-        
-        // Check network and switch if needed
+
+        // Check network
         const network = await provider.getNetwork();
-        debugLog('Current network chainId:', network.chainId.toString());
-        
-        if (network.chainId !== 59141n) {
-          debugLog('Wrong network, switching to Linea Sepolia...');
+        if (network.chainId !== EXPECTED_CHAIN_ID) {
           try {
             await window.ethereum.request({
               method: 'wallet_switchEthereumChain',
@@ -1497,7 +1320,6 @@
             });
           } catch (switchError) {
             if (switchError.code === 4902) {
-              debugLog('Network not found, adding Linea Sepolia...');
               await window.ethereum.request({
                 method: 'wallet_addEthereumChain',
                 params: [{
@@ -1512,309 +1334,204 @@
               throw switchError;
             }
           }
-          // Wallet will reconnect after network switch
-          debugLog('Network switched, reconnecting...');
         }
-        
-        debugLog('[4/5] Setting wallet address in WalletManager...');
-        await WalletManager.setAddress(address);
-        
-        debugLog('[5/5] Syncing credits from blockchain...');
-        let syncSuccess = false;
-        let retries = 3;
-        
-        while (!syncSuccess && retries > 0) {
-          syncSuccess = await CreditManager.syncFromBlockchain();
-          if (!syncSuccess) {
-            retries--;
-            if (retries > 0) {
-              debugLog(`Sync failed, retrying... (${retries} left)`);
-              await new Promise(resolve => setTimeout(resolve, 1000));
-            }
-          }
-        }
-        
-        if (!syncSuccess) {
-          debugWarn('⚠️ Could not sync credits after retries, using local storage');
-        }
-        
-        // Update UI
-        WalletManager.updateUI();
-        CreditManager.updateUI();
-        
+
+        // Create contract
+        const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+
+        // Update state
+        Object.assign(WalletState, {
+          provider,
+          signer,
+          contract,
+          address: ethers.getAddress(address),
+          chainId: network.chainId,
+        });
+
+        debugLog('Wallet connected:', WalletState.address);
+
+        // Refresh credits
+        await refreshCreditsFromChainAndLocal();
+        updateWalletUI();
+
         if (connectBtn) connectBtn.disabled = false;
-        
-        debugLog('=== WALLET CONNECT SUCCESS ===');
         resumeGameTicker('wallet-connect-success');
       } catch (err) {
-        console.error('❌ Wallet connection error:', err);
-        alert('Wallet connection failed: ' + (err.message || 'Unknown error'));
+        console.error('Wallet connection error:', err);
+        alert('Connection failed: ' + (err.message || 'Unknown error'));
         if (connectBtn) connectBtn.disabled = false;
         resumeGameTicker('wallet-connect-error');
       }
     }
 
-    // Manual credit refresh function
-    async function refreshCredits() {
-      if (!WalletManager.isConnected()) {
-        alert('⚠️ Not connected to wallet');
-        return;
-      }
-      
-      const refreshBtn = document.getElementById('refresh-btn');
-      if (refreshBtn) refreshBtn.disabled = true;
-      
-      try {
-        alert('🔄 Syncing credits from blockchain...');
-        const success = await CreditManager.syncFromBlockchain();
-        
-        if (success) {
-          const credits = CreditManager.getCredits();
-          alert(`✅ Credits synced! You have ${credits} credits`);
-          CreditManager.updateUI();
-        } else {
-          alert('❌ Failed to sync credits. Check console for details.');
-        }
-      } finally {
-        if (refreshBtn) refreshBtn.disabled = false;
-      }
-    }
-    
-    // Disconnect wallet handler
-    async function disconnectWallet() {
-      debugLog('=== DISCONNECTING WALLET ===');
-      
-      // Clear wallet state
-      await WalletManager.setAddress(null);
-      
-      // Reset credit display
-      CreditManager.currentCredits = 0;
+    // ========== DISCONNECT ==========
+    function disconnectWallet() {
+      Object.assign(WalletState, {
+        provider: null,
+        signer: null,
+        contract: null,
+        address: null,
+        chainId: null,
+        creditsRemaining: 0,
+      });
       window.localCredits = 0;
-      
-      // Update UI
-      WalletManager.updateUI();
-      CreditManager.updateUI();
-      
-      debugLog('✅ Wallet disconnected, state cleared');
+      updateWalletUI();
+      updateCreditsUI();
+      debugLog('Wallet disconnected');
     }
 
-    // Purchase credit using ETH with proper ethers v6 + BigInt handling
-    async function purchaseCredit() {
-      if (!WalletManager.isConnected()) {
+    // ========== BUY CREDIT ==========
+    async function buyOneCredit() {
+      if (!WalletState.contract || !WalletState.address) {
         alert('Connect your wallet first.');
         return;
       }
 
       const purchaseBtn = document.getElementById('purchase-btn');
-      if (purchaseBtn && purchaseBtn.disabled) return;
+      const originalText = purchaseBtn ? purchaseBtn.textContent : '';
 
-      // Timeout protection - force reset after 2 minutes
-      const timeoutId = setTimeout(() => {
-        debugWarn('⚠️ Purchase timeout - resetting button');
-        window.isPurchasing = false;
-        if (purchaseBtn) {
-          purchaseBtn.disabled = false;
-          purchaseBtn.textContent = '💳 Buy Credit';
-        }
-        resumeGameTicker('purchase-timeout');
-      }, 120000); // 2 minutes
+      pauseGameTicker('purchase');
 
       try {
         if (purchaseBtn) {
           purchaseBtn.disabled = true;
-          purchaseBtn.textContent = '⏳ Processing...';
-        }
-        window.isPurchasing = true;
-        
-        // Pause game during purchase transaction
-        pauseGameTicker('purchase-start');
-
-        debugLog('=== STARTING CREDIT PURCHASE ===');
-        debugLog('WalletManager.isConnected():', WalletManager.isConnected());
-        debugLog('WalletManager.getAddress():', WalletManager.getAddress());
-        debugLog('WalletManager.provider:', !!WalletManager.provider);
-        debugLog('WalletManager.signer:', !!WalletManager.signer);
-        debugLog('WalletManager.contract:', !!WalletManager.contract);
-        debugLog('Price:', CREDIT_PRICE_WEI.toString(), 'wei');
-
-        // Verify contract is initialized
-        if (!WalletManager.contract) {
-          throw new Error('Contract not initialized. Try reconnecting your wallet.');
+          purchaseBtn.textContent = '⏳ Confirm...';
         }
 
-        // Get quantity (default 1)
-        const quantity = 1;
-        const creditPrice = BigInt(CREDIT_PRICE_WEI);
-        const totalCost = creditPrice * BigInt(quantity);
-        debugLog('Quantity:', quantity, 'Total cost:', totalCost.toString(), 'wei');
+        // Get price
+        const priceWei = CREDIT_PRICE_WEI;
+        const amount = 1n;
 
-        // Step 1: Check wallet balance
-        debugLog('[1/5] Checking balance...');
-        const balance = await WalletManager.provider.getBalance(WalletManager.getAddress());
-        debugLog('Wallet balance:', ethers.formatEther(balance), 'ETH');
-        
-        // Require 3x the cost for gas buffer
-        const requiredWithGas = totalCost * BigInt(3);
-        if (balance < requiredWithGas) {
-          const needed = ethers.formatEther(requiredWithGas);
-          const current = ethers.formatEther(balance);
-          throw new Error(`Insufficient balance. Need ~${needed} ETH (includes gas), you have ${current} ETH`);
+        // Check balance
+        const balance = await WalletState.provider.getBalance(WalletState.address);
+        if (balance < priceWei) {
+          throw new Error('Insufficient ETH for credit purchase');
         }
 
-        // Step 2: Estimate gas (ethers v6 syntax)
-        debugLog('[2/5] Estimating gas...');
-        
-        let gasEstimate;
-        try {
-          // In ethers v6, directly call the method with .staticCall first to verify it will work
-          debugLog('Testing transaction with staticCall...');
-          await WalletManager.contract.purchaseCreditsWithETH.staticCall(quantity, { value: totalCost });
-          debugLog('Static call succeeded, estimating gas...');
-          
-          // Now estimate gas - use bracket notation to avoid property access issues
-          gasEstimate = await WalletManager.contract['purchaseCreditsWithETH'].estimateGas(quantity, { value: totalCost });
-          debugLog('Gas estimate:', gasEstimate.toString());
-        } catch (gasErr) {
-          console.error('❌ Gas estimation failed:', gasErr);
-          debugLog('Error code:', gasErr.code);
-          debugLog('Error message:', gasErr.message);
-          
-          // More detailed error
-          let detailMsg = 'Transaction will fail: ';
-          if (gasErr.code === 'INVALID_ARGUMENT') {
-            detailMsg += 'Invalid contract parameters.';
-          } else if (gasErr.message?.includes('execution reverted')) {
-            detailMsg += 'Contract reverted. May be paused or requirements not met.';
-          } else if (gasErr.message?.includes('insufficient funds')) {
-            detailMsg += 'Insufficient ETH for transaction.';
-          } else {
-            detailMsg += gasErr.message || 'Unknown error';
-          }
-          throw new Error(detailMsg);
-        }
-        
-        // Add 20% buffer to gas estimate
-        const gasLimit = (gasEstimate * BigInt(120)) / BigInt(100);
-        debugLog('Gas limit with buffer:', gasLimit.toString());
+        // Send transaction
+        const tx = await WalletState.contract.purchaseCreditsWithETH(amount, { value: priceWei });
 
-        // Step 3: Send transaction (ethers v6 direct call)
-        debugLog('[3/5] Sending transaction...');
-        if (purchaseBtn) purchaseBtn.textContent = '⏳ Confirm in wallet...';
-        
-        const tx = await WalletManager.contract['purchaseCreditsWithETH'](quantity, {
-          value: totalCost,
-          gasLimit: gasLimit
+        // Wait for confirmation
+        tx.wait(1).then(() => {
+          refreshCreditsFromChainAndLocal();
         });
-        debugLog('Transaction hash:', tx.hash);
-        
-        if (purchaseBtn) purchaseBtn.textContent = '⏳ Waiting for confirmation...';
-        
-        // Step 4: Wait for confirmation
-        debugLog('[4/5] Waiting for confirmation...');
-        const receipt = await tx.wait(1);
-        debugLog('Transaction confirmed, status:', receipt.status);
-        
-        if (receipt.status !== 1) {
-          throw new Error('Transaction failed with status: ' + receipt.status);
+
+        // Optimistically increment credit immediately
+        WalletState.creditsRemaining += 1;
+        updateCreditsUI();
+
+        if (purchaseBtn) {
+          purchaseBtn.textContent = originalText;
+          purchaseBtn.disabled = false;
         }
-        
-        // Step 5: Sync credits from blockchain
-        debugLog('[5/5] Syncing credits...');
-        if (purchaseBtn) purchaseBtn.textContent = '⏳ Syncing...';
-        
-        let synced = false;
-        let attempts = 5;
-        
-        while (!synced && attempts > 0) {
-          await new Promise(resolve => setTimeout(resolve, 600));
-          synced = await CreditManager.syncFromBlockchain();
-          
-          if (!synced) {
-            attempts--;
-            debugLog(`Sync retry ${5 - attempts}/5...`);
-          }
-        }
-        
-        if (!synced) {
-          // Fallback: add credit locally
-          debugWarn('Using fallback credit increment');
-          const current = CreditManager.getCredits();
-          CreditManager.saveCredits(current + quantity);
-        }
-        
-        const finalCredits = CreditManager.getCredits();
-        alert(`✅ Credit purchased! You now have ${finalCredits} credit(s).`);
-        debugLog('=== PURCHASE SUCCESS ===');
-        
-        // Clear timeout on success
-        clearTimeout(timeoutId);
-        
       } catch (err) {
-        console.error('❌ Purchase error:', err);
-        debugLog('Full error object:', err);
+        console.error('Purchase error:', err);
         
-        // Clear timeout
-        clearTimeout(timeoutId);
-        
-        // Reset button immediately before showing error
-        window.isPurchasing = false;
-        if (purchaseBtn) {
-          purchaseBtn.disabled = false;
-          purchaseBtn.textContent = '💳 Buy Credit';
-        }
-        resumeGameTicker('purchase-error');
-        
-        let errorMsg = 'Purchase failed';
-        
+        let msg = 'Purchase failed';
         if (err.code === 4001 || err.code === 'ACTION_REJECTED') {
-          errorMsg = 'Transaction cancelled by user';
-        } else if (err.code === -32603 || err.message?.includes('internal error')) {
-          errorMsg = 'RPC error. Try again or check your connection.';
+          msg = 'Transaction cancelled';
         } else if (err.message) {
-          const msg = err.message.toLowerCase();
-          if (msg.includes('user rejected') || msg.includes('user denied')) {
-            errorMsg = 'Transaction rejected by user';
-          } else if (msg.includes('insufficient')) {
-            errorMsg = 'Insufficient ETH balance for transaction + gas';
-          } else if (msg.includes('cannot estimate')) {
-            errorMsg = 'Gas estimation failed. Contract may be paused or parameters invalid.';
-          } else if (msg.includes('contract not initialized')) {
-            errorMsg = 'Wallet not properly connected. Please reconnect.';
-          } else if (msg.includes('execution reverted')) {
-            errorMsg = 'Transaction would fail. Contract may be paused or you may not meet requirements.';
+          const lower = err.message.toLowerCase();
+          if (lower.includes('insufficient')) {
+            msg = 'Insufficient ETH';
+          } else if (lower.includes('rejected') || lower.includes('denied')) {
+            msg = 'Transaction rejected';
           } else {
-            // Show first 200 chars of actual error
-            errorMsg = 'Error: ' + err.message.substring(0, 200);
+            msg = err.message.substring(0, 100);
           }
         }
         
-        alert('❌ ' + errorMsg);
-        debugLog('User-facing error:', errorMsg);
-      } finally {
-        // Clear timeout
-        clearTimeout(timeoutId);
-        
-        // Safety reset in case catch block had issues
-        window.isPurchasing = false;
+        alert('❌ ' + msg);
+
         if (purchaseBtn) {
+          purchaseBtn.textContent = originalText;
           purchaseBtn.disabled = false;
-          purchaseBtn.textContent = '💳 Buy Credit';
         }
-        resumeGameTicker('purchase-complete');
       }
     }
 
-    // Bind button events once DOM is ready
+    // ========== REFRESH CREDITS ==========
+    async function refreshCredits() {
+      if (!WalletState.address) {
+        alert('Not connected to wallet');
+        return;
+      }
+
+      const refreshBtn = document.getElementById('refresh-btn');
+      if (refreshBtn) refreshBtn.disabled = true;
+
+      try {
+        await refreshCreditsFromChainAndLocal();
+        alert(`✅ Credits refreshed! You have ${WalletState.creditsRemaining} credits.`);
+      } catch (err) {
+        alert('Failed to refresh credits');
+        console.error(err);
+      } finally {
+        if (refreshBtn) refreshBtn.disabled = false;
+      }
+    }
+
+    // ========== CREDIT USAGE ==========
+    function tryUseCredit() {
+      if (!WalletState.address) {
+        alert('Connect your wallet first.');
+        return false;
+      }
+
+      if (WalletState.creditsRemaining <= 0) {
+        alert('No credits left. Buy another credit to play.');
+        return false;
+      }
+
+      WalletState.creditsRemaining -= 1;
+      saveLocalCredits(WalletState.address, WalletState.creditsRemaining);
+      updateCreditsUI();
+      debugLog('Credit used, remaining:', WalletState.creditsRemaining);
+      return true;
+    }
+
+    // Legacy compatibility
+    window.useCredit = tryUseCredit;
+    window.localCredits = 0;
+
+    // ========== METAMASK EVENT HANDLERS ==========
+    function setupWalletListeners() {
+      if (!window.ethereum) return;
+
+      // Account changed
+      window.ethereum.on('accountsChanged', async (accounts) => {
+        debugLog('Account changed:', accounts);
+        if (accounts.length === 0) {
+          disconnectWallet();
+        } else {
+          // Re-connect with new account
+          await connectWallet();
+        }
+      });
+
+      // Chain changed
+      window.ethereum.on('chainChanged', () => {
+        debugLog('Chain changed, reloading...');
+        window.location.reload();
+      });
+    }
+
+    // Initialize listeners once
+    setupWalletListeners();
+
+    debugLog('Wallet system initialized');
+
+    // ========== DOM EVENT BINDINGS ==========
     window.addEventListener('DOMContentLoaded', () => {
       const connectBtn = document.getElementById('connect-btn');
       const disconnectBtn = document.getElementById('disconnect-btn');
       const purchaseBtn = document.getElementById('purchase-btn');
       const refreshBtn = document.getElementById('refresh-btn');
       
-      // Add both click and touchstart handlers for mobile reliability
+      // Connect button
       if (connectBtn) {
         const handleConnect = () => {
-          // Unlock audio on mobile - force init if needed
+          // Unlock audio on mobile
           if (typeof audioManager !== 'undefined' && audioManager) {
             if (!audioManager.context) {
               audioManager.init().then(() => audioManager.resume()).catch(err => debugWarn('Audio init failed:', err));
@@ -1833,10 +1550,9 @@
         }, { passive: false });
       }
       
+      // Disconnect button
       if (disconnectBtn) {
-        const handleDisconnect = () => {
-          disconnectWallet();
-        };
+        const handleDisconnect = () => disconnectWallet();
         
         disconnectBtn.addEventListener('click', handleDisconnect);
         disconnectBtn.addEventListener('touchend', (e) => {
@@ -1846,9 +1562,10 @@
         }, { passive: false });
       }
       
+      // Purchase button
       if (purchaseBtn) {
         const handlePurchase = () => {
-          // Unlock audio on mobile - force init if needed
+          // Unlock audio on mobile
           if (typeof audioManager !== 'undefined' && audioManager) {
             if (!audioManager.context) {
               audioManager.init().then(() => audioManager.resume()).catch(err => debugWarn('Audio init failed:', err));
@@ -1856,7 +1573,7 @@
               audioManager.resume();
             }
           }
-          purchaseCredit();
+          buyOneCredit();
         };
         
         purchaseBtn.addEventListener('click', handlePurchase);
@@ -1867,10 +1584,9 @@
         }, { passive: false });
       }
       
+      // Refresh button
       if (refreshBtn) {
-        const handleRefresh = () => {
-          refreshCredits();
-        };
+        const handleRefresh = () => refreshCredits();
         
         refreshBtn.addEventListener('click', handleRefresh);
         refreshBtn.addEventListener('touchend', (e) => {
@@ -1880,107 +1596,10 @@
         }, { passive: false });
       }
       
-      updateCreditDisplay();
-      
-      // Handle wallet events for mobile reconnection
-      if (window.ethereum) {
-        const handleAccountsChanged = async (accounts) => {
-          debugLog('=== ACCOUNT CHANGED ===');
-          debugLog('New accounts:', accounts);
-          
-          // Prevent handling during active purchase
-          if (window.isPurchasing) {
-            debugLog('⚠️ Purchase in progress, deferring account change...');
-            return;
-          }
-          
-          if (accounts.length === 0) {
-            // Disconnected
-            debugLog('No accounts, disconnecting...');
-            if (WalletManager && WalletManager.setAddress) {
-              await WalletManager.setAddress(null);
-              WalletManager.updateUI();
-              CreditManager.updateUI();
-            }
-          } else {
-            // Switched to different account
-            try {
-              debugLog('Switching to new account:', accounts[0]);
-              
-              // Wait for WalletManager to be ready (important on mobile)
-              let retries = 10;
-              while ((!WalletManager || !WalletManager.setAddress) && retries > 0) {
-                debugLog('WalletManager not ready, waiting...', retries);
-                await new Promise(resolve => setTimeout(resolve, 200));
-                retries--;
-              }
-              
-              if (!WalletManager || !WalletManager.setAddress) {
-                throw new Error('WalletManager failed to initialize');
-              }
-              
-              await WalletManager.setAddress(accounts[0]);
-              
-              // Wait for contract to reinitialize
-              await new Promise(resolve => setTimeout(resolve, 500));
-              
-              // Sync credits with retry
-              let synced = false;
-              let syncRetries = 3;
-              
-              while (!synced && syncRetries > 0) {
-                if (CreditManager && CreditManager.syncFromBlockchain) {
-                  synced = await CreditManager.syncFromBlockchain();
-                }
-                if (!synced) {
-                  syncRetries--;
-                  if (syncRetries > 0) {
-                    debugLog(`Sync failed, retrying... (${syncRetries} left)`);
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                  }
-                }
-              }
-              
-              if (!synced) {
-                debugWarn('⚠️ Could not sync credits for new account');
-              }
-              
-              if (WalletManager && WalletManager.updateUI) WalletManager.updateUI();
-              if (CreditManager && CreditManager.updateUI) CreditManager.updateUI();
-              
-              debugLog('✅ Account switch complete');
-            } catch (err) {
-              console.error('❌ Account switch failed:', err);
-              alert('⚠️ Failed to switch account. Please reconnect your wallet.');
-              if (typeof disconnectWallet === 'function') {
-                await disconnectWallet();
-              }
-            }
-          }
-        };
-        
-        // Register with both event patterns for mobile compatibility
-        try {
-          window.ethereum.on('accountsChanged', handleAccountsChanged);
-        } catch (err) {
-          debugWarn('EventEmitter pattern failed, trying addEventListener:', err);
-        }
-        
-        // Fallback for mobile wallets that use standard event listeners
-        if (window.ethereum.addEventListener) {
-          window.ethereum.addEventListener('accountsChanged', handleAccountsChanged);
-        }
-        
-        window.ethereum.on('chainChanged', () => {
-          // Don't reload if currently purchasing - prevents losing credits
-          if (window.isPurchasing) {
-            debugLog('Chain changed during purchase, deferring reload...');
-            return;
-          }
-          debugLog('Chain changed, reloading page...');
-          window.location.reload();
-        });
-      }
+      // Initialize UI
+      updateWalletUI();
+      updateCreditsUI();
+    });
       
       // Attach start menu and restart button handlers (MUST be in DOMContentLoaded)
       if (dom.startMenu) {
@@ -2020,18 +1639,14 @@
     
     // Resync credits when tab regains focus (critical for mobile wallet returns)
     window.addEventListener('focus', () => {
-      if (WalletManager.isConnected()) {
-        debugLog('🔄 Tab focused - loading credits from localStorage first');
-        // Load from localStorage immediately for instant UI update
-        CreditManager.loadCredits();
-        CreditManager.updateUI();
-        
-        // DON'T sync from blockchain if game is active - prevents credit overwrite race condition
+      if (WalletState.address) {
+        debugLog('🔄 Tab focused - reloading credits');
+        // Don't sync if game is active - prevents credit overwrite race condition
         if (!game.started || game.over) {
           debugLog('🔄 Game not active, syncing from blockchain');
-          CreditManager.syncFromBlockchain();
+          refreshCreditsFromChainAndLocal().catch(err => debugWarn('Credit refresh failed:', err));
         } else {
-          debugLog('⚠️ Game is active, skipping blockchain sync to prevent credit overwrite');
+          debugLog('⚠️ Game is active, skipping blockchain sync');
         }
       }
     });
@@ -4434,7 +4049,7 @@
     }
 
     async function submitScoreToLeaderboard(score, tbags) {
-      if (!WalletManager.isConnected()) return;
+      if (!WalletState.address) return;
       
       const initials = prompt("Enter initials (optional, max 3 letters):");
       
@@ -4446,7 +4061,7 @@
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            wallet: WalletManager.getAddress(),
+            wallet: WalletState.address,
             score,
             tbags: tbags || 0,
             initials: initials || ""
@@ -4858,22 +4473,15 @@
     function startGame() {
       debugLog('=== START GAME CALLED ===');
 
-      if (!WalletManager.isConnected()) {
+      // Check wallet connection
+      if (!WalletState.address) {
         alert('Connect your wallet first.');
         return;
       }
 
-      // Reload credits from localStorage before starting game
-      CreditManager.loadCredits();
-      window.localCredits = CreditManager.getCredits(); // Update legacy variable
-      CreditManager.updateUI();
-      debugLog('🎮 Pre-game credit check:', window.localCredits);
-
-      if (typeof window.useCredit === 'function') {
-        const ok = window.useCredit();
-        if (!ok) {
-          return;
-        }
+      // Check and use credit
+      if (!tryUseCredit()) {
+        return;
       }
 
       // Actually start the game
