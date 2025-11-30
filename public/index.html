@@ -1293,7 +1293,6 @@
         return;
       }
 
-      pauseGameTicker('wallet-connect');
       const connectBtn = document.getElementById('connect-btn');
       if (connectBtn) connectBtn.disabled = true;
 
@@ -1355,12 +1354,10 @@
         updateWalletUI();
 
         if (connectBtn) connectBtn.disabled = false;
-        resumeGameTicker('wallet-connect-success');
       } catch (err) {
         console.error('Wallet connection error:', err);
         alert('Connection failed: ' + (err.message || 'Unknown error'));
         if (connectBtn) connectBtn.disabled = false;
-        resumeGameTicker('wallet-connect-error');
       }
     }
 
@@ -1530,14 +1527,13 @@
       
       // Connect button
       if (connectBtn) {
-        const handleConnect = () => {
-          // Unlock audio on mobile
-          if (typeof audioManager !== 'undefined' && audioManager) {
-            if (!audioManager.context) {
-              audioManager.init().then(() => audioManager.resume()).catch(err => debugWarn('Audio init failed:', err));
-            } else if (audioManager.context.state === 'suspended') {
-              audioManager.resume();
-            }
+        const handleConnect = async () => {
+          // Unlock audio on mobile - do this synchronously
+          if (audioManager && !audioManager.context) {
+            await audioManager.init();
+          }
+          if (audioManager && audioManager.context.state === 'suspended') {
+            audioManager.resume();
           }
           connectWallet();
         };
@@ -1564,14 +1560,13 @@
       
       // Purchase button
       if (purchaseBtn) {
-        const handlePurchase = () => {
-          // Unlock audio on mobile
-          if (typeof audioManager !== 'undefined' && audioManager) {
-            if (!audioManager.context) {
-              audioManager.init().then(() => audioManager.resume()).catch(err => debugWarn('Audio init failed:', err));
-            } else if (audioManager.context.state === 'suspended') {
-              audioManager.resume();
-            }
+        const handlePurchase = async () => {
+          // Unlock audio on mobile - do this synchronously
+          if (audioManager && !audioManager.context) {
+            await audioManager.init();
+          }
+          if (audioManager && audioManager.context.state === 'suspended') {
+            audioManager.resume();
           }
           buyOneCredit();
         };
