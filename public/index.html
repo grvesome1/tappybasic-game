@@ -2330,7 +2330,7 @@
         // HTML5 Audio fallback for mobile
         this.html5Audio = {};
         if (this.isMobile) {
-          // Create HTML5 audio elements for all sounds
+          // Create HTML5 audio elements for all sounds (lazy load, no preload)
           this.html5Audio.score = new Audio('./assets/audio/score.mp3');
           this.html5Audio.flap = new Audio('./assets/audio/flap.mp3');
           this.html5Audio.lift = new Audio('./assets/audio/lift.mp3');
@@ -2342,8 +2342,11 @@
           this.html5Audio.invincibility = new Audio('./assets/audio/invincibility.mp3');
           this.html5Audio.powerup = new Audio('./assets/audio/tbagburst.mp3');
           
-          // Preload all
-          Object.values(this.html5Audio).forEach(audio => audio.preload = 'auto');
+          // Set preload to 'none' for lazy loading - only load when first played
+          Object.values(this.html5Audio).forEach(audio => {
+            audio.preload = 'none';
+            audio.volume = 0.5; // Lower default volume for mobile
+          });
         }
       }
       
