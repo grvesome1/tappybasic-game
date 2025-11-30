@@ -1134,7 +1134,7 @@
     const CANDLE_COLLISION_INSET_VERTICAL = 10;   // Shrink vertical edges by 10px
     
     // Debug collision visualization (set to true to see collision circle)
-    const SHOW_COLLISION_DEBUG = true;
+    const SHOW_COLLISION_DEBUG = false;
     
     const GRAVITY = 0.25;
     const BASE_SPEED = 3.21;
@@ -2364,30 +2364,61 @@
       
       // Unlock audio on first user gesture
       async unlock() {
-        if (this.disabled) return false;
-        if (this.unlocked) return true;
+        if (this.disabled) {
+          console.log('[Audio] unlock() - disabled, skipping');
+          return false;
+        }
+        if (this.unlocked) {
+          console.log('[Audio] unlock() - already unlocked');
+          return true;
+        }
         
+        console.log('[Audio] unlock() - attempting to initialize and resume');
         const initialized = await this.init();
-        if (!initialized) return false;
+        if (!initialized) {
+          console.warn('[Audio] unlock() - init failed');
+          return false;
+        }
         
-        if (this.context.state === 'suspended') {
-          try {
-            console.log('[Audio] unlockAudio() called, state before resume =', this.context.state);
-            await this.context.resume();
-            console.log('[Audio] AudioContext resumed, state =', this.context.state);
-          } catch (err) {
-            console.warn('[Audio] Failed to resume AudioContext:', err);
-            this.disabled = true;
-            return false;
-          }
+        console.log('[Audio] AudioContext state before unlock:', this.context.state);
+        
+        // Always try to resume, even if not suspended (mobile Safari quirk)
+        try {
+          await this.context.resume();
+          console.log('[Audio] AudioContext state after resume:', this.context.state);
+          
+          // Play a silent buffer to fully unlock (mobile requirement)
+          const silentBuffer = this.context.createBuffer(1, 1, 22050);
+          const source = this.context.createBufferSource();
+          source.buffer = silentBuffer;
+          source.connect(this.context.destination);
+          source.start(0);
+          console.log('[Audio] Silent buffer played for unlock');
+          
+        } catch (err) {
+          console.warn('[Audio] Failed to resume AudioContext:', err);
+          this.disabled = true;
+          return false;
         }
         
         this.unlocked = true;
+        console.log('[Audio] unlock() - SUCCESS, unlocked =', this.unlocked);
         return true;
       }
       
       // Check if a sound should play (mobile whitelist)
       shouldPlaySound(name) {
+        const checks = {
+          ready: this.ready,
+          disabled: this.disabled,
+          unlocked: this.unlocked,
+          sfxMuted: this.sfxMuted,
+          isMobile: this.isMobile,
+          whitelisted: this.mobileWhitelist.has(name)
+        };
+        
+        console.log(`[Audio] shouldPlaySound('${name}'):`, checks);
+        
         if (!this.ready || this.disabled || !this.unlocked) return false;
         if (this.sfxMuted) return false;
         
@@ -2462,20 +2493,32 @@
       }
       
       playSfx(name, volume = 1.0, rate = 1.0) {
-        if (!this.shouldPlaySound(name)) return;
-        if (!this.buffers[name]) return;
+        if (!this.shouldPlaySound(name)) {
+          console.log(`[Audio] playSfx('${name}') - shouldPlaySound returned false`);
+          return;
+        }
+        if (!this.buffers[name]) {
+          console.warn(`[Audio] playSfx('${name}') - buffer not loaded`);
+          return;
+        }
         
         // Rate limiting (especially important for MetaMask mobile)
         const now = Date.now();
         const lastPlay = this.lastPlayTimes[name] || 0;
         const interval = this.isMetaMask ? this.minPlayInterval : 0;
         
-        if (now - lastPlay < interval) return;
+        if (now - lastPlay < interval) {
+          console.log(`[Audio] playSfx('${name}') - rate limited`);
+          return;
+        }
         this.lastPlayTimes[name] = now;
+        
+        console.log(`[Audio] playSfx('${name}', vol=${volume}, rate=${rate}) - PLAYING`);
         
         try {
           // Auto-resume if suspended
           if (this.context.state === 'suspended') {
+            console.log('[Audio] Context suspended, resuming...');
             this.context.resume().catch(err => console.warn('[Audio] Resume failed:', err));
           }
           
