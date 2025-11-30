@@ -3186,16 +3186,29 @@
       }
 
       checkCollision(pipe) {
-        // No collision radius - exact center point collision only
-        const collisionRadius = 0; // Exact center point
+        // Pixel-perfect collision using actual sprite bounds
+        // Rocket sprite bounds (centered anchor at 0.5)
+        const rocketHalfWidth = (this.size * ROCKET_SIZE_MULTIPLIER) / 2;
+        const rocketHalfHeight = (this.size * ROCKET_SIZE_MULTIPLIER) / 2;
+        const rocketLeft = this.x - rocketHalfWidth;
+        const rocketRight = this.x + rocketHalfWidth;
+        const rocketTop = this.y - rocketHalfHeight;
+        const rocketBottom = this.y + rocketHalfHeight;
         
-        const horizontallyAligned =
-          this.x + collisionRadius > pipe.x &&
-          this.x - collisionRadius < pipe.x + pipe.w;
-        const aboveTop = this.y - collisionRadius < (pipe.collisionTop || pipe.top);
-        const belowBottom = this.y + collisionRadius > (pipe.collisionBottom || pipe.bottom);
+        // Pipe bounds
+        const pipeLeft = pipe.x;
+        const pipeRight = pipe.x + pipe.w;
+        const pipeTop = pipe.collisionTop || pipe.top;
+        const pipeBottom = pipe.collisionBottom || pipe.bottom;
         
-        return horizontallyAligned && (aboveTop || belowBottom);
+        // Check horizontal overlap
+        const horizontalOverlap = rocketRight > pipeLeft && rocketLeft < pipeRight;
+        
+        // Check if rocket touches top or bottom candle
+        const touchingTopCandle = rocketTop < pipeTop;
+        const touchingBottomCandle = rocketBottom > pipeBottom;
+        
+        return horizontalOverlap && (touchingTopCandle || touchingBottomCandle);
       }
     }
 
