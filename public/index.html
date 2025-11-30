@@ -1545,13 +1545,7 @@
         const handleConnect = async () => {
           console.log('[DEBUG] Connect button clicked!');
           try {
-            // Unlock audio on mobile - do this synchronously
-            if (audioManager && !audioManager.context) {
-              await audioManager.init();
-            }
-            if (audioManager && audioManager.context && audioManager.context.state === 'suspended') {
-              audioManager.resume();
-            }
+            await forceAudioUnlock();
             await connectWallet();
           } catch (err) {
             console.error('[DEBUG] Error in handleConnect:', err);
@@ -1584,13 +1578,7 @@
         const handlePurchase = async () => {
           console.log('[DEBUG] Purchase button clicked!');
           try {
-            // Unlock audio on mobile - do this synchronously
-            if (audioManager && !audioManager.context) {
-              await audioManager.init();
-            }
-            if (audioManager && audioManager.context && audioManager.context.state === 'suspended') {
-              audioManager.resume();
-            }
+            await forceAudioUnlock();
             await buyOneCredit();
           } catch (err) {
             console.error('[DEBUG] Error in handlePurchase:', err);
@@ -1623,35 +1611,21 @@
       
       // Attach start menu and restart button handlers (MUST be in DOMContentLoaded)
       if (dom.startMenu) {
-        dom.startMenu.addEventListener('pointerdown', (e) => {
+        dom.startMenu.addEventListener('pointerdown', async (e) => {
           e.preventDefault();
           e.stopPropagation();
           debugLog('=== START MENU POINTERDOWN ===');
-          // Unlock audio on mobile
-          if (typeof audioManager !== 'undefined' && audioManager) {
-            if (!audioManager.context) {
-              audioManager.init().then(() => audioManager.resume()).catch(err => debugWarn('Audio init failed:', err));
-            } else if (audioManager.context.state === 'suspended') {
-              audioManager.resume();
-            }
-          }
+          await forceAudioUnlock();
           startGame();
         });
       }
       
       if (dom.restartButton) {
-        dom.restartButton.addEventListener('pointerdown', (e) => {
+        dom.restartButton.addEventListener('pointerdown', async (e) => {
           e.preventDefault();
           e.stopPropagation();
           debugLog('=== RESTART POINTERDOWN ===');
-          // Unlock audio on mobile
-          if (typeof audioManager !== 'undefined' && audioManager) {
-            if (!audioManager.context) {
-              audioManager.init().then(() => audioManager.resume()).catch(err => debugWarn('Audio init failed:', err));
-            } else if (audioManager.context.state === 'suspended') {
-              audioManager.resume();
-            }
-          }
+          await forceAudioUnlock();
           startGame();
         });
       }
@@ -2307,6 +2281,13 @@
     // MetaMask Mobile-optimized audio system with Web Audio API pooling
     // Designed for smooth 60 FPS with rapid score sound playback
     
+    // ==================== AUDIO MANAGER ====================
+    // Lazy-initialized, mobile-friendly Web Audio API manager
+    // - Never breaks the game even if Web Audio is unsupported
+    // - Respects autoplay policies (only starts after user gesture)
+    // - Mobile mode: no background music, whitelist-only SFX
+    // - MetaMask mobile: aggressive optimization to prevent jank
+    
     class AudioManager {
       constructor() {
         this.context = null;
@@ -2315,67 +2296,96 @@
         this.musicGain = null;
         this.ready = false;
         this.disabled = false;
+        this.unlocked = false;
         this.sfxMuted = false;
         this.musicMuted = false;
         
         // Rate limiting for rapid sounds (MetaMask Mobile optimization)
         this.lastPlayTimes = {};
-        this.minPlayInterval = 50; // ms between rapid plays (MetaMask: 50ms, Desktop: 0ms)
+        this.minPlayInterval = 50; // ms between rapid plays
         
-        // Sound pool for reusing nodes
-        this.soundPool = new Map();
-        this.maxPoolSize = 3;
-        
-        // MetaMask-specific config
+        // Mobile config
+        this.isMobile = isMobile;
         this.isMetaMask = isMetaMaskMobile;
-        this.suspendOnPause = this.isMetaMask; // Suspend context when paused on MetaMask
-      }
-      
-      async init() {
-        if (this.context) return;
         
-        try {
-          this.context = new (window.AudioContext || window.webkitAudioContext)();
-          
-          // MetaMask Mobile: Use lower sample rate for better performance
-          if (this.isMetaMask && this.context.sampleRate > 22050) {
-            debugLog('[Audio] MetaMask Mobile detected, using optimized settings');
-          }
-          
-          this.ready = true;
-          debugLog(`[Audio] AudioContext initialized (sampleRate: ${this.context.sampleRate})`);
-          
-          // Auto-resume on user gesture
-          this.setupAutoResume();
-        } catch (err) {
-          console.error('[Audio] Failed to create AudioContext:', err);
-          this.disabled = true;
-        }
-      }
-      
-      setupAutoResume() {
-        const resumeContext = () => {
-          if (this.context && this.context.state === 'suspended') {
-            this.context.resume().then(() => {
-              console.log('[Audio] Context resumed');
-            }).catch(err => {
-              debugWarn('[Audio] Resume failed:', err);
-            });
-          }
-        };
+        // Mobile SFX whitelist (only these sounds play on mobile)
+        this.mobileWhitelist = new Set(['score', 'flap']);
         
-        // For MetaMask mobile, be more aggressive
-        const events = this.isMetaMask 
-          ? ['touchstart', 'touchend', 'mousedown', 'click', 'pointerdown', 'pointerup']
-          : ['touchstart', 'touchend', 'mousedown', 'click'];
-        
-        events.forEach(event => {
-          document.addEventListener(event, resumeContext, { passive: true, capture: true });
+        console.log('[Audio] Manager created:', { 
+          isMobile: this.isMobile, 
+          isMetaMask: this.isMetaMask 
         });
       }
       
+      // Lazy init - only creates context when needed
+      async init() {
+        if (this.context) return true;
+        if (this.disabled) return false;
+        
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) {
+          console.warn('[Audio] Disabled: Web Audio not supported in this environment');
+          this.disabled = true;
+          return false;
+        }
+        
+        try {
+          this.context = new AC();
+          this.ready = true;
+          console.log('[Audio] AudioContext created (sampleRate:', this.context.sampleRate + ')');
+          
+          if (this.isMobile) {
+            console.log('[Audio] Mobile mode: background music disabled, SFX whitelist active');
+          }
+          
+          return true;
+        } catch (err) {
+          console.warn('[Audio] Failed to create AudioContext, disabling audio:', err);
+          this.disabled = true;
+          return false;
+        }
+      }
+      
+      // Unlock audio on first user gesture
+      async unlock() {
+        if (this.disabled) return false;
+        if (this.unlocked) return true;
+        
+        const initialized = await this.init();
+        if (!initialized) return false;
+        
+        if (this.context.state === 'suspended') {
+          try {
+            console.log('[Audio] unlockAudio() called, state before resume =', this.context.state);
+            await this.context.resume();
+            console.log('[Audio] AudioContext resumed, state =', this.context.state);
+          } catch (err) {
+            console.warn('[Audio] Failed to resume AudioContext:', err);
+            this.disabled = true;
+            return false;
+          }
+        }
+        
+        this.unlocked = true;
+        return true;
+      }
+      
+      // Check if a sound should play (mobile whitelist)
+      shouldPlaySound(name) {
+        if (!this.ready || this.disabled || !this.unlocked) return false;
+        if (this.sfxMuted) return false;
+        
+        // Desktop: play everything
+        if (!this.isMobile) return true;
+        
+        // Mobile: only whitelisted sounds
+        return this.mobileWhitelist.has(name);
+      }
+      
       async loadSound(name, url) {
-        if (!this.context || this.disabled) return;
+        if (this.disabled) return;
+        if (!this.context) await this.init();
+        if (!this.context) return;
         
         try {
           const response = await fetch(url);
@@ -2383,104 +2393,100 @@
           const audioBuffer = await this.context.decodeAudioData(arrayBuffer);
           
           this.buffers[name] = audioBuffer;
-          debugLog(`[Audio] Loaded: ${name} (${(audioBuffer.duration).toFixed(2)}s)`);
+          console.log(`[Audio] Loaded: ${name} (${(audioBuffer.duration).toFixed(2)}s)`);
         } catch (err) {
-          debugWarn(`[Audio] Failed to load ${name}:`, err);
+          console.warn(`[Audio] Failed to load ${name}:`, err);
         }
       }
       
       async loadAllSounds() {
-        const soundMap = {
+        // Mobile gets minimal sounds, desktop gets everything
+        const soundMap = this.isMobile ? {
           score: './assets/audio/score.mp3',
-          lift: './assets/audio/lift.mp3', // Testing mobile performance with lift.mp3
-          tbagsecured: './assets/audio/tbagsecured.mp3', // Added for tbag powerup collection
-          explosion: './assets/audio/explosion.mp3', // Added for destroying pipes/candles
-          sherk: './assets/audio/sherk.mp3', // Added for sherk powerup
-          slow: './assets/audio/slow.mp3', // Added for slow powerup
-          shoot: './assets/audio/gun.mp3', // Added for shooting bullets
-          invincibility: './assets/audio/invincibility.mp3', // Added for invincibility powerup
-          powerup: './assets/audio/tbagburst.mp3', // Added for generic powerup collection
-          flap: './assets/audio/flap.mp3', // Added flap sound to mobile
+          flap: './assets/audio/flap.mp3',
+        } : {
+          score: './assets/audio/score.mp3',
+          lift: './assets/audio/lift.mp3',
+          tbagsecured: './assets/audio/tbagsecured.mp3',
+          explosion: './assets/audio/explosion.mp3',
+          sherk: './assets/audio/sherk.mp3',
+          slow: './assets/audio/slow.mp3',
+          shoot: './assets/audio/gun.mp3',
+          invincibility: './assets/audio/invincibility.mp3',
+          powerup: './assets/audio/tbagburst.mp3',
+          flap: './assets/audio/flap.mp3',
         };
-        
-        // Desktop gets more sounds
-        if (!isMobile) {
-          Object.assign(soundMap, {
-          });
-        }
         
         await Promise.all(
           Object.entries(soundMap).map(([name, url]) => this.loadSound(name, url))
         );
         
-        debugLog(`[Audio] All sounds loaded (${Object.keys(this.buffers).length} sounds)`);
+        console.log(`[Audio] Sounds loaded: ${Object.keys(this.buffers).length} total`);
       }
       
       async loadMusic(url) {
-        if (this.disabled) {
-          debugLog('[Audio] Music loading disabled');
+        // Mobile: skip background music entirely
+        if (this.isMobile || this.disabled) {
+          console.log('[Audio] Background music disabled (mobile or unsupported)');
           return;
         }
+        
+        if (!this.context) await this.init();
+        if (!this.context) return;
         
         try {
           const response = await fetch(url);
           const arrayBuffer = await response.arrayBuffer();
           const audioBuffer = await this.context.decodeAudioData(arrayBuffer);
           this.buffers.music = audioBuffer;
-          debugLog('[Audio] Background music loaded');
+          console.log('[Audio] Background music loaded');
         } catch (err) {
-          debugWarn('[Audio] Failed to load background music:', err);
+          console.warn('[Audio] Failed to load background music:', err);
         }
       }
       
       playSfx(name, volume = 1.0, rate = 1.0) {
-        if (!this.ready || this.disabled || this.sfxMuted || !this.context) return;
+        if (!this.shouldPlaySound(name)) return;
         if (!this.buffers[name]) return;
         
-        // Rate limiting (MetaMask Mobile optimization)
+        // Rate limiting (especially important for MetaMask mobile)
         const now = Date.now();
         const lastPlay = this.lastPlayTimes[name] || 0;
         const interval = this.isMetaMask ? this.minPlayInterval : 0;
         
-        if (now - lastPlay < interval) {
-          // Too soon, skip this play to avoid audio stutter
-          return;
-        }
-        
+        if (now - lastPlay < interval) return;
         this.lastPlayTimes[name] = now;
         
         try {
-          // Resume context if suspended
+          // Auto-resume if suspended
           if (this.context.state === 'suspended') {
-            this.context.resume();
+            this.context.resume().catch(err => console.warn('[Audio] Resume failed:', err));
           }
           
-          // Create source
           const source = this.context.createBufferSource();
           source.buffer = this.buffers[name];
           source.playbackRate.value = rate;
           
-          // Create gain
           const gainNode = this.context.createGain();
           gainNode.gain.value = volume;
           
-          // Connect and play
           source.connect(gainNode);
           gainNode.connect(this.context.destination);
           source.start(0);
           
-          // Auto-cleanup after playback
           source.onended = () => {
             source.disconnect();
             gainNode.disconnect();
           };
         } catch (err) {
-          debugWarn(`[Audio] Failed to play ${name}:`, err);
+          console.warn(`[Audio] Failed to play ${name}:`, err);
         }
       }
       
       startMusic() {
-        if (this.disabled || this.musicMuted || !this.buffers.music) return;
+        // Never start music on mobile
+        if (this.isMobile || this.disabled || this.musicMuted) return;
+        if (!this.unlocked || !this.buffers.music) return;
         if (this.musicSource) return; // Already playing
         
         try {
@@ -2498,9 +2504,9 @@
           this.musicSource.connect(this.musicGain);
           this.musicSource.start(0);
           
-          debugLog('[Audio] Background music started');
+          console.log('[Audio] Background music started');
         } catch (err) {
-          console.error('[Audio] Failed to start music:', err);
+          console.warn('[Audio] Failed to start music:', err);
         }
       }
       
@@ -2513,9 +2519,8 @@
           this.musicGain.disconnect();
           this.musicSource = null;
           this.musicGain = null;
-          debugLog('[Audio] Background music stopped');
         } catch (err) {
-          debugWarn('[Audio] Error stopping music:', err);
+          console.warn('[Audio] Error stopping music:', err);
         }
       }
       
@@ -2523,7 +2528,7 @@
         this.musicMuted = muted;
         if (muted) {
           this.stopMusic();
-        } else if (this.buffers.music) {
+        } else if (!this.isMobile && this.unlocked && this.buffers.music) {
           this.startMusic();
         }
       }
@@ -2532,27 +2537,15 @@
         this.sfxMuted = muted;
       }
       
-      // MetaMask pause/resume integration
+      // MetaMask pause/resume (only if context exists)
       pause() {
-        if (!this.context) return;
-        
-        if (this.suspendOnPause && this.context.state === 'running') {
-          this.context.suspend().catch(err => {
-            debugWarn('[Audio] Suspend failed:', err);
-          });
-          debugLog('[Audio] Context suspended (MetaMask pause)');
-        }
+        if (!this.context || this.context.state !== 'running') return;
+        this.context.suspend().catch(err => console.warn('[Audio] Suspend failed:', err));
       }
       
       resume() {
-        if (!this.context) return;
-        
-        if (this.context.state === 'suspended') {
-          this.context.resume().catch(err => {
-            debugWarn('[Audio] Resume failed:', err);
-          });
-          debugLog('[Audio] Context resumed (MetaMask resume)');
-        }
+        if (!this.context || this.context.state !== 'suspended') return;
+        this.context.resume().catch(err => console.warn('[Audio] Resume failed:', err));
       }
     }
     
@@ -2574,23 +2567,19 @@
     let bgMusicGain = null; // Legacy
     const sounds = {}; // Legacy
 
-    // Initialize AudioManager (called on DOM ready)
+    // Initialize AudioManager - safe to call early, won't create context yet
     async function initAudioLayer() {
-      await audioManager.init();
-      
-      // Set legacy variable for compatibility
-      audioContext = audioManager.context;
-      
-      // Load all sounds
+      // Just load sounds, don't init context until user gesture
       await audioManager.loadAllSounds();
-      
-      // Load background music (now enabled for mobile too!)
       await audioManager.loadMusic('./assets/audio/background.mp3');
       
-      debugLog('[Audio] AudioManager initialized');
+      // Set legacy variable for compatibility (may be null until unlocked)
+      audioContext = audioManager.context;
+      
+      console.log('[Audio] AudioManager layer initialized');
     }
 
-    // Legacy wrapper for AudioManager
+    // Legacy wrappers
     function playSfx(name, volume = 1.0, rate = 1.0) {
       audioManager.playSfx(name, volume, rate);
     }
@@ -2603,9 +2592,9 @@
       audioManager.setSfxMuted(muted);
     }
 
-    // Legacy audio unlock (now handled by AudioManager.setupAutoResume)
-    function forceAudioUnlock() {
-      audioManager.resume();
+    // Force audio unlock - call this on first user interaction
+    async function forceAudioUnlock() {
+      await audioManager.unlock();
     }
 
     // Background music: "background.mp3" made by Elisaveta Stoycheva
@@ -4516,7 +4505,7 @@
     }
     
     function doStartGame() {
-      // Force audio
+      // Force audio unlock
       forceAudioUnlock();
       
       // Performance logging
@@ -4533,13 +4522,9 @@
         payload: { timestamp: Date.now() }
       }, '*');
 
-      // Start background music on first user interaction
-      try {
-        if (!bgMusicSource && sounds.background) {
-          createBackgroundMusic();
-        }
-      } catch (err) {
-        console.error('Failed to start background music:', err);
+      // Start background music (only on desktop, after unlock)
+      if (!isMobile && audioManager.unlocked && !audioManager.musicMuted) {
+        createBackgroundMusic();
       }
 
       // Hide menus immediately
@@ -5352,8 +5337,7 @@
         game.bird.setTexture();
       }
       initGame();
-      // Start background music immediately after loading
-      createBackgroundMusic();
+      // Background music will start after user gesture (see forceAudioUnlock)
       // Notify parent frame
       notifyGameReady();
     }).catch(() => {
