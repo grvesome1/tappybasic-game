@@ -1191,13 +1191,8 @@
     // ========== LOCALSTORAGE HELPERS ==========
     function getCreditStorageKey(address) {
       if (!address) return null;
-      try {
-        // Normalize address with ethers checksum to prevent mismatch
-        return `tappyCredits_${ethers.getAddress(address).toLowerCase()}`;
-      } catch (err) {
-        // Fallback if invalid address format
-        return `tappyCredits_${address.toLowerCase()}`;
-      }
+      // Address from signer.getAddress() is already checksummed and valid
+      return `tappyCredits_${address.toLowerCase()}`;
     }
 
     function loadLocalCredits(address) {
@@ -1373,7 +1368,7 @@
           provider,
           signer,
           contract,
-          address: ethers.getAddress(address),
+          address: address, // Already checksummed from signer.getAddress()
           chainId: network.chainId,
           creditsSpentThisSession: 0
         });
