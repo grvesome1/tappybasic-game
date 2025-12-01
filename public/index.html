@@ -2363,8 +2363,12 @@
         if (this.disabled) return false;
         if (this.unlocked) return true;
         
+        debugLog('[Audio] Unlocking audio context...');
         const initialized = await this.init();
-        if (!initialized) return false;
+        if (!initialized) {
+          console.error('[Audio] Failed to initialize context');
+          return false;
+        }
         
         // Always try to resume, even if not suspended (mobile Safari quirk)
         try {
@@ -2373,14 +2377,16 @@
           // Play a silent buffer to fully unlock (mobile requirement)
           const silentBuffer = this.context.createBuffer(1, 1, 22050);
           const source = this.context.createBufferSource();
-          source.buffer = silentBuffer;
-          source.connect(this.context.destination);
-          source.start(0);
-          
         } catch (err) {
+          console.error('[Audio] Unlock failed:', err);
           this.disabled = true;
           return false;
         }
+        
+        this.unlocked = true;
+        debugLog('[Audio] Successfully unlocked! Buffers loaded:', Object.keys(this.buffers).length);
+        return true;
+      } }
         
         this.unlocked = true;
         return true;
@@ -2408,8 +2414,9 @@
           const arrayBuffer = await response.arrayBuffer();
           const audioBuffer = await this.context.decodeAudioData(arrayBuffer);
           this.buffers[name] = audioBuffer;
+          debugLog(`[Audio] Loaded: ${name}`);
         } catch (err) {
-          // Silently fail
+          console.error(`[Audio] Failed to load ${name}:`, err);
         }
       }
       
@@ -2454,8 +2461,17 @@
       playSfx(name, volume = 1.0, rate = 1.0) {
         // Unified Web Audio API path for both mobile and desktop
         if (this.sfxMuted) return;
-        if (!this.shouldPlaySound(name)) return;
-        if (!this.buffers[name]) return;
+        
+        // Debug logging for audio issues
+        if (!this.shouldPlaySound(name)) {
+          debugLog(`[Audio] Cannot play ${name}: ready=${this.ready}, unlocked=${this.unlocked}, disabled=${this.disabled}`);
+          return;
+        }
+        
+        if (!this.buffers[name]) {
+          console.warn(`[Audio] Buffer not loaded for: ${name}`);
+          return;
+        }
         
         // Rate limiting (especially important for MetaMask mobile)
         const now = Date.now();
