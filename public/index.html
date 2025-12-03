@@ -962,35 +962,40 @@
     // Detect mobile once, reuse everywhere
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     const isMetaMaskMobile = /MetaMaskMobile|MetaMask/i.test(navigator.userAgent) && isMobile;
-    
+
     // Performance profiles for different contexts
+    // Desktop stays full-quality; mobile (especially MetaMask WebView)
+    // gets a lower internal resolution and fewer overdraw-heavy effects.
     const PERF_PROFILE = isMetaMaskMobile ? {
-      resolution: 2, // Increase to 2x for sharper rendering
-      antialias: true, // Enable smooth antialiasing
-      maxFPS: 60,
+      // MetaMask mobile WebView: prioritize smoothness over sharpness
+      resolution: 1,       // Half the pixels vs desktop profile
+      antialias: false,    // Rely on pixel-art style instead of MSAA
+      maxFPS: 45,          // Give the CPU/GPU more headroom
+      effectScale: 0.4,
+      particleScale: 0.3,
+      enableFilters: false,
+      cullDistance: 80,    // Cull earlier off-screen to save work
+      skipRenderThreshold: 0.8
+    } : isMobile ? {
+      // Generic mobile browsers: still reduced resolution & AA
+      resolution: 1.25,    // Slightly sharper than MetaMask, still lighter than 2x
+      antialias: false,
+      maxFPS: 50,
       effectScale: 0.5,
       particleScale: 0.4,
-      enableFilters: false,
-      cullDistance: 100, // Cull objects 100px off-screen
-      skipRenderThreshold: 0.8 // Skip heavy updates if frame time > 13.3ms (80% of 16.67ms budget)
-    } : isMobile ? {
-      resolution: 2, // Use 2x for crisp mobile rendering
-      antialias: true, // Enable smooth antialiasing
-      maxFPS: 45,
-      effectScale: 0.6,
-      particleScale: 0.5,
       enableFilters: false,
       cullDistance: 80,
       skipRenderThreshold: 0.85
     } : {
-      resolution: 2, // Fixed 2x for desktop
+      // Desktop: full quality
+      resolution: 2,       // Fixed 2x for crisp rendering
       antialias: true,
       maxFPS: 60,
       effectScale: 1.0,
       particleScale: 1.0,
       enableFilters: true,
-      cullDistance: 50, // Desktop can handle closer culling
-      skipRenderThreshold: 1.0 // No frame skipping on desktop
+      cullDistance: 50,
+      skipRenderThreshold: 1.0
     };
     
     // FPS monitoring
@@ -1174,7 +1179,7 @@
     ];
 
     const EXPECTED_CHAIN_ID = 59141n; // Linea Sepolia
-    const CREDIT_PRICE_WEI = 5000000000000n; // 0.000005 ETH
+    const CREDIT_PRICE_WEI = 5000000000000n; // 0.000005 ETH (fallback)
 
     // ========== WALLET STATE ==========
     // Single source of truth for wallet connection
@@ -1184,15 +1189,19 @@
       contract: null,
       address: null,
       chainId: null,
-      creditsRemaining: 0, // Local playable credits
-      creditsSpentThisSession: 0 // Track credits spent this session for blockchain sync
+      creditsRemaining: 0, // Local playable credits (per-wallet)
+      creditPriceWei: CREDIT_PRICE_WEI // Populated from contract on connect when possible
     };
 
     // ========== LOCALSTORAGE HELPERS ==========
     function getCreditStorageKey(address) {
       if (!address) return null;
-      // Address from signer.getAddress() is already checksummed and valid
       return `tappyCredits_${address.toLowerCase()}`;
+    }
+
+    function getCreditsSpentKey(address) {
+      if (!address) return null;
+      return `tappyCredits_spent_${address.toLowerCase()}`;
     }
 
     function loadLocalCredits(address) {
@@ -1209,6 +1218,20 @@
       localStorage.setItem(key, String(Math.max(0, value)));
     }
 
+    function loadCreditsSpentLifetime(address) {
+      const key = getCreditsSpentKey(address);
+      if (!key) return 0;
+      const raw = localStorage.getItem(key);
+      const parsed = raw ? parseInt(raw, 10) : 0;
+      return Number.isNaN(parsed) || parsed < 0 ? 0 : parsed;
+    }
+
+    function saveCreditsSpentLifetime(address, value) {
+      const key = getCreditsSpentKey(address);
+      if (!key) return;
+      localStorage.setItem(key, String(Math.max(0, value)));
+    }
+
     // ========== CREDIT REFRESH ==========
     async function refreshCreditsFromChainAndLocal() {
       if (!WalletState.address || !WalletState.contract) {
@@ -1218,37 +1241,43 @@
       }
 
       try {
-        // Read on-chain credits
-        const onChainBigInt = await WalletState.contract.credits(WalletState.address);
+        const addr = WalletState.address.toLowerCase();
+
+        // Read on-chain credits (authoritative total remaining on contract)
+        const onChainBigInt = await WalletState.contract.credits(addr);
         const onChain = Number(onChainBigInt);
 
-        // Read local credits
-        let local = loadLocalCredits(WalletState.address);
+        // Read local snapshot of remaining credits
+        let localRemaining = loadLocalCredits(addr);
 
-        console.log('[DEBUG] refreshCreditsFromChainAndLocal:', { onChain, local, spent: WalletState.creditsSpentThisSession });
+        // Read lifetime credits spent from localStorage (per wallet)
+        let spentLifetime = loadCreditsSpentLifetime(addr);
 
-        // Check if there's a new purchase
-        // A purchase is detected when on-chain credits exceed what we started with
-        const expectedOnChain = local + WalletState.creditsSpentThisSession;
-        
-        if (onChain > expectedOnChain) {
-          // New purchase detected
-          const purchasedAmount = onChain - expectedOnChain;
-          console.log(`[DEBUG] New purchase detected: ${purchasedAmount} credits bought`);
-          local += purchasedAmount;
-          WalletState.creditsSpentThisSession = 0; // Reset spent counter
-        } else if (local > onChain) {
-          // Local exceeds on-chain (shouldn't happen but handle it)
-          console.log('[DEBUG] Local exceeds on-chain, clamping down');
-          local = onChain;
-          WalletState.creditsSpentThisSession = 0;
+        // One-time migration for existing users: if we have no explicit spentLifetime
+        // but do have a local balance, infer spent = max(onChain - localRemaining, 0).
+        const spentKey = getCreditsSpentKey(addr);
+        if (localStorage.getItem(spentKey) === null) {
+          if (onChain >= localRemaining) {
+            spentLifetime = onChain - localRemaining;
+          } else {
+            // Local should never exceed on-chain; clamp and reset spent
+            localRemaining = onChain;
+            spentLifetime = 0;
+          }
+          saveCreditsSpentLifetime(addr, spentLifetime);
         }
-        // Otherwise, keep local as is (credits were spent locally)
 
-        WalletState.creditsRemaining = local;
-        saveLocalCredits(WalletState.address, local);
+        // Compute remaining credits implied by on-chain minus lifetime spent
+        let chainRemaining = onChain - spentLifetime;
+        if (chainRemaining < 0) chainRemaining = 0;
+
+        // Choose the most generous value that is still consistent with on-chain
+        let effectiveRemaining = Math.min(onChain, Math.max(localRemaining, chainRemaining));
+
+        WalletState.creditsRemaining = effectiveRemaining;
+        saveLocalCredits(addr, effectiveRemaining);
         updateCreditsUI();
-        debugLog(`Credits refreshed: ${local} (on-chain: ${onChain})`);
+        debugLog(`Credits refreshed: ${effectiveRemaining} (on-chain: ${onChain}, spentLifetime: ${spentLifetime})`);
       } catch (err) {
         console.error('Failed to refresh credits:', err);
         // Fallback to local only
@@ -1282,7 +1311,10 @@
         if (refreshBtn) refreshBtn.style.display = 'inline-block';
 
         // Admin button
-        if (WalletState.address === '0x3100ff9597b87e791e5bb8c0d57c94336a432089') {
+        if (
+          WalletState.address &&
+          WalletState.address.toLowerCase() === '0x3100ff9597b87e791e5bb8c0d57c94336a432089'
+        ) {
           const adminBtn = document.getElementById('adminResetBtn');
           if (adminBtn) adminBtn.style.display = 'block';
         }
@@ -1302,9 +1334,42 @@
       }
     }
 
+    let walletConnectInProgress = false;
+
+    // Helper: resolve available accounts, preferring already-authorized
+    // accounts via eth_accounts and falling back to eth_requestAccounts
+    // only when necessary. This reduces MetaMask's "Already processing
+    // eth_requestAccounts" errors and makes account switching more
+    // predictable on mobile.
+    async function getAvailableAccounts() {
+      if (!window.ethereum) return [];
+
+      try {
+        const existing = await window.ethereum.request({ method: 'eth_accounts' });
+        if (Array.isArray(existing) && existing.length > 0) {
+          debugLog('[Wallet] eth_accounts returned:', existing);
+          return existing;
+        }
+      } catch (err) {
+        debugWarn('[Wallet] eth_accounts failed, will fall back to eth_requestAccounts:', err);
+      }
+
+      // Either no authorized accounts yet or eth_accounts is unavailable.
+      // Fall back to an explicit connect request.
+      const requested = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      debugLog('[Wallet] eth_requestAccounts returned:', requested);
+      return Array.isArray(requested) ? requested : [];
+    }
+
     // ========== WALLET CONNECT ==========
     async function connectWallet() {
       console.log('[DEBUG] connectWallet called');
+
+      if (walletConnectInProgress) {
+        console.log('[DEBUG] connectWallet already in progress, ignoring duplicate call');
+        return;
+      }
+
       if (!window.ethereum) {
         const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
         if (isMobileDevice) {
@@ -1320,19 +1385,51 @@
       const connectBtn = document.getElementById('connect-btn');
       if (connectBtn) connectBtn.disabled = true;
 
+      walletConnectInProgress = true;
+
       try {
-        console.log('[DEBUG] Requesting accounts...');
-        // Request accounts
-        const provider = new ethers.BrowserProvider(window.ethereum);
-        const accounts = await provider.send('eth_requestAccounts', []);
-        
-        if (accounts.length === 0) {
+        console.log('[DEBUG] Resolving available accounts...');
+        const accounts = await getAvailableAccounts();
+
+        if (!accounts || accounts.length === 0) {
           throw new Error('No accounts returned');
         }
 
-        // Get signer and address
-        const signer = await provider.getSigner();
-        const address = await signer.getAddress();
+        // Normalize account list once
+        const normalizedAccounts = accounts.map(a => ethers.getAddress(a));
+
+        // Prefer the wallet currently selected in MetaMask (if exposed),
+        // otherwise keep the wallet we were already bound to, otherwise
+        // fall back to the first account.
+        let preferred = null;
+        if (window.ethereum.selectedAddress) {
+          try {
+            preferred = ethers.getAddress(window.ethereum.selectedAddress);
+          } catch (e) {
+            preferred = null;
+          }
+        }
+
+        let current = null;
+        if (WalletState.address) {
+          try {
+            current = ethers.getAddress(WalletState.address);
+          } catch (e) {
+            current = null;
+          }
+        }
+
+        let finalAddress = normalizedAccounts[0];
+        if (current && normalizedAccounts.includes(current)) {
+          finalAddress = current;
+        } else if (preferred && normalizedAccounts.includes(preferred)) {
+          finalAddress = preferred;
+        }
+
+        // Create provider and signer bound to the chosen account
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        const signer = await provider.getSigner(finalAddress);
+        const address = finalAddress;
 
         // Check network
         const network = await provider.getNetwork();
@@ -1363,14 +1460,25 @@
         // Create contract
         const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
 
+        // Read credit price from contract (fallback to constant on error)
+        let creditPriceWei = CREDIT_PRICE_WEI;
+        try {
+          const onChainPrice = await contract.creditPriceETH();
+          if (typeof onChainPrice === 'bigint') {
+            creditPriceWei = onChainPrice;
+          }
+        } catch (e) {
+          debugLog('Using fallback CREDIT_PRICE_WEI (creditPriceETH read failed):', e);
+        }
+
         // Update state
         Object.assign(WalletState, {
           provider,
           signer,
           contract,
-          address: address, // Already checksummed from signer.getAddress()
+          address,
           chainId: network.chainId,
-          creditsSpentThisSession: 0
+          creditPriceWei
         });
 
         debugLog('Wallet connected:', WalletState.address);
@@ -1378,11 +1486,11 @@
         // Refresh credits
         await refreshCreditsFromChainAndLocal();
         updateWalletUI();
-
-        if (connectBtn) connectBtn.disabled = false;
       } catch (err) {
         console.error('[DEBUG] Wallet connection error:', err);
         alert('Connection failed: ' + (err.message || 'Unknown error'));
+      } finally {
+        walletConnectInProgress = false;
         if (connectBtn) connectBtn.disabled = false;
       }
     }
@@ -1396,7 +1504,7 @@
         address: null,
         chainId: null,
         creditsRemaining: 0,
-        creditsSpentThisSession: 0,
+        creditPriceWei: CREDIT_PRICE_WEI,
       });
       window.localCredits = 0;
       updateWalletUI();
@@ -1421,8 +1529,8 @@
           purchaseBtn.textContent = '⏳ Confirm...';
         }
 
-        // Get price
-        const priceWei = CREDIT_PRICE_WEI;
+        // Get price (prefer on-chain value, fallback to constant)
+        const priceWei = WalletState.creditPriceWei ?? CREDIT_PRICE_WEI;
         const amount = 1n;
 
         // Check balance
@@ -1510,10 +1618,14 @@
       }
 
       WalletState.creditsRemaining -= 1;
-      WalletState.creditsSpentThisSession += 1;
-      saveLocalCredits(WalletState.address, WalletState.creditsRemaining);
+
+      // Track lifetime credits spent per wallet so refreshes and reconnects
+      // cannot "restore" previously used credits purely from on-chain balance.
+      const addr = WalletState.address.toLowerCase();
+      const currentSpent = loadCreditsSpentLifetime(addr);
+      saveCreditsSpentLifetime(addr, currentSpent + 1);
+      saveLocalCredits(addr, WalletState.creditsRemaining);
       updateCreditsUI();
-      console.log('[DEBUG] Credit used! New balance:', WalletState.creditsRemaining, 'Spent this session:', WalletState.creditsSpentThisSession);
       debugLog('Credit used, remaining:', WalletState.creditsRemaining);
       return true;
     }
@@ -1529,11 +1641,41 @@
       // Account changed
       window.ethereum.on('accountsChanged', async (accounts) => {
         debugLog('Account changed:', accounts);
-        if (accounts.length === 0) {
+        if (!accounts || accounts.length === 0) {
           disconnectWallet();
-        } else {
-          // Re-connect with new account
-          await connectWallet();
+          return;
+        }
+
+        try {
+          const normalizedAccounts = accounts.map(a => ethers.getAddress(a));
+
+          // Prefer MetaMask's selectedAddress if present and permitted
+          let preferred = window.ethereum.selectedAddress || normalizedAccounts[0];
+          const normalizedPreferred = ethers.getAddress(preferred);
+          const nextAddress = normalizedAccounts.includes(normalizedPreferred)
+            ? normalizedPreferred
+            : normalizedAccounts[0];
+
+          const provider = new ethers.BrowserProvider(window.ethereum);
+          const signer = await provider.getSigner(nextAddress);
+          const network = await provider.getNetwork();
+          const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+
+          Object.assign(WalletState, {
+            provider,
+            signer,
+            contract,
+            address: nextAddress,
+            chainId: network.chainId,
+          });
+
+          debugLog('Wallet switched via accountsChanged to:', WalletState.address);
+
+          await refreshCreditsFromChainAndLocal();
+          updateWalletUI();
+        } catch (err) {
+          console.error('[DEBUG] Error handling accountsChanged:', err);
+          // In case of error, fall back to a full reconnect on next user action
         }
       });
 
@@ -1542,6 +1684,70 @@
         debugLog('Chain changed, reloading...');
         window.location.reload();
       });
+    }
+
+    // When returning from MetaMask mobile (or other wallet UIs), make
+    // sure our in-game WalletState matches the provider's idea of the
+    // active account. This is especially important when the user
+    // switches accounts while the game tab is backgrounded.
+    async function resyncWalletFromProviderOnFocus() {
+      if (!window.ethereum) return;
+
+      try {
+        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+        debugLog('[Wallet] Focus resync eth_accounts:', accounts);
+
+        if (!accounts || accounts.length === 0) {
+          if (WalletState.address) {
+            debugLog('[Wallet] No accounts after focus, disconnecting');
+            disconnectWallet();
+          }
+          return;
+        }
+
+        const normalizedAccounts = accounts.map(a => ethers.getAddress(a));
+
+        let current = null;
+        if (WalletState.address) {
+          try {
+            current = ethers.getAddress(WalletState.address);
+          } catch (e) {
+            current = null;
+          }
+        }
+
+        const nextAddress = current && normalizedAccounts.includes(current)
+          ? current
+          : normalizedAccounts[0];
+
+        // Nothing to do if address didn't actually change
+        if (
+          WalletState.address &&
+          WalletState.address.toLowerCase() === nextAddress.toLowerCase()
+        ) {
+          return;
+        }
+
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        const signer = await provider.getSigner(nextAddress);
+        const network = await provider.getNetwork();
+        const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+
+        Object.assign(WalletState, {
+          provider,
+          signer,
+          contract,
+          address: nextAddress,
+          chainId: network.chainId,
+        });
+
+        debugLog('[Wallet] Wallet resynced from provider on focus to:', WalletState.address);
+
+        await refreshCreditsFromChainAndLocal();
+        updateWalletUI();
+      } catch (err) {
+        debugWarn('[Wallet] Failed to resync wallet on focus:', err);
+      }
     }
 
     // Initialize listeners once
@@ -1556,6 +1762,31 @@
       const disconnectBtn = document.getElementById('disconnect-btn');
       const purchaseBtn = document.getElementById('purchase-btn');
       const refreshBtn = document.getElementById('refresh-btn');
+      const supportsPointer = window.PointerEvent !== undefined;
+
+      function addPressHandler(element, handler) {
+        if (!element) return;
+
+        if (supportsPointer) {
+          element.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handler();
+          }, { passive: false });
+        } else {
+          element.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handler();
+          }, { passive: false });
+
+          element.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handler();
+          }, { passive: false });
+        }
+      }
       
       // Connect button
       if (connectBtn) {
@@ -1569,25 +1800,15 @@
             console.error('[DEBUG] Error in handleConnect:', err);
           }
         };
-        
-        connectBtn.addEventListener('click', handleConnect);
-        connectBtn.addEventListener('touchend', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          handleConnect();
-        }, { passive: false });
+
+        addPressHandler(connectBtn, handleConnect);
       }
       
       // Disconnect button
       if (disconnectBtn) {
         const handleDisconnect = () => disconnectWallet();
-        
-        disconnectBtn.addEventListener('click', handleDisconnect);
-        disconnectBtn.addEventListener('touchend', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          handleDisconnect();
-        }, { passive: false });
+
+        addPressHandler(disconnectBtn, handleDisconnect);
       }
       
       // Purchase button
@@ -1602,25 +1823,15 @@
             console.error('[DEBUG] Error in handlePurchase:', err);
           }
         };
-        
-        purchaseBtn.addEventListener('click', handlePurchase);
-        purchaseBtn.addEventListener('touchend', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          handlePurchase();
-        }, { passive: false });
+
+        addPressHandler(purchaseBtn, handlePurchase);
       }
       
       // Refresh button
       if (refreshBtn) {
         const handleRefresh = () => refreshCredits();
-        
-        refreshBtn.addEventListener('click', handleRefresh);
-        refreshBtn.addEventListener('touchend', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          handleRefresh();
-        }, { passive: false });
+
+        addPressHandler(refreshBtn, handleRefresh);
       }
       
       // Initialize UI
@@ -1649,9 +1860,15 @@
       }
     });
     
-    // Resync credits when tab regains focus (critical for mobile wallet returns)
+    // Resync credits and active wallet when tab regains focus (critical
+    // for mobile wallet returns, especially MetaMask mobile)
     window.addEventListener('focus', () => {
       if (WalletState.address) {
+        if (window.ethereum) {
+          // Ensure WalletState.address matches provider's active account
+          resyncWalletFromProviderOnFocus();
+        }
+
         debugLog('🔄 Tab focused - reloading credits');
         // Don't sync if game is active - prevents credit overwrite race condition
         if (!game.started || game.over) {
@@ -2199,8 +2416,10 @@
       const frameBudget = 16.67 * PERF_PROFILE.skipRenderThreshold;
       if (frameTimeAvg > frameBudget) {
         if (frameCount % 4 !== 0) return; // Update every 4th frame when stressed
-      } else if (isMobile && (frameCount % 2 !== 0)) {
-        return; // Normal mobile: every other frame
+      } else if (isMobile) {
+        // Normal mobile: every 3rd frame, MetaMask: every 4th frame for extra headroom
+        const modulo = isMetaMaskMobile ? 4 : 3;
+        if (frameCount % modulo !== 0) return;
       }
       
       for (const star of stars) {
@@ -2223,8 +2442,10 @@
       const frameBudget = 16.67 * PERF_PROFILE.skipRenderThreshold;
       if (frameTimeAvg > frameBudget) {
         if (frameCount % 4 !== 0) return; // Update every 4th frame when stressed
-      } else if (isMobile && (frameCount % 2 !== 0)) {
-        return; // Normal mobile: every other frame
+      } else if (isMobile) {
+        // Normal mobile: every 3rd frame, MetaMask: every 4th frame for extra headroom
+        const modulo = isMetaMaskMobile ? 4 : 3;
+        if (frameCount % modulo !== 0) return;
       }
       
       const time = Date.now() * 0.0005;
@@ -2318,16 +2539,35 @@
         this.unlocked = false;
         this.sfxMuted = false;
         this.musicMuted = false;
-        
-        // Rate limiting for rapid sounds (MetaMask Mobile optimization)
-        this.lastPlayTimes = {};
-        this.minPlayInterval = 50; // ms between rapid plays
-        
-        // Mobile config
+        this.soundsLoaded = false;
+        this.musicLoaded = false;
+        this.html5Sounds = {};
+
+        // Backend selection flags
+        // - Desktop: Web Audio only
+        // - Generic mobile: HTML5 <audio> only
+        // - MetaMask mobile: prefer Web Audio, fall back to HTML5 if needed
         this.isMobile = isMobile;
         this.isMetaMask = isMetaMaskMobile;
-        
-        // Mobile SFX whitelist - ALL sounds now enabled on mobile
+        this.useHtml5Sfx = false;
+        this.useWebAudioSfx = false;
+
+        if (this.isMetaMask) {
+          // MetaMask mobile: Web Audio is significantly lighter than HTML5
+          this.useWebAudioSfx = true;
+        } else if (this.isMobile) {
+          // Other mobile browsers: HTML5 path is the safest default
+          this.useHtml5Sfx = true;
+        } else {
+          // Desktop
+          this.useWebAudioSfx = true;
+        }
+
+        // Rate limiting for rapid sounds (especially for MetaMask Mobile)
+        this.lastPlayTimes = {};
+        this.minPlayInterval = 50; // ms between rapid plays
+
+        // Mobile SFX whitelist - ALL core gameplay sounds enabled on mobile
         this.mobileWhitelist = new Set(['score', 'flap', 'lift', 'tbagsecured', 'explosion', 'sherk', 'slow', 'shoot', 'invincibility', 'powerup']);
       }
       
@@ -2338,8 +2578,12 @@
         
         const AC = window.AudioContext || window.webkitAudioContext;
         if (!AC) {
-          console.warn('[Audio] Disabled: Web Audio not supported in this environment');
-          this.disabled = true;
+          console.warn('[Audio] Web Audio not supported, falling back to HTML5 audio only');
+          // Disable Web Audio backend but keep HTML5 SFX available
+          this.useWebAudioSfx = false;
+          if (!this.useHtml5Sfx) {
+            this.useHtml5Sfx = true;
+          }
           return false;
         }
         
@@ -2348,7 +2592,11 @@
           this.ready = true;
           return true;
         } catch (err) {
-          this.disabled = true;
+          console.warn('[Audio] Failed to create AudioContext, falling back to HTML5 audio only:', err);
+          this.useWebAudioSfx = false;
+          if (!this.useHtml5Sfx) {
+            this.useHtml5Sfx = true;
+          }
           return false;
         }
       }
@@ -2358,45 +2606,58 @@
         if (this.disabled) return false;
         if (this.unlocked) return true;
         
-        debugLog('[Audio] Unlocking audio context...');
-        const initialized = await this.init();
-        if (!initialized) {
-          console.error('[Audio] Failed to initialize context');
-          return false;
+        // Desktop + MetaMask mobile: try Web Audio unlock
+        if (this.useWebAudioSfx) {
+          const initialized = await this.init();
+
+          // init() may decide Web Audio is unavailable and flip
+          // useWebAudioSfx/useHtml5Sfx for us. Only attempt resume
+          // when a context actually exists.
+          if (initialized && this.context) {
+            // Always try to resume, even if not suspended (mobile Safari quirk)
+            try {
+              await this.context.resume();
+
+              // Play a silent buffer to fully unlock (mobile requirement)
+              const silentBuffer = this.context.createBuffer(1, 1, 22050);
+              const source = this.context.createBufferSource();
+              source.buffer = silentBuffer;
+              source.connect(this.context.destination);
+              source.start(0);
+            } catch (err) {
+              // Some WebViews can throw here even though audio can still
+              // be used on subsequent explicit plays. Do NOT
+              // hard-disable audio; just log and continue.
+              console.warn('[Audio] unlock resume failed, continuing anyway:', err);
+            }
+          }
         }
-        
-        // Always try to resume, even if not suspended (mobile Safari quirk)
-        try {
-          await this.context.resume();
-          
-          // Play a silent buffer to fully unlock (mobile requirement)
-          const silentBuffer = this.context.createBuffer(1, 1, 22050);
-          const source = this.context.createBufferSource();
-        } catch (err) {
-          console.error('[Audio] Unlock failed:', err);
-          this.disabled = true;
-          return false;
-        }
-        
+
         this.unlocked = true;
-        debugLog('[Audio] Successfully unlocked! Buffers loaded:', Object.keys(this.buffers).length);
-        return true;
-      } }
-        
-        this.unlocked = true;
+
+        // After unlock (user gesture), lazily load all sounds and music
+        // This respects autoplay policies by deferring any decoding work
+        // until after the first real interaction.
+        this.loadAllSounds().catch(() => {});
+        this.loadMusic('./assets/audio/background.mp3').catch(() => {});
+
         return true;
       }
       
       // Check if a sound should play (mobile whitelist)
       shouldPlaySound(name) {
-        if (!this.ready || this.disabled || !this.unlocked) return false;
+        if (this.disabled) return false;
         if (this.sfxMuted) return false;
-        
-        // Desktop: play everything
-        if (!this.isMobile) return true;
-        
-        // Mobile: only whitelisted sounds
-        return this.mobileWhitelist.has(name);
+
+        // Mobile (including MetaMask): require unlock + whitelist
+        if (this.isMobile) {
+          if (!this.unlocked) return false;
+          return this.mobileWhitelist.has(name);
+        }
+
+        // Desktop Web Audio: require ready + unlocked
+        if (!this.ready || !this.unlocked) return false;
+        return true;
       }
       
       async loadSound(name, url) {
@@ -2409,15 +2670,17 @@
           const arrayBuffer = await response.arrayBuffer();
           const audioBuffer = await this.context.decodeAudioData(arrayBuffer);
           this.buffers[name] = audioBuffer;
-          debugLog(`[Audio] Loaded: ${name}`);
         } catch (err) {
-          console.error(`[Audio] Failed to load ${name}:`, err);
+          // Silently fail
         }
       }
       
       async loadAllSounds() {
-        // Load sounds via Web Audio API for both mobile and desktop
-        // (HTML5 Audio removed - unified approach with proper unlock)
+        // Load sounds for both mobile and desktop.
+        // Backend is chosen via useHtml5Sfx/useWebAudioSfx flags.
+        if (this.disabled) return;
+        if (this.soundsLoaded) return;
+
         const soundMap = {
           score: './assets/audio/score.mp3',
           lift: './assets/audio/lift.mp3',
@@ -2430,69 +2693,125 @@
           powerup: './assets/audio/tbagburst.mp3',
           flap: './assets/audio/flap.mp3',
         };
-        
-        await Promise.all(
-          Object.entries(soundMap).map(([name, url]) => this.loadSound(name, url))
-        );
+
+        // HTML5 SFX backend (generic mobile and Web Audio fallback)
+        if (this.useHtml5Sfx) {
+          for (const [name, url] of Object.entries(soundMap)) {
+            if (!this.html5Sounds[name]) {
+              const audio = new Audio(url);
+              audio.preload = 'auto';
+              audio.crossOrigin = 'anonymous';
+              this.html5Sounds[name] = audio;
+            }
+          }
+        }
+
+        // Web Audio SFX backend (desktop + MetaMask mobile)
+        if (this.useWebAudioSfx) {
+          // Only load buffers after a real user gesture
+          if (!this.unlocked) return;
+
+          if (!this.context) {
+            const ok = await this.init();
+            if (!ok || !this.context) {
+              return;
+            }
+          }
+
+          await Promise.all(
+            Object.entries(soundMap).map(([name, url]) => this.loadSound(name, url))
+          );
+        }
+
+        this.soundsLoaded = true;
       }
       
       async loadMusic(url) {
         // Mobile: skip background music entirely
         if (this.isMobile || this.disabled) return;
-        
-        if (!this.context) await this.init();
-        if (!this.context) return;
+
+        // Only load once, after audio has been unlocked by a user gesture.
+        if (!this.unlocked) return;
+        if (this.musicLoaded) return;
+
+        if (!this.context) {
+          const ok = await this.init();
+          if (!ok) return;
+        }
         
         try {
           const response = await fetch(url);
           const arrayBuffer = await response.arrayBuffer();
           const audioBuffer = await this.context.decodeAudioData(arrayBuffer);
           this.buffers.music = audioBuffer;
+          this.musicLoaded = true;
+
+          // If the game is already running and music is allowed,
+          // start playback as soon as the track finishes loading.
+          if (typeof game !== 'undefined' && game.started &&
+              !this.isMobile && !this.musicMuted && this.unlocked && !this.musicSource) {
+            try {
+              this.startMusic();
+            } catch (e) {
+              // Silently fail
+            }
+          }
         } catch (err) {
           // Silently fail
         }
       }
       
       playSfx(name, volume = 1.0, rate = 1.0) {
-        // Unified Web Audio API path for both mobile and desktop
         if (this.sfxMuted) return;
-        
-        // Debug logging for audio issues
-        if (!this.shouldPlaySound(name)) {
-          debugLog(`[Audio] Cannot play ${name}: ready=${this.ready}, unlocked=${this.unlocked}, disabled=${this.disabled}`);
-          return;
-        }
-        
-        if (!this.buffers[name]) {
-          console.warn(`[Audio] Buffer not loaded for: ${name}`);
-          return;
-        }
-        
-        // Rate limiting (especially important for MetaMask mobile)
+        if (!this.shouldPlaySound(name)) return;
+
+        // Shared rate limiting (especially important for MetaMask mobile)
         const now = Date.now();
         const lastPlay = this.lastPlayTimes[name] || 0;
         const interval = this.isMetaMask ? this.minPlayInterval : 0;
-        
-        if (now - lastPlay < interval) return;
+        if (interval > 0 && (now - lastPlay) < interval) return;
         this.lastPlayTimes[name] = now;
-        
+
+        // HTML5 <audio> backend
+        if (this.useHtml5Sfx) {
+          const audio = this.html5Sounds[name];
+          if (!audio) return;
+
+          try {
+            audio.pause();
+            audio.currentTime = 0;
+            audio.volume = Math.max(0, Math.min(1, volume));
+            audio.playbackRate = rate;
+            audio.play().catch(() => {});
+          } catch (err) {
+            // Silently fail
+          }
+          return;
+        }
+
+        // Web Audio backend
+        if (!this.useWebAudioSfx) return;
+        if (!this.buffers[name]) return;
+
         try {
           // Auto-resume if suspended
-          if (this.context.state === 'suspended') {
+          if (this.context && this.context.state === 'suspended') {
             this.context.resume().catch(() => {});
           }
-          
+
+          if (!this.context) return;
+
           const source = this.context.createBufferSource();
           source.buffer = this.buffers[name];
           source.playbackRate.value = rate;
-          
+
           const gainNode = this.context.createGain();
           gainNode.gain.value = volume;
-          
+
           source.connect(gainNode);
           gainNode.connect(this.context.destination);
           source.start(0);
-          
+
           source.onended = () => {
             source.disconnect();
             gainNode.disconnect();
@@ -4493,8 +4812,8 @@
         powerupEffectsLayer.lineStyle(2, 0xFF66FF, 0.43);
         powerupEffectsLayer.drawCircle(bx, by, inner);
         
-        // Draw shield sprite if available
-        if (assets.invincibility && assets.invincibility.width) {
+        // Draw shield sprite if available (desktop only; too heavy for mobile)
+        if (!isMobile && assets.invincibility && assets.invincibility.width) {
           const shieldSize = (birdSize * 2.0) * (0.9 + 0.15 * Math.sin(frameCount * 0.25));
           const shieldSprite = new PIXI.Sprite(assets.invincibility);
           shieldSprite.anchor.set(0.5);
@@ -4532,20 +4851,22 @@
         powerupEffectsLayer.drawCircle(powerup.x, powerup.y, ring2 / 2);
       }
       
-      // Draw floating multiplier texts
-      for (const t of floatingTexts) {
-        const style = new PIXI.TextStyle({
-          fontFamily: 'Barlow, sans-serif',
-          fontSize: 20 * t.scale,
-          fill: 0xFFFFFF,
-          align: 'center'
-        });
-        const text = new PIXI.Text(t.text, style);
-        text.anchor.set(0.5);
-        text.x = t.x;
-        text.y = t.y;
-        text.alpha = t.alpha;
-        powerupEffectsLayer.addChild(text);
+      // Draw floating multiplier texts (skip on mobile to avoid heavy text allocations)
+      if (!isMobile) {
+        for (const t of floatingTexts) {
+          const style = new PIXI.TextStyle({
+            fontFamily: 'Barlow, sans-serif',
+            fontSize: 20 * t.scale,
+            fill: 0xFFFFFF,
+            align: 'center'
+          });
+          const text = new PIXI.Text(t.text, style);
+          text.anchor.set(0.5);
+          text.x = t.x;
+          text.y = t.y;
+          text.alpha = t.alpha;
+          powerupEffectsLayer.addChild(text);
+        }
       }
       
       // Sherk icon animation now handled in Bird.update()
@@ -5051,8 +5372,12 @@
         }
       }
       
-      // Update Cece smoke (throttled on mobile)
-      if (!isMobile || (frameCount % 2 === 0)) {
+      // Update Cece smoke (throttled on mobile; extra throttle on MetaMask)
+      if (
+        !isMobile ||
+        (!isMetaMaskMobile && frameCount % 2 === 0) ||
+        (isMetaMaskMobile && frameCount % 3 === 0)
+      ) {
         for (let i = game.ceceSmokes.length - 1; i >= 0; i--) {
           const smoke = game.ceceSmokes[i];
           if (smoke.update()) {
@@ -5147,6 +5472,13 @@
     }
     
     function handleInput() {
+      // If the full-screen tutorial overlay is visible, ignore generic
+      // input; the overlay itself will handle dismissal so we don't
+      // accidentally start the game or consume credits.
+      if (dom.tutorialOverlay && !dom.tutorialOverlay.classList.contains('hidden')) {
+        return;
+      }
+
       // Force audio unlock on every interaction (mobile requirement)
       forceAudioUnlock().catch(() => {});
       
@@ -5174,6 +5506,12 @@
     // Unified pointer input for desktop + mobile
     function handlePrimaryPointerDown(e) {
       e.preventDefault();
+
+      // If the tutorial overlay is visible, treat taps as UI-only and
+      // let its own handlers run, without starting the game.
+      if (dom.tutorialOverlay && !dom.tutorialOverlay.classList.contains('hidden')) {
+        return;
+      }
 
       // During active gameplay, accept all taps (no hitbox check for performance)
       if (game.started && !game.over && game.bird) {

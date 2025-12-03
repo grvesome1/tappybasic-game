@@ -39,15 +39,27 @@ export default async function handler(req, res) {
         .toUpperCase() || '';
 
     const board = (await redis.get('leaderboard')) || [];
-    const arr = Array.isArray(board) ? board : [];
+    // Ensure we always work with a sane array of entries
+    const arr = Array.isArray(board)
+      ? board.filter((entry) => entry && typeof entry.score === 'number')
+      : [];
 
-    arr.push({
+    const entry = {
       wallet: wallet.toLowerCase(),
       initials: safeInitials,
       score,
       tbags: typeof tbags === 'number' ? tbags : 0,
       ts: Date.now(),
-    });
+    };
+
+    arr.push(entry);
+
+    // Keep the stored leaderboard bounded and focused on the highest scores
+    const MAX_ENTRIES = 100;
+    arr.sort((a, b) => b.score - a.score);
+    if (arr.length > MAX_ENTRIES) {
+      arr.length = MAX_ENTRIES;
+    }
 
     await redis.set('leaderboard', arr);
 
