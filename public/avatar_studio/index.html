@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Avatar Studio</title>
+  <style>
+    :root{color-scheme:dark;}
+    html,body{height:100%;margin:0;background:#07090d;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;}
+    body{padding:16px;box-sizing:border-box;}
+    .wrap{max-width:980px;margin:0 auto;}
+    .top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+    h1{margin:0;font-size:18px;letter-spacing:0.2px;}
+    .muted{color:rgba(255,255,255,0.62);font-size:12px;}
+    .card{margin-top:12px;border:1px solid rgba(255,255,255,0.10);border-radius:18px;background:rgba(0,0,0,0.45);padding:14px;}
+    .grid{display:grid;grid-template-columns:220px 1fr;gap:12px;align-items:start;}
+    @media (max-width:860px){.grid{grid-template-columns:1fr;}}
+
+    .avatarCard{border:1px solid rgba(255,255,255,0.10);border-radius:16px;background:rgba(2,6,23,0.55);padding:12px;}
+    .avatarSvg{width:100%;height:auto;border-radius:14px;border:1px solid rgba(255,255,255,0.08);background:rgba(0,0,0,0.25);}
+
+    .kv{display:grid;grid-template-columns:140px 1fr;gap:6px 10px;margin-top:10px;font-size:12px;}
+    .k{color:rgba(255,255,255,0.55);} .v{color:rgba(255,255,255,0.86);} 
+
+    label{display:block;color:rgba(255,255,255,0.62);font-size:12px;margin-bottom:4px;}
+    select{width:100%;padding:10px 10px;border-radius:14px;border:1px solid rgba(255,255,255,0.12);background:rgba(0,0,0,0.35);color:rgba(255,255,255,0.92);}
+
+    .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;}
+    button{appearance:none;border:1px solid rgba(255,255,255,0.14);background:rgba(34,211,238,0.18);color:#eaffff;padding:9px 12px;border-radius:14px;font-weight:650;cursor:pointer;}
+    button.secondary{background:rgba(255,255,255,0.08);}
+
+    a{color:rgba(34,211,238,0.92);text-decoration:none;}
+    a:hover{text-decoration:underline;}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div>
+        <h1>Avatar Studio</h1>
+        <div class="muted">Uses the same local profile keys as the dashboard. Saving still honors PRO + level edit limits.</div>
+      </div>
+      <div class="muted"><a href="/">Back to Arcade</a></div>
+    </div>
+
+    <div class="card">
+      <div class="grid">
+        <div class="avatarCard">
+          <div class="muted">Preview</div>
+          <div id="avatarSvgHost"></div>
+          <div class="muted" style="margin-top:10px">Edits available: <strong id="avatarEdits">0</strong> (1 per level)</div>
+
+          <div class="kv">
+            <div class="k">PRO</div><div class="v" id="proState">NONE</div>
+            <div class="k">Last edit level</div><div class="v" id="avatarLast">0</div>
+            <div class="k">Current level</div><div class="v" id="avatarLvl">1</div>
+          </div>
+        </div>
+
+        <div>
+          <div class="kv" style="margin-top:0">
+            <div class="k">Storage key</div><div class="v"><code>arcade.profile.avatar.dna</code></div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+            <div>
+              <label for="avBg">Background</label>
+              <select id="avBg">
+                <option value="nebula">Nebula</option>
+                <option value="void">Void</option>
+                <option value="aurora">Aurora</option>
+                <option value="mars">Mars</option>
+              </select>
+            </div>
+            <div>
+              <label for="avAcc">Accessory</label>
+              <select id="avAcc">
+                <option value="none">None</option>
+                <option value="antenna">Antenna</option>
+                <option value="visor">Visor</option>
+                <option value="cap">Cap</option>
+              </select>
+            </div>
+            <div>
+              <label for="avEyes">Eyes</label>
+              <select id="avEyes">
+                <option value="dots">Dots</option>
+                <option value="angry">Angry</option>
+                <option value="glow">Glow</option>
+              </select>
+            </div>
+            <div>
+              <label for="avMouth">Mouth</label>
+              <select id="avMouth">
+                <option value="smile">Smile</option>
+                <option value="flat">Flat</option>
+                <option value="grin">Grin</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="row">
+            <button id="btnRandom" type="button">Randomize</button>
+            <button id="btnSave" type="button">Update Avatar (Tx)</button>
+            <button id="btnOpenWallet" class="secondary" type="button">Open Wallet View</button>
+          </div>
+
+          <div class="muted" style="margin-top:10px">
+            Tip: If you want to unlock saving, activate PRO in the dashboard wallet view.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const K = {
+      xp: 'arcade.profile.xp',
+      level: 'arcade.profile.level',
+      proTier: 'arcade.profile.pro.tier',
+      proExp: 'arcade.profile.pro.expiresAt',
+      avatar: 'arcade.profile.avatar.dna',
+      avatarLast: 'arcade.profile.avatar.lastEditLevel',
+    };
+
+    function lsGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
+    function lsSet(k, v) { try { localStorage.setItem(k, String(v)); } catch {} }
+    function getInt(k, d=0) { const v = parseInt(lsGet(k)||'',10); return Number.isFinite(v)?v:d; }
+    function setInt(k, n) { lsSet(k, String(Math.max(0, Math.floor(Number(n)||0)))); }
+    function now(){ return Date.now(); }
+
+    function levelFromXP(xp) { return Math.max(1, Math.floor((xp||0)/100) + 1); }
+    function syncLevel() {
+      const xp = getInt(K.xp, 0);
+      const lvl = levelFromXP(xp);
+      const stored = getInt(K.level, 0);
+      if (stored !== lvl) setInt(K.level, lvl);
+      return lvl;
+    }
+
+    function proActive() {
+      const tier = String(lsGet(K.proTier) || 'none');
+      if (tier === 'none') return false;
+      if (tier === 'lifetime') return true;
+      const exp = getInt(K.proExp, 0);
+      return exp > now();
+    }
+
+    function proLabel() {
+      if (!proActive()) return 'NONE';
+      return String(lsGet(K.proTier) || 'none').toUpperCase();
+    }
+
+    const BG = {
+      nebula: ['#050b1a','#0ea5e9','#22d3ee'],
+      void: ['#000000','#111827','#334155'],
+      aurora: ['#03151a','#22c55e','#22d3ee'],
+      mars: ['#120608','#f97316','#ffdd55']
+    };
+
+    function getAvatarDNA() {
+      try {
+        const d = JSON.parse(lsGet(K.avatar) || 'null');
+        if (d && typeof d === 'object') return d;
+      } catch {}
+      return { bg:'nebula', acc:'antenna', eyes:'dots', mouth:'smile' };
+    }
+    function setAvatarDNA(d) { lsSet(K.avatar, JSON.stringify(d)); }
+
+    function svgRect(x,y,w,h,fill) {
+      return `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${fill}"/>`;
+    }
+
+    function renderAvatarSvg(dna) {
+      const size = 16;
+      const [bg0,bg1,bg2] = BG[dna.bg] || BG.nebula;
+
+      const skin = 'rgba(229,231,235,0.92)';
+      const outline = 'rgba(0,0,0,0.55)';
+      const accent = '#22d3ee';
+
+      const head = [
+        [4,4,8,8],
+        [5,3,6,1],
+        [5,12,6,1]
+      ];
+
+      let rects = '';
+      rects += svgRect(0,0,size,size,bg0);
+      rects += svgRect(0,0,size,6,bg1);
+      rects += svgRect(0,6,size,10,bg0);
+      rects += svgRect(0,10,size,6,bg2);
+
+      head.forEach(([x,y,w,h])=>{ rects += svgRect(x,y,w,h,skin); });
+      rects += svgRect(4,4,8,1,outline);
+      rects += svgRect(4,11,8,1,outline);
+      rects += svgRect(4,4,1,8,outline);
+      rects += svgRect(11,4,1,8,outline);
+
+      if (dna.eyes === 'dots') {
+        rects += svgRect(6,7,1,1,'#0b1220');
+        rects += svgRect(9,7,1,1,'#0b1220');
+      } else if (dna.eyes === 'angry') {
+        rects += svgRect(6,7,2,1,'#0b1220');
+        rects += svgRect(8,6,1,1,'#0b1220');
+        rects += svgRect(9,7,2,1,'#0b1220');
+        rects += svgRect(9,6,1,1,'#0b1220');
+      } else {
+        rects += svgRect(6,7,1,1,accent);
+        rects += svgRect(9,7,1,1,accent);
+        rects += svgRect(5,6,1,1,'rgba(34,211,238,0.25)');
+        rects += svgRect(10,6,1,1,'rgba(34,211,238,0.25)');
+      }
+
+      if (dna.mouth === 'smile') {
+        rects += svgRect(7,9,2,1,'#0b1220');
+        rects += svgRect(6,8,1,1,'#0b1220');
+        rects += svgRect(9,8,1,1,'#0b1220');
+      } else if (dna.mouth === 'flat') {
+        rects += svgRect(6,9,4,1,'#0b1220');
+      } else {
+        rects += svgRect(6,9,4,1,'#0b1220');
+        rects += svgRect(6,10,1,1,'#0b1220');
+        rects += svgRect(9,10,1,1,'#0b1220');
+      }
+
+      if (dna.acc === 'antenna') {
+        rects += svgRect(8,2,1,2,accent);
+        rects += svgRect(7,1,3,1,accent);
+      } else if (dna.acc === 'visor') {
+        rects += svgRect(5,6,6,3,'rgba(34,211,238,0.25)');
+        rects += svgRect(5,6,6,1,'rgba(34,211,238,0.45)');
+      } else if (dna.acc === 'cap') {
+        rects += svgRect(4,3,8,2,'rgba(15,23,42,0.90)');
+        rects += svgRect(5,2,6,1,'rgba(15,23,42,0.90)');
+      }
+
+      return `
+        <svg class="avatarSvg" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges">
+          ${rects}
+        </svg>
+      `;
+    }
+
+    const avBg = document.getElementById('avBg');
+    const avAcc = document.getElementById('avAcc');
+    const avEyes = document.getElementById('avEyes');
+    const avMouth = document.getElementById('avMouth');
+    const avatarSvgHost = document.getElementById('avatarSvgHost');
+
+    const avatarEdits = document.getElementById('avatarEdits');
+    const avatarLast = document.getElementById('avatarLast');
+    const avatarLvl = document.getElementById('avatarLvl');
+    const proState = document.getElementById('proState');
+
+    function render(){
+      const dna = getAvatarDNA();
+      avatarSvgHost.innerHTML = renderAvatarSvg(dna);
+
+      avBg.value = dna.bg;
+      avAcc.value = dna.acc;
+      avEyes.value = dna.eyes;
+      avMouth.value = dna.mouth;
+
+      const lvl = syncLevel();
+      const last = getInt(K.avatarLast, 0);
+      const edits = Math.max(0, lvl - last);
+
+      avatarEdits.textContent = String(edits);
+      avatarLast.textContent = String(last);
+      avatarLvl.textContent = String(lvl);
+      proState.textContent = proLabel();
+    }
+
+    function randomChoice(arr) { return arr[Math.floor(Math.random()*arr.length)]; }
+
+    document.getElementById('btnRandom').addEventListener('click', () => {
+      const dna = getAvatarDNA();
+      dna.bg = randomChoice(Object.keys(BG));
+      dna.acc = randomChoice(['none','antenna','visor','cap']);
+      dna.eyes = randomChoice(['dots','angry','glow']);
+      dna.mouth = randomChoice(['smile','flat','grin']);
+      setAvatarDNA(dna);
+      render();
+    });
+
+    function saveAvatar(){
+      if (!proActive()) {
+        alert('PRO required: Activate PRO in Wallet to unlock avatar edits.');
+        return;
+      }
+      const lvl = syncLevel();
+      const last = getInt(K.avatarLast, 0);
+      const edits = Math.max(0, lvl - last);
+      if (edits <= 0) {
+        alert('No edits available yet. You unlock 1 avatar edit each level.');
+        return;
+      }
+
+      const dna = { bg: avBg.value, acc: avAcc.value, eyes: avEyes.value, mouth: avMouth.value };
+      // Simulated tx: update DNA and consume 1 edit.
+      setAvatarDNA(dna);
+      setInt(K.avatarLast, lvl);
+      render();
+      alert('Avatar updated (simulated tx).');
+    }
+
+    document.getElementById('btnSave').addEventListener('click', saveAvatar);
+    document.getElementById('btnOpenWallet').addEventListener('click', () => { window.location.href = '/wallet'; });
+
+    [avBg,avAcc,avEyes,avMouth].forEach(el => el.addEventListener('change', () => {
+      const dna = getAvatarDNA();
+      dna.bg = avBg.value;
+      dna.acc = avAcc.value;
+      dna.eyes = avEyes.value;
+      dna.mouth = avMouth.value;
+      setAvatarDNA(dna);
+      render();
+    }));
+
+    render();
+  </script>
+</body>
+</html>

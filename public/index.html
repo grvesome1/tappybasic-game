@@ -1975,6 +1975,38 @@
     }
     navBtns.forEach(btn => btn.addEventListener('click', ()=>setView(btn.dataset.nav)));
 
+    function getRouteIntent() {
+      // Map clean URLs to SPA views.
+      // Examples:
+      // - /wallet => wallet
+      // - /leaderboard => leaderboard
+      // - /credits => wallet (focus buy area)
+      // - /avatar_studio => wallet (scroll to avatar editor)
+      let view = 'play';
+      let scrollId = '';
+
+      try {
+        const u = new URL(window.location.href);
+        const path = String(u.pathname || '/').toLowerCase();
+        const hash = String(u.hash || '').replace('#', '').toLowerCase();
+        const qpView = String(u.searchParams.get('view') || '').toLowerCase();
+
+        const byPath = (p) => path === p || path.startsWith(p + '/');
+        if (byPath('/wallet')) view = 'wallet';
+        else if (byPath('/leaderboard')) view = 'leaderboard';
+        else if (byPath('/proposals')) view = 'proposals';
+        else if (byPath('/settings')) view = 'settings';
+        else if (byPath('/credits')) view = 'wallet';
+        else if (byPath('/avatar_studio') || byPath('/avatar')) { view = 'wallet'; scrollId = 'avatarCard'; }
+
+        if (qpView && ['play','wallet','leaderboard','proposals','settings'].includes(qpView)) view = qpView;
+        if (hash && ['play','wallet','leaderboard','proposals','settings'].includes(hash)) view = hash;
+        if (hash === 'avatar') { view = 'wallet'; scrollId = 'avatarCard'; }
+      } catch {}
+
+      return { view, scrollId };
+    }
+
     // ----- Leaderboard v2 (drop-in bundle) -----
     let GA_LB_V2_LOADED = false;
 
@@ -3695,6 +3727,7 @@ async function recordRunResult(gameId, runId, score, durationMs) {
 
     // Init
     (async function init() {
+      const route = getRouteIntent();
       await loadCatalog();
       renderGameTiles();
       populateLbSelect();
@@ -3707,9 +3740,16 @@ async function recordRunResult(gameId, runId, score, durationMs) {
       if (!lsGet(K.lbPeriod)) lsSet(K.lbPeriod, 'daily');
       if (!lsGet(K.lbGame)) lsSet(K.lbGame, currentGameId);
 
-      setView('play');
+      setView(route.view || 'play');
       recalcBuyOutputs();
       renderAll();
+
+      if (route && route.scrollId) {
+        try {
+          const el = document.getElementById(route.scrollId);
+          if (el) setTimeout(() => { try { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch {} }, 50);
+        } catch {}
+      }
       // Primary gate is the starfield iframe overlay (runs every refresh).
       // Keep the in-dashboard gate as a fallback only.
 
