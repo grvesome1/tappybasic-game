@@ -870,93 +870,113 @@
     // built by gruesøme
     // SIG_ENC_XOR5A_HEX=382f33362e7a38237a3d282f3f29a2373f
 
-    import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
-
     // ---------- 3D BACKDROP (subtle, UI-first) ----------
-    const sceneHost = document.getElementById('scene');
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
-    renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    sceneHost.appendChild(renderer.domElement);
+    // Defensive: if this page is ever loaded inside an iframe (e.g. a missing
+    // /games/* route rewriting back to /index.html), do NOT create WebGL contexts.
+    // That scenario can quickly exhaust the browser's WebGL context limit.
+    let __setAccent = () => {};
+    try {
+      if (window.self === window.top) {
+        const THREE = await import('https://unpkg.com/three@0.160.0/build/three.module.js');
+        const sceneHost = document.getElementById('scene');
+        if (sceneHost) {
+          const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+          renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+          renderer.setSize(window.innerWidth, window.innerHeight);
+          sceneHost.appendChild(renderer.domElement);
 
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(55, window.innerWidth/window.innerHeight, 0.1, 100);
-    camera.position.set(0, 0, 7.5);
+          const scene = new THREE.Scene();
+          const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 100);
+          camera.position.set(0, 0, 7.5);
 
-    const starGeo = new THREE.BufferGeometry();
-    const starCount = 1500;
-    const positions = new Float32Array(starCount * 3);
-    for (let i = 0; i < starCount; i++) {
-      const r = 26 * Math.random();
-      const theta = Math.random() * Math.PI * 2;
-      const phi = Math.acos(2*Math.random()-1);
-      positions[i*3+0] = r * Math.sin(phi) * Math.cos(theta);
-      positions[i*3+1] = r * Math.sin(phi) * Math.sin(theta);
-      positions[i*3+2] = -r * Math.cos(phi);
-    }
-    starGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    const starMat = new THREE.PointsMaterial({
-      color: 0xffffff,
-      size: 0.03,
-      transparent: true,
-      opacity: 0.65,
-      depthWrite: false
-    });
-    const stars = new THREE.Points(starGeo, starMat);
-    scene.add(stars);
+          const starGeo = new THREE.BufferGeometry();
+          const starCount = 1500;
+          const positions = new Float32Array(starCount * 3);
+          for (let i = 0; i < starCount; i++) {
+            const r = 26 * Math.random();
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.acos(2 * Math.random() - 1);
+            positions[i * 3 + 0] = r * Math.sin(phi) * Math.cos(theta);
+            positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+            positions[i * 3 + 2] = -r * Math.cos(phi);
+          }
+          starGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+          const starMat = new THREE.PointsMaterial({
+            color: 0xffffff,
+            size: 0.03,
+            transparent: true,
+            opacity: 0.65,
+            depthWrite: false
+          });
+          const stars = new THREE.Points(starGeo, starMat);
+          scene.add(stars);
 
-    const ringGroup = new THREE.Group();
-    scene.add(ringGroup);
+          const ringGroup = new THREE.Group();
+          scene.add(ringGroup);
 
-    function mkRing(radius, tube, opacity) {
-      const geo = new THREE.TorusGeometry(radius, tube, 18, 120);
-      const mat = new THREE.MeshBasicMaterial({
-        color: 0x22d3ee,
-        transparent: true,
-        opacity,
-        blending: THREE.AdditiveBlending
-      });
-      const mesh = new THREE.Mesh(geo, mat);
-      return mesh;
-    }
-    const ringA = mkRing(2.0, 0.020, 0.22);
-    const ringB = mkRing(3.0, 0.015, 0.14);
-    const ringC = mkRing(4.0, 0.010, 0.10);
-    ringGroup.add(ringA, ringB, ringC);
-    ringGroup.rotation.x = 0.55;
+          function mkRing(radius, tube, opacity) {
+            const geo = new THREE.TorusGeometry(radius, tube, 18, 120);
+            const mat = new THREE.MeshBasicMaterial({
+              color: 0x22d3ee,
+              transparent: true,
+              opacity,
+              blending: THREE.AdditiveBlending
+            });
+            const mesh = new THREE.Mesh(geo, mat);
+            return { mesh, geo, mat };
+          }
+          const ringA = mkRing(2.0, 0.020, 0.22);
+          const ringB = mkRing(3.0, 0.015, 0.14);
+          const ringC = mkRing(4.0, 0.010, 0.10);
+          ringGroup.add(ringA.mesh, ringB.mesh, ringC.mesh);
+          ringGroup.rotation.x = 0.55;
 
-    const accentColor = new THREE.Color(0x22d3ee);
-    function setAccent(hex) {
-      accentColor.set(hex);
-      [ringA, ringB, ringC].forEach((r, idx) => {
-        r.material.color = accentColor;
-        r.material.opacity = [0.22, 0.14, 0.10][idx];
-      });
-    }
+          const accentColor = new THREE.Color(0x22d3ee);
+          __setAccent = function setAccent(hex) {
+            accentColor.set(hex);
+            [ringA, ringB, ringC].forEach((r, idx) => {
+              r.mat.color = accentColor;
+              r.mat.opacity = [0.22, 0.14, 0.10][idx];
+            });
+          };
 
-    function onResize() {
-      camera.aspect = window.innerWidth/window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-    }
-    window.addEventListener('resize', onResize);
+          function onResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+          }
+          window.addEventListener('resize', onResize);
 
-    let t0 = performance.now();
-    function animate() {
-      const t = (performance.now() - t0) * 0.001;
-      stars.rotation.y = t * 0.02;
-      ringGroup.rotation.y = t * 0.08;
-      ringGroup.rotation.z = t * 0.03;
-      camera.position.x = Math.sin(t*0.25) * 0.18;
-      camera.position.y = Math.cos(t*0.20) * 0.10;
-      camera.lookAt(0,0,0);
-      renderer.render(scene, camera);
-      requestAnimationFrame(animate);
-    }
-    animate();
+          let t0 = performance.now();
+          let raf = 0;
+          function animate() {
+            const t = (performance.now() - t0) * 0.001;
+            stars.rotation.y = t * 0.02;
+            ringGroup.rotation.y = t * 0.08;
+            ringGroup.rotation.z = t * 0.03;
+            camera.position.x = Math.sin(t * 0.25) * 0.18;
+            camera.position.y = Math.cos(t * 0.20) * 0.10;
+            camera.lookAt(0, 0, 0);
+            renderer.render(scene, camera);
+            raf = requestAnimationFrame(animate);
+          }
+          animate();
+
+          window.addEventListener('beforeunload', () => {
+            try { if (raf) cancelAnimationFrame(raf); } catch {}
+            try { window.removeEventListener('resize', onResize); } catch {}
+            try { starGeo.dispose(); } catch {}
+            try { starMat.dispose(); } catch {}
+            try { ringA.geo.dispose(); ringB.geo.dispose(); ringC.geo.dispose(); } catch {}
+            try { ringA.mat.dispose(); ringB.mat.dispose(); ringC.mat.dispose(); } catch {}
+            try { renderer.dispose(); } catch {}
+          }, { once: true });
+        }
+      }
+    } catch {}
 
     // Expose to non-module app logic
-    window.__arcadeScene = { setAccent };
+    window.__arcadeScene = { setAccent: (hex) => __setAccent(hex) };
 
     // ---------- APP LOGIC ----------
     const ECON = {

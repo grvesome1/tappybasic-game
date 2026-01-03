@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Moonshot</title>
+  <style>
+    :root{color-scheme:dark;}
+    html,body{height:100%;margin:0;background:#07090d;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;}
+    body{display:grid;place-items:center;padding:18px;box-sizing:border-box;}
+    .card{width:min(760px,100%);border:1px solid rgba(255,255,255,0.10);border-radius:18px;background:rgba(0,0,0,0.45);padding:18px;}
+    h1{margin:0 0 8px;font-size:20px;}
+    p{margin:0;color:rgba(255,255,255,0.72);font-size:13px;line-height:1.45;}
+    .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;align-items:center;}
+    button{appearance:none;border:1px solid rgba(255,255,255,0.14);background:rgba(34,211,238,0.18);color:#eaffff;padding:9px 12px;border-radius:14px;font-weight:650;cursor:pointer;}
+    button.secondary{background:rgba(255,255,255,0.08);}
+    .muted{color:rgba(255,255,255,0.55);font-size:12px;}
+    .kv{display:grid;grid-template-columns:120px 1fr;gap:6px 10px;margin-top:12px;font-size:12px;}
+    .k{color:rgba(255,255,255,0.55);} .v{color:rgba(255,255,255,0.86);word-break:break-word;}
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>Moonshot</h1>
+    <p>This build is missing the full Moonshot game files, so this is a safe placeholder to prevent the arcade from recursively iframing itself.</p>
+    <p class="muted" style="margin-top:6px">It still implements the ArcadeBridge messages so the dashboard stays usable.</p>
+
+    <div class="kv">
+      <div class="k">Game ID</div><div class="v" id="gid">moonshot</div>
+      <div class="k">Run ID</div><div class="v" id="rid">(none)</div>
+      <div class="k">Run Type</div><div class="v" id="rtype">(none)</div>
+      <div class="k">Paid AC</div><div class="v" id="paid">0</div>
+      <div class="k">Promo AC</div><div class="v" id="promo">0</div>
+      <div class="k">Player</div><div class="v" id="addr">(unknown)</div>
+    </div>
+
+    <div class="row">
+      <button id="btnRequestRun">Request Run</button>
+      <button id="btnSubmitScore" class="secondary">Submit Score (test)</button>
+      <button id="btnRequestPromo" class="secondary">Request Promo</button>
+    </div>
+
+    <p class="muted" style="margin-top:12px">Tip: Replace this folder with the real Moonshot build at <code>/public/games/moonshot/</code>.</p>
+  </main>
+
+  <script>
+    const state = { gameId: 'moonshot', runId: '', runType: '', paidAC: 0, promoAC: 0, address: '' };
+    const $ = (id) => document.getElementById(id);
+    function render(){
+      $('rid').textContent = state.runId || '(none)';
+      $('rtype').textContent = state.runType || '(none)';
+      $('paid').textContent = String(state.paidAC || 0);
+      $('promo').textContent = String(state.promoAC || 0);
+      $('addr').textContent = state.address || '(unknown)';
+    }
+
+    function send(type, payload){
+      try { window.parent && window.parent.postMessage({ type, payload: payload || {} }, '*'); } catch {}
+    }
+
+    // Tell the dashboard we're alive.
+    send('ARCADE:READY', { gameId: state.gameId, version: 'placeholder' });
+
+    window.addEventListener('message', (ev) => {
+      const data = ev && ev.data;
+      if (!data || typeof data !== 'object') return;
+      const type = String(data.type || '');
+      if (!type.startsWith('ARCADE:')) return;
+
+      if (type === 'ARCADE:SYNC') {
+        const p = data || {};
+        try {
+          state.address = String((p.player && p.player.address) || '');
+          state.paidAC = Number((p.player && p.player.paidAC) || 0);
+          state.promoAC = Number((p.game && p.game.promoAC) || 0);
+        } catch {}
+        render();
+      }
+
+      if (type === 'ARCADE:RUN_GRANTED') {
+        const p = data || {};
+        try {
+          state.runId = String(p.runId || '');
+          state.runType = String(p.runType || '');
+          state.paidAC = Number(p.paidAC || state.paidAC || 0);
+          state.promoAC = Number(p.promoAC || state.promoAC || 0);
+        } catch {}
+        render();
+      }
+
+      if (type === 'ARCADE:RUN_RECORDED') {
+        // no-op
+      }
+    });
+
+    $('btnRequestRun').addEventListener('click', () => {
+      send('ARCADE:REQUEST_RUN', { gameId: state.gameId });
+    });
+
+    $('btnRequestPromo').addEventListener('click', () => {
+      send('ARCADE:REQUEST_PROMO', { gameId: state.gameId });
+    });
+
+    $('btnSubmitScore').addEventListener('click', () => {
+      const score = Math.floor(1000 + Math.random() * 2500);
+      const durationMs = Math.floor(15000 + Math.random() * 20000);
+      // Prefer the modern message.
+      send('ARCADE:RUN_RESULT', { gameId: state.gameId, runId: state.runId || 'test_run', score, durationMs });
+    });
+
+    render();
+  </script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Storm the Blockchain</title>
+  <style>
+    :root{color-scheme:dark;}
+    html,body{height:100%;margin:0;background:#07090d;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;}
+    body{display:grid;place-items:center;padding:18px;box-sizing:border-box;}
+    .card{width:min(760px,100%);border:1px solid rgba(255,255,255,0.10);border-radius:18px;background:rgba(0,0,0,0.45);padding:18px;}
+    h1{margin:0 0 8px;font-size:20px;}
+    p{margin:0;color:rgba(255,255,255,0.72);font-size:13px;line-height:1.45;}
+    .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;align-items:center;}
+    button{appearance:none;border:1px solid rgba(255,255,255,0.14);background:rgba(34,211,238,0.18);color:#eaffff;padding:9px 12px;border-radius:14px;font-weight:650;cursor:pointer;}
+    .muted{color:rgba(255,255,255,0.55);font-size:12px;}
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>Storm the Blockchain (3D Remaster)</h1>
+    <p>This is a placeholder page so the arcade iframe points to a real game route instead of rewriting back to the dashboard.</p>
+    <div class="row">
+      <button id="btnReady">Send READY</button>
+    </div>
+    <p class="muted" style="margin-top:12px">Replace with the real game build at <code>/public/games/stormblockchain/</code>.</p>
+  </main>
+  <script>
+    function sendReady(){
+      try { window.parent && window.parent.postMessage({ type: 'ARCADE:READY', payload: { gameId: 'storm-the-blockchain', version: 'placeholder' } }, '*'); } catch {}
+    }
+    document.getElementById('btnReady').addEventListener('click', sendReady);
+    sendReady();
+  </script>
+</body>
+</html>
