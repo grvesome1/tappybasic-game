@@ -71,6 +71,10 @@
   </main>
 
   <script>
+    // This page is meant to run embedded inside the dashboard.
+    // If opened directly, bounce back to the arcade shell.
+    try { if (window.self === window.top) window.location.replace('/'); } catch {}
+
     function sendEnter(){
       try { document.body.classList.add('is-header'); } catch {}
       try {

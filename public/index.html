@@ -1976,28 +1976,15 @@
     navBtns.forEach(btn => btn.addEventListener('click', ()=>setView(btn.dataset.nav)));
 
     function getRouteIntent() {
-      // Map clean URLs to SPA views.
-      // Examples:
-      // - /wallet => wallet
-      // - /leaderboard => leaderboard
-      // - /credits => wallet (focus buy area)
-      // - /avatar_studio => wallet (scroll to avatar editor)
+      // Single-dashboard URL rule: only use hash/query to select a view.
+      // Do NOT route based on pathname like /wallet or /avatar_studio.
       let view = 'play';
       let scrollId = '';
 
       try {
         const u = new URL(window.location.href);
-        const path = String(u.pathname || '/').toLowerCase();
         const hash = String(u.hash || '').replace('#', '').toLowerCase();
         const qpView = String(u.searchParams.get('view') || '').toLowerCase();
-
-        const byPath = (p) => path === p || path.startsWith(p + '/');
-        if (byPath('/wallet')) view = 'wallet';
-        else if (byPath('/leaderboard')) view = 'leaderboard';
-        else if (byPath('/proposals')) view = 'proposals';
-        else if (byPath('/settings')) view = 'settings';
-        else if (byPath('/credits')) view = 'wallet';
-        else if (byPath('/avatar_studio') || byPath('/avatar')) { view = 'wallet'; scrollId = 'avatarCard'; }
 
         if (qpView && ['play','wallet','leaderboard','proposals','settings'].includes(qpView)) view = qpView;
         if (hash && ['play','wallet','leaderboard','proposals','settings'].includes(hash)) view = hash;

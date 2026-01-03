@@ -26,6 +26,10 @@
     <p class="muted" style="margin-top:12px">Replace with the real game build at <code>/public/games/stormblockchain/</code>.</p>
   </main>
   <script>
+    // Games are intended to run embedded in the dashboard portal.
+    // If opened directly, bounce to the arcade shell (single-dashboard rule).
+    try { if (window.self === window.top) window.location.replace('/'); } catch {}
+
     function sendReady(){
       try { window.parent && window.parent.postMessage({ type: 'ARCADE:READY', payload: { gameId: 'storm-the-blockchain', version: 'placeholder' } }, '*'); } catch {}
     }

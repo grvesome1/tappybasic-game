@@ -44,6 +44,10 @@
   </main>
 
   <script>
+    // Games are intended to run embedded in the dashboard portal.
+    // If opened directly, bounce to the arcade shell (single-dashboard rule).
+    try { if (window.self === window.top) window.location.replace('/'); } catch {}
+
     const state = { gameId: 'moonshot', runId: '', runType: '', paidAC: 0, promoAC: 0, address: '' };
     const $ = (id) => document.getElementById(id);
     function render(){
