@@ -1,0 +1,3147 @@
+--- a/api/_lib/keys.js
++++ b/api/_lib/keys.js
+@@ -1,100 +1,146 @@
+-// built by gruesøme
+-// SIG_ENC_XOR5A_HEX=382f33362e7a38237a3d282f3f29a2373f
+-
+-const PREFIX = 'ga:'; // Gruesøme’s Arcade
+-
+-export function normAddr(address) {
+-  return String(address || '').toLowerCase();
+-}
+-
+-export function profile(address) {
+-  return `${PREFIX}u:${normAddr(address)}:profile`;
+-}
+-export function bal(address) {
+-  return `${PREFIX}u:${normAddr(address)}:bal`;
+-}
+-export function promo(address) {
+-  return `${PREFIX}u:${normAddr(address)}:promo`;
+-}
+-export function best(address) {
+-  return `${PREFIX}u:${normAddr(address)}:best`;
+-}
+-export function avatar(address) {
+-  return `${PREFIX}u:${normAddr(address)}:avatar`;
+-}
+-export function audit(address) {
+-  return `${PREFIX}u:${normAddr(address)}:audit`;
+-}
+-export function runs(address, gameId) {
+-  return `${PREFIX}u:${normAddr(address)}:runs:${gameId}`;
+-}
+-
+-export function promoClaimed(address, gameId) {
+-  return `${PREFIX}u:${normAddr(address)}:promoClaimed:${gameId}`;
+-}
+-
+-export function run(address, runId) {
+-  return `${PREFIX}run:${normAddr(address)}:${runId}`;
+-}
+-
+-export function lbDaily(gameId, ymd) {
+-  return `${PREFIX}lb:${gameId}:d:${ymd}`;
+-}
+-export function lbWeekly(gameId, yw) {
+-  return `${PREFIX}lb:${gameId}:w:${yw}`;
+-}
+-export function lbAll(gameId) {
+-  return `${PREFIX}lb:${gameId}:all`;
+-}
+-export function lbDailyPaid(gameId, ymd) {
+-  return `${PREFIX}lb:${gameId}:d:${ymd}:paid`;
+-}
+-export function lbWeeklyPaid(gameId, yw) {
+-  return `${PREFIX}lb:${gameId}:w:${yw}:paid`;
+-}
+-export function lbAllPaid(gameId) {
+-  return `${PREFIX}lb:${gameId}:all:paid`;
+-}
+-export function actDaily(ymd) {
+-  return `${PREFIX}act:d:${ymd}`;
+-}
+-
+-export function proposalsList() {
+-  return `${PREFIX}proposals:list`;
+-}
+-export function proposal(id) {
+-  return `${PREFIX}proposal:${id}`;
+-}
+-export function proposalSupport(id) {
+-  return `${PREFIX}proposal:${id}:support`;
+-}
+-export function proposalRate(address) {
+-  return `${PREFIX}u:${normAddr(address)}:proposalRate`;
+-}
+-export function supportRate(address) {
+-  return `${PREFIX}u:${normAddr(address)}:supportRate`;
+-}
+-
+-// --- economy pots / epochs ---
+-export function spentDay(ymd) {
+-  return `${PREFIX}spent:d:${ymd}`; // Hash: gameId -> paidSpentAC
+-}
+-export function opsDay(ymd) {
+-  return `${PREFIX}ops:d:${ymd}`; // Hash: gameId -> opsAC
+-}
+-export function badgeDaily(ymd) {
+-  return `${PREFIX}badge:d:${ymd}`; // Set: addresses who minted daily badge
+-}
+-
+-export function epochSummary(ymd) {
+-  return `${PREFIX}epoch:d:${ymd}:summary`; // Hash summary fields
+-}
+-export function epochClaims(ymd) {
+-  return `${PREFIX}epoch:d:${ymd}:claims`; // Hash: address -> JSON
+-}
+-export function epochClaimed(ymd) {
+-  return `${PREFIX}epoch:d:${ymd}:claimed`; // Set: claimed addresses
+-}
+-export function epochsList() {
+-  return `${PREFIX}epochs:list`; // List of settled epoch ids
+-}
++// built by gruesøme
++// SIG_ENC_XOR5A_HEX=382f33362e7a38237a3d282f3f29a2373f
++
++const PREFIX = 'ga:'; // Gruesøme’s Arcade
++
++export function normAddr(address) {
++  return String(address || '').toLowerCase();
++}
++
++export function profile(address) {
++  return `${PREFIX}u:${normAddr(address)}:profile`;
++}
++export function bal(address) {
++  return `${PREFIX}u:${normAddr(address)}:bal`;
++}
++export function promo(address) {
++  return `${PREFIX}u:${normAddr(address)}:promo`;
++}
++export function best(address) {
++  return `${PREFIX}u:${normAddr(address)}:best`;
++}
++export function avatar(address) {
++  return `${PREFIX}u:${normAddr(address)}:avatar`;
++}
++export function audit(address) {
++  return `${PREFIX}u:${normAddr(address)}:audit`;
++}
++export function runs(address, gameId) {
++  return `${PREFIX}u:${normAddr(address)}:runs:${gameId}`;
++}
++
++export function promoClaimed(address, gameId) {
++  return `${PREFIX}u:${normAddr(address)}:promoClaimed:${gameId}`;
++}
++
++export function run(address, runId) {
++  return `${PREFIX}run:${normAddr(address)}:${runId}`;
++}
++
++export function lbDaily(gameId, ymd) {
++  return `${PREFIX}lb:${gameId}:d:${ymd}`;
++}
++export function lbWeekly(gameId, yw) {
++  return `${PREFIX}lb:${gameId}:w:${yw}`;
++}
++export function lbAll(gameId) {
++  return `${PREFIX}lb:${gameId}:all`;
++}
++export function lbDailyPaid(gameId, ymd) {
++  return `${PREFIX}lb:${gameId}:d:${ymd}:paid`;
++}
++export function lbWeeklyPaid(gameId, yw) {
++  return `${PREFIX}lb:${gameId}:w:${yw}:paid`;
++}
++export function lbAllPaid(gameId) {
++  return `${PREFIX}lb:${gameId}:all:paid`;
++}
++export function actDaily(ymd) {
++  return `${PREFIX}act:d:${ymd}`;
++}
++
++export function actWeekly(yw) {
++  return `${PREFIX}act:w:${yw}`;
++}
++export function actAll() {
++  return `${PREFIX}act:all`;
++}
++
++// --- metric-aware leaderboards (multi-metric) ---
++// Scores stored are "encoded" so that higher-is-better for Redis ZREVRANGE.
++// For asc metrics (e.g., time), store negative values (e.g., -durationMs).
++export function lbDailyMetric(gameId, metricId, ymd) {
++  return `${PREFIX}lb:${gameId}:m:${metricId}:d:${ymd}`;
++}
++export function lbWeeklyMetric(gameId, metricId, yw) {
++  return `${PREFIX}lb:${gameId}:m:${metricId}:w:${yw}`;
++}
++export function lbAllMetric(gameId, metricId) {
++  return `${PREFIX}lb:${gameId}:m:${metricId}:all`;
++}
++export function lbDailyPaidMetric(gameId, metricId, ymd) {
++  return `${PREFIX}lb:${gameId}:m:${metricId}:d:${ymd}:paid`;
++}
++export function lbWeeklyPaidMetric(gameId, metricId, yw) {
++  return `${PREFIX}lb:${gameId}:m:${metricId}:w:${yw}:paid`;
++}
++export function lbAllPaidMetric(gameId, metricId) {
++  return `${PREFIX}lb:${gameId}:m:${metricId}:all:paid`;
++}
++
++// --- weekly payout epoch keys (UTC ISO week) ---
++export function weekPot(yw) {
++  return `${PREFIX}week:${yw}:potCents`; // String integer cents reserved from dailies
++}
++export function weekSummary(yw) {
++  return `${PREFIX}epoch:w:${yw}:summary`; // Hash summary fields
++}
++export function weekClaims(yw) {
++  return `${PREFIX}epoch:w:${yw}:claims`; // Hash: address -> JSON
++}
++export function weekClaimed(yw) {
++  return `${PREFIX}epoch:w:${yw}:claimed`; // Set: claimed addresses
++}
++export function weeksList() {
++  return `${PREFIX}weeks:list`; // List of settled week ids
++}
++
++export function proposalsList() {
++  return `${PREFIX}proposals:list`;
++}
++export function proposal(id) {
++  return `${PREFIX}proposal:${id}`;
++}
++export function proposalSupport(id) {
++  return `${PREFIX}proposal:${id}:support`;
++}
++export function proposalRate(address) {
++  return `${PREFIX}u:${normAddr(address)}:proposalRate`;
++}
++export function supportRate(address) {
++  return `${PREFIX}u:${normAddr(address)}:supportRate`;
++}
++
++// --- economy pots / epochs ---
++export function spentDay(ymd) {
++  return `${PREFIX}spent:d:${ymd}`; // Hash: gameId -> paidSpentAC
++}
++export function opsDay(ymd) {
++  return `${PREFIX}ops:d:${ymd}`; // Hash: gameId -> opsAC
++}
++export function badgeDaily(ymd) {
++  return `${PREFIX}badge:d:${ymd}`; // Set: addresses who minted daily badge
++}
++
++export function epochSummary(ymd) {
++  return `${PREFIX}epoch:d:${ymd}:summary`; // Hash summary fields
++}
++export function epochClaims(ymd) {
++  return `${PREFIX}epoch:d:${ymd}:claims`; // Hash: address -> JSON
++}
++export function epochClaimed(ymd) {
++  return `${PREFIX}epoch:d:${ymd}:claimed`; // Set: claimed addresses
++}
++export function epochsList() {
++  return `${PREFIX}epochs:list`; // List of settled epoch ids
++}
+
+--- a/api/_lib/games.js
++++ b/api/_lib/games.js
+@@ -1,30 +1,50 @@
+-// built by gruesøme
+-// SIG_ENC_XOR5A_HEX=382f33362e7a38237a3d282f3f29a2373f
+-// Keep in sync with public/arcade-games.json (server-side validation & pricing)
+-
+-export const GAMES = {
+-  moonshot: {
+-    name: 'Moonshot',
+-    runCostAC: 10,
+-    promoRuns: 5,
+-    promoGrantAC: 50,
+-    payoutEligible: true,
+-    scoreMax: 5000,
+-    minDurationMs: 800,
+-  },
+-  'storm-the-blockchain': {
+-    name: 'Storm the Blockchain (3D Remaster)',
+-    runCostAC: 0,
+-    promoRuns: 0,
+-    promoGrantAC: 0,
+-    payoutEligible: false,
+-    scoreMax: 100000,
+-    minDurationMs: 0,
+-  },
+-};
+-
+-export const DEFAULTS = {
+-  acUsd: 0.01,
+-  maxBonusPct: 0.15,
+-  bonusCurveK: 40,
+-};
++// built by gruesøme
++// SIG_ENC_XOR5A_HEX=382f33362e7a38237a3d282f3f29a2373f
++// Keep in sync with public/arcade-games.json (server-side validation & pricing)
++//
++// Multi-metric support:
++// - Each game can define multiple leaderboard metrics (score, time, accuracy, etc).
++// - Metrics store "encoded" values so higher-is-better for Redis ZREVRANGE:
++//   - dir: 'desc' => enc = value
++//   - dir: 'asc'  => enc = -value
++//
++// NOTE: payoutWeight controls how a game's Skill pool is split across metrics.
++// For launch, keep secondary metrics at payoutWeight=0 until you explicitly enable them.
++
++export const GAMES = {
++  moonshot: {
++    name: 'Moonshot',
++    runCostAC: 10,
++    promoRuns: 5,
++    promoGrantAC: 50,
++    payoutEligible: true,
++    scoreMax: 5000,
++    minDurationMs: 800,
++
++    // Leaderboard metrics
++    defaultMetric: 'score',
++    metrics: [
++      { id: 'score', label: 'Score', kind: 'score', dir: 'desc', format: 'int', src: 'score', payoutWeight: 1.0 },
++      { id: 'time', label: 'Time', kind: 'time', dir: 'asc', format: 'ms', src: 'durationMs', payoutWeight: 0.0 },
++    ],
++  },
++
++  'storm-the-blockchain': {
++    name: 'Storm the Blockchain (3D Remaster)',
++    runCostAC: 0,
++    promoRuns: 0,
++    promoGrantAC: 0,
++    payoutEligible: false,
++    scoreMax: 100000,
++    minDurationMs: 0,
++
++    defaultMetric: 'score',
++    metrics: [{ id: 'score', label: 'Score', kind: 'score', dir: 'desc', format: 'int', src: 'score', payoutWeight: 1.0 }],
++  },
++};
++
++export const DEFAULTS = {
++  acUsd: 0.01,
++  maxBonusPct: 0.15,
++  bonusCurveK: 40,
++};
+
+--- a/api/run/submit.js
++++ b/api/run/submit.js
+@@ -1,195 +1,260 @@
+-// built by gruesøme
+-// SIG_ENC_XOR5A_HEX=382f33362e7a38237a3d282f3f29a2373f
+-
+-import { parseCookies, readJson } from '../_lib/util.js';
+-import { readSession } from '../_lib/session.js';
+-import * as R from '../_lib/redis.js';
+-import * as K from '../_lib/keys.js';
+-import * as U from '../_lib/user.js';
+-import { GAMES } from '../_lib/games.js';
+-import { ipFromReq, enforce, rlKey } from '../_lib/rate.js';
+-import { sameOrigin } from '../_lib/security.js';
+-import { bump } from '../_lib/metrics.js';
+-
+-function calcXpEarned(score, runType) {
+-  const s = Math.max(0, Number(score || 0));
+-  let xp = 6 + Math.floor(Math.log10(s + 1) * 14);
+-  if (runType === 'promo') xp = Math.floor(xp * 0.6);
+-  return U.clamp(xp, 3, 40);
+-}
+-
+-function ymdUtc() {
+-  return new Date().toISOString().slice(0, 10).replace(/-/g, '');
+-}
+-
+-function weekKeyUtc() {
+-  // ISO week approx (UTC). Good enough for leaderboard grouping.
+-  const d = new Date();
+-  const date = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+-  const dayNum = date.getUTCDay() || 7;
+-  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+-  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+-  const weekNo = Math.ceil(((date - yearStart) / 86400000 + 1) / 7);
+-  const y = date.getUTCFullYear();
+-  const w = String(weekNo).padStart(2, '0');
+-  return String(y) + 'W' + w;
+-}
+-
+-export default async function handler(req, res) {
+-  try {
+-    if (req.method !== 'POST') return res.status(405).json({ error: 'method_not_allowed' });
+-    if (!R.enabled()) return res.status(503).json({ error: 'redis_not_configured' });
+-
+-    if (!sameOrigin(req)) {
+-      await bump('run_submit', 403);
+-      return res.status(403).json({ error: 'bad_origin' });
+-    }
+-
+-    const ip = ipFromReq(req);
+-    await enforce({ key: rlKey('run:submit:ip', ip), limit: 240, windowSec: 600 });
+-
+-    const cookies = parseCookies(req);
+-    const s = readSession(cookies);
+-    if (!s || !s.address) return res.status(401).json({ error: 'not_authenticated' });
+-
+-    const address = String(s.address);
+-    await enforce({ key: rlKey('run:submit:addr', address.toLowerCase()), limit: 180, windowSec: 600 });
+-
+-    const addrLc = address.toLowerCase();
+-
+-    const body = await readJson(req).catch(() => ({}));
+-    const gameId = String(body.gameId || '').trim();
+-    const runId = String(body.runId || '').trim();
+-    const score = Math.max(0, Math.floor(Number(body.score || 0)));
+-    const durationMs = Math.max(0, Math.floor(Number(body.durationMs || 0)));
+-
+-    if (!gameId || !GAMES[gameId]) return res.status(400).json({ error: 'bad_game' });
+-    if (!runId || runId.length < 6) return res.status(400).json({ error: 'bad_run' });
+-
+-    const cfg = GAMES[gameId];
+-    if (score > Number(cfg.scoreMax || 1_000_000)) return res.status(400).json({ error: 'score_out_of_bounds' });
+-    if (durationMs < Number(cfg.minDurationMs || 0)) return res.status(400).json({ error: 'duration_too_short' });
+-    if (durationMs > 60 * 60 * 1000) return res.status(400).json({ error: 'duration_too_long' });
+-
+-    await U.ensureUser(address);
+-
+-    const runKey = K.run(address, runId);
+-    const runRaw = await R.cmd('GET', runKey);
+-    if (!runRaw) return res.status(404).json({ error: 'run_not_found' });
+-
+-    let runRec = null;
+-    try {
+-      runRec = JSON.parse(String(runRaw));
+-    } catch {
+-      runRec = null;
+-    }
+-
+-    if (!runRec || String(runRec.gameId) !== gameId) return res.status(400).json({ error: 'run_game_mismatch' });
+-    if (String(runRec.address || '').toLowerCase() !== addrLc) return res.status(403).json({ error: 'run_owner_mismatch' });
+-    if (String(runRec.status || '') !== 'started') return res.status(400).json({ error: 'run_not_start' });
+-
+-    const runType = String(runRec.runType || '');
+-    const costAC = Math.max(0, Math.floor(Number(runRec.costAC || 0)));
+-
+-    // Determine runType best-effort: if costAC==0 => free. Else use stored type if present; fallback 'paid'.
+-    let finalRunType = 'free';
+-    if (costAC > 0) finalRunType = runType === 'promo' || runType === 'paid' ? runType : 'paid';
+-
+-    runRec.status = 'submitted';
+-    runRec.score = score;
+-    runRec.durationMs = durationMs;
+-    runRec.submittedAt = new Date().toISOString();
+-    runRec.runType = finalRunType;
+-
+-    const xpEarned = calcXpEarned(score, finalRunType);
+-
+-    // Activity points that influence payouts are paid-only.
+-    const actInc = finalRunType === 'paid' ? costAC : 0;
+-
+-    const pKey = K.profile(address);
+-    const bestKey = K.best(address);
+-    const runsKey = K.runs(address, gameId);
+-    const auditKey = K.audit(address);
+-
+-    const curState = await U.getState(address);
+-    const curBest = Math.max(0, Number((curState.best || {})[gameId] || 0));
+-    const newBest = Math.max(curBest, score);
+-
+-    const newXp = Math.max(0, Number(curState.xp || 0) + xpEarned);
+-    const newLevel = Math.max(1, Math.floor(newXp / 100) + 1);
+-
+-    const ymd = ymdUtc();
+-    const wk = weekKeyUtc();
+-
+-    const lbAll = K.lbAll(gameId);
+-    const lbD = K.lbDaily(gameId, ymd);
+-    const lbW = K.lbWeekly(gameId, wk);
+-    const lbAllP = K.lbAllPaid(gameId);
+-    const lbDP = K.lbDailyPaid(gameId, ymd);
+-    const lbWP = K.lbWeeklyPaid(gameId, wk);
+-    const actD = K.actDaily(ymd);
+-
+-    const audit = JSON.stringify({
+-      t: 'run_submit',
+-      ts: runRec.submittedAt,
+-      gameId,
+-      runId,
+-      score,
+-      durationMs,
+-      runType: finalRunType,
+-      xpEarned,
+-    });
+-
+-    const cmds = [
+-      ['DEL', runKey],
+-      ['LPUSH', runsKey, JSON.stringify(runRec)],
+-      ['LTRIM', runsKey, 0, 49],
+-      ['HSET', bestKey, gameId, newBest],
+-      ['HSET', pKey, 'xp', newXp, 'level', newLevel, 'lastActiveAt', runRec.submittedAt],
+-      ['ZADD', lbAll, score, addrLc],
+-      ['ZADD', lbD, score, addrLc],
+-      ['ZADD', lbW, score, addrLc],
+-      ['EXPIRE', lbD, 60 * 60 * 24 * 45],
+-      ['EXPIRE', lbW, 60 * 60 * 24 * 60],
+-      ['ZINCRBY', actD, actInc, addrLc],
+-      ['EXPIRE', actD, 60 * 60 * 24 * 45],
+-      ['LPUSH', auditKey, audit],
+-      ['LTRIM', auditKey, 0, 99],
+-    ];
+-
+-    if (finalRunType === 'paid') {
+-      cmds.push(['ZADD', lbAllP, score, addrLc]);
+-      cmds.push(['ZADD', lbDP, score, addrLc]);
+-      cmds.push(['ZADD', lbWP, score, addrLc]);
+-      cmds.push(['EXPIRE', lbDP, 60 * 60 * 24 * 45]);
+-      cmds.push(['EXPIRE', lbWP, 60 * 60 * 24 * 60]);
+-    }
+-
+-    await R.pipeline(cmds);
+-
+-    const state = await U.getState(address);
+-    await bump('run_submit', 200);
+-    return res.status(200).json({
+-      ok: true,
+-      address,
+-      gameId,
+-      runId,
+-      score,
+-      durationMs,
+-      runType: finalRunType,
+-      xpEarned,
+-      state,
+-    });
+-  } catch (e) {
+-    if (e && e.code === 'RATE_LIMIT') {
+-      try {
+-        await bump('run_submit', 429);
+-      } catch {}
+-      return res.status(429).json({ error: 'rate_limited', limit: e.limit, windowSec: e.windowSec });
+-    }
+-    try {
+-      await bump('run_submit', 500);
+-    } catch {}
+-    return res.status(500).json({ error: 'server_error' });
+-  }
+-}
++// built by gruesøme
++// SIG_ENC_XOR5A_HEX=382f33362e7a38237a3d282f3f29a2373f
++
++import { parseCookies, readJson } from '../_lib/util.js';
++import { readSession } from '../_lib/session.js';
++import * as R from '../_lib/redis.js';
++import * as K from '../_lib/keys.js';
++import * as U from '../_lib/user.js';
++import { GAMES } from '../_lib/games.js';
++import { ipFromReq, enforce, rlKey } from '../_lib/rate.js';
++import { sameOrigin } from '../_lib/security.js';
++import { bump } from '../_lib/metrics.js';
++
++function calcXpEarned(score, runType) {
++  const s = Math.max(0, Number(score || 0));
++  let xp = 6 + Math.floor(Math.log10(s + 1) * 14);
++  if (runType === 'promo') xp = Math.floor(xp * 0.6);
++  return U.clamp(xp, 3, 40);
++}
++
++function ymdUtc() {
++  return new Date().toISOString().slice(0, 10).replace(/-/g, '');
++}
++
++function weekKeyUtc() {
++  // ISO week approx (UTC). Good enough for leaderboard grouping + weekly epochs.
++  const d = new Date();
++  const date = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
++  const dayNum = date.getUTCDay() || 7;
++  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
++  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
++  const weekNo = Math.ceil(((date - yearStart) / 86400000 + 1) / 7);
++  const y = date.getUTCFullYear();
++  const w = String(weekNo).padStart(2, '0');
++  return String(y) + 'W' + w;
++}
++
++function getMetricCfg(cfg, metricId) {
++  const list = Array.isArray(cfg?.metrics) ? cfg.metrics : [];
++  if (!metricId) return null;
++  return list.find((m) => String(m?.id || '') === String(metricId)) || null;
++}
++
++function normalizeMetrics(cfg) {
++  const list = Array.isArray(cfg?.metrics) ? cfg.metrics : [];
++  if (list.length) return list;
++  return [{ id: 'score', label: 'Score', kind: 'score', dir: 'desc', format: 'int', src: 'score', payoutWeight: 1.0 }];
++}
++
++function metricEncValue(metricCfg, { score, durationMs }) {
++  const src = String(metricCfg?.src || 'score');
++  let v = 0;
++  if (src === 'durationMs') v = Math.max(0, Math.floor(Number(durationMs || 0)));
++  else v = Math.max(0, Math.floor(Number(score || 0)));
++
++  const dir = String(metricCfg?.dir || 'desc');
++  const enc = dir === 'asc' ? -v : v;
++  return { value: v, enc };
++}
++
++export default async function handler(req, res) {
++  try {
++    if (req.method !== 'POST') return res.status(405).json({ error: 'method_not_allowed' });
++    if (!R.enabled()) return res.status(503).json({ error: 'redis_not_configured' });
++
++    if (!sameOrigin(req)) {
++      await bump('run_submit', 403);
++      return res.status(403).json({ error: 'bad_origin' });
++    }
++
++    const ip = ipFromReq(req);
++    await enforce({ key: rlKey('run:submit:ip', ip), limit: 240, windowSec: 600 });
++
++    const cookies = parseCookies(req);
++    const s = readSession(cookies);
++    if (!s || !s.address) return res.status(401).json({ error: 'not_authenticated' });
++
++    const address = String(s.address);
++    await enforce({ key: rlKey('run:submit:addr', address.toLowerCase()), limit: 180, windowSec: 600 });
++
++    const addrLc = address.toLowerCase();
++
++    const body = await readJson(req).catch(() => ({}));
++    const gameId = String(body.gameId || '').trim();
++    const runId = String(body.runId || '').trim();
++    const score = Math.max(0, Math.floor(Number(body.score || 0)));
++    const durationMs = Math.max(0, Math.floor(Number(body.durationMs || 0)));
++
++    if (!gameId || !GAMES[gameId]) return res.status(400).json({ error: 'bad_game' });
++    if (!runId || runId.length < 6) return res.status(400).json({ error: 'bad_run' });
++
++    const cfg = GAMES[gameId];
++    if (score > Number(cfg.scoreMax || 1_000_000)) return res.status(400).json({ error: 'score_out_of_bounds' });
++    if (durationMs < Number(cfg.minDurationMs || 0)) return res.status(400).json({ error: 'duration_too_short' });
++    if (durationMs > 60 * 60 * 1000) return res.status(400).json({ error: 'duration_too_long' });
++
++    await U.ensureUser(address);
++
++    const runKey = K.run(address, runId);
++    const runRaw = await R.cmd('GET', runKey);
++    if (!runRaw) return res.status(404).json({ error: 'run_not_found' });
++
++    let runRec = null;
++    try {
++      runRec = JSON.parse(String(runRaw));
++    } catch {
++      runRec = null;
++    }
++
++    if (!runRec || String(runRec.gameId) !== gameId) return res.status(400).json({ error: 'run_game_mismatch' });
++    if (String(runRec.address || '').toLowerCase() !== addrLc) return res.status(403).json({ error: 'run_owner_mismatch' });
++    if (String(runRec.status || '') !== 'started') return res.status(400).json({ error: 'run_not_start' });
++
++    const runType = String(runRec.runType || '');
++    const costAC = Math.max(0, Math.floor(Number(runRec.costAC || 0)));
++
++    // Determine runType best-effort: if costAC==0 => free. Else use stored type if present; fallback 'paid'.
++    let finalRunType = 'free';
++    if (costAC > 0) finalRunType = runType === 'promo' || runType === 'paid' ? runType : 'paid';
++
++    runRec.status = 'submitted';
++    runRec.score = score;
++    runRec.durationMs = durationMs;
++    runRec.submittedAt = new Date().toISOString();
++    runRec.runType = finalRunType;
++
++    const xpEarned = calcXpEarned(score, finalRunType);
++
++    // Activity points that influence payouts are paid-only.
++    const actInc = finalRunType === 'paid' ? costAC : 0;
++
++    const pKey = K.profile(address);
++    const bestKey = K.best(address);
++    const runsKey = K.runs(address, gameId);
++    const auditKey = K.audit(address);
++
++    const curState = await U.getState(address);
++    const curBest = Math.max(0, Number((curState.best || {})[gameId] || 0));
++    const newBest = Math.max(curBest, score);
++
++    const newXp = Math.max(0, Number(curState.xp || 0) + xpEarned);
++    const newLevel = Math.max(1, Math.floor(newXp / 100) + 1);
++
++    const ymd = ymdUtc();
++    const wk = weekKeyUtc();
++
++    const EXP_DAILY = 60 * 60 * 24 * 45;
++    const EXP_WEEKLY = 60 * 60 * 24 * 60;
++
++    // --- Build leaderboard targets (best-of write) ---
++    // We encode metric values so higher-is-better. For asc metrics, enc is negative.
++    const metrics = normalizeMetrics(cfg);
++
++    /** @type {{key:string, score:number, expireSec:number}} */
++    const targets = [];
++
++    function addTarget(key, scoreEnc, expireSec) {
++      targets.push({ key, score: Number(scoreEnc || 0), expireSec: Math.max(0, Number(expireSec || 0)) });
++    }
++
++    // Legacy "score" leaderboards (kept for backward compatibility)
++    addTarget(K.lbAll(gameId), score, 0);
++    addTarget(K.lbDaily(gameId, ymd), score, EXP_DAILY);
++    addTarget(K.lbWeekly(gameId, wk), score, EXP_WEEKLY);
++    if (finalRunType === 'paid') {
++      addTarget(K.lbAllPaid(gameId), score, 0);
++      addTarget(K.lbDailyPaid(gameId, ymd), score, EXP_DAILY);
++      addTarget(K.lbWeeklyPaid(gameId, wk), score, EXP_WEEKLY);
++    }
++
++    // Metric leaderboards
++    for (const m of metrics) {
++      const mid = String(m?.id || '').trim();
++      if (!mid) continue;
++      const { enc } = metricEncValue(m, { score, durationMs });
++
++      addTarget(K.lbAllMetric(gameId, mid), enc, 0);
++      addTarget(K.lbDailyMetric(gameId, mid, ymd), enc, EXP_DAILY);
++      addTarget(K.lbWeeklyMetric(gameId, mid, wk), enc, EXP_WEEKLY);
++
++      if (finalRunType === 'paid') {
++        addTarget(K.lbAllPaidMetric(gameId, mid), enc, 0);
++        addTarget(K.lbDailyPaidMetric(gameId, mid, ymd), enc, EXP_DAILY);
++        addTarget(K.lbWeeklyPaidMetric(gameId, mid, wk), enc, EXP_WEEKLY);
++      }
++    }
++
++    // Fetch existing scores to do best-of updates without requiring Redis ZADD GT support.
++    const existing = targets.length ? await R.pipeline(targets.map((t) => ['ZSCORE', t.key, addrLc])) : [];
++    const bestOfCmds = [];
++    for (let i = 0; i < targets.length; i++) {
++      const t = targets[i];
++      const prevRaw = existing[i];
++      const prev = prevRaw == null ? null : Number(prevRaw);
++      if (prev == null || !isFinite(prev) || t.score > prev) {
++        bestOfCmds.push(['ZADD', t.key, t.score, addrLc]);
++      }
++      if (t.expireSec > 0) bestOfCmds.push(['EXPIRE', t.key, t.expireSec]);
++    }
++
++    const actD = K.actDaily(ymd);
++    const actW = K.actWeekly(wk);
++    const actA = K.actAll();
++
++    const audit = JSON.stringify({
++      t: 'run_submit',
++      ts: runRec.submittedAt,
++      gameId,
++      runId,
++      score,
++      durationMs,
++      runType: finalRunType,
++      xpEarned,
++    });
++
++    const cmds = [
++      ['DEL', runKey],
++      ['LPUSH', runsKey, JSON.stringify(runRec)],
++      ['LTRIM', runsKey, 0, 49],
++      ['HSET', bestKey, gameId, newBest],
++      ['HSET', pKey, 'xp', newXp, 'level', newLevel, 'lastActiveAt', runRec.submittedAt],
++      ...bestOfCmds,
++      // Activity is paid-only; weekly/all-time rollups are new for weekly payouts & future UI.
++      ['ZINCRBY', actD, actInc, addrLc],
++      ['ZINCRBY', actW, actInc, addrLc],
++      ['ZINCRBY', actA, actInc, addrLc],
++      ['EXPIRE', actD, EXP_DAILY],
++      ['EXPIRE', actW, EXP_WEEKLY],
++      ['LPUSH', auditKey, audit],
++      ['LTRIM', auditKey, 0, 99],
++    ];
++
++    await R.pipeline(cmds);
++
++    const state = await U.getState(address);
++    await bump('run_submit', 200);
++    return res.status(200).json({
++      ok: true,
++      address,
++      gameId,
++      runId,
++      score,
++      durationMs,
++      runType: finalRunType,
++      xpEarned,
++      state,
++    });
++  } catch (e) {
++    if (e && e.code === 'RATE_LIMIT') {
++      try {
++        await bump('run_submit', 429);
++      } catch {}
++      return res.status(429).json({ error: 'rate_limited', limit: e.limit, windowSec: e.windowSec });
++    }
++    try {
++      await bump('run_submit', 500);
++    } catch {}
++    return res.status(500).json({ error: 'server_error' });
++  }
++}
+
+--- a/api/leaderboard/top.js
++++ b/api/leaderboard/top.js
+@@ -1,95 +1,160 @@
+-// built by gruesøme
+-// SIG_ENC_XOR5A_HEX=382f33362e7a38237a3d282f3f29a2373f
+-
+-import { parseCookies } from '../_lib/util.js';
+-import { readSession } from '../_lib/session.js';
+-import * as R from '../_lib/redis.js';
+-import * as K from '../_lib/keys.js';
+-import { GAMES } from '../_lib/games.js';
+-import { ipFromReq, enforce, rlKey } from '../_lib/rate.js';
+-import { bump } from '../_lib/metrics.js';
+-
+-function ymdUtc() {
+-  return new Date().toISOString().slice(0, 10).replace(/-/g, '');
+-}
+-
+-function weekKeyUtc() {
+-  const d = new Date();
+-  const date = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+-  const dayNum = date.getUTCDay() || 7;
+-  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+-  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+-  const weekNo = Math.ceil(((date - yearStart) / 86400000 + 1) / 7);
+-  const y = date.getUTCFullYear();
+-  const w = String(weekNo).padStart(2, '0');
+-  return String(y) + 'W' + w;
+-}
+-
+-function parseWithScores(arr) {
+-  const out = [];
+-  if (!Array.isArray(arr)) return out;
+-  for (let i = 0; i < arr.length; i += 2) {
+-    const member = String(arr[i] ?? '');
+-    const score = Number(arr[i + 1] ?? 0);
+-    if (!member) continue;
+-    out.push({ member, score: Math.max(0, score) });
+-  }
+-  return out;
+-}
+-
+-export default async function handler(req, res) {
+-  try {
+-    if (req.method !== 'GET') return res.status(405).json({ error: 'method_not_allowed' });
+-    if (!R.enabled()) return res.status(200).json({ ok: false, error: 'redis_not_configured' });
+-
+-    const ip = ipFromReq(req);
+-    await enforce({ key: rlKey('lb:top:ip', ip), limit: 600, windowSec: 60 });
+-
+-    const url = new URL(req.url, 'http://localhost');
+-    const gameId = String(url.searchParams.get('gameId') || '').trim();
+-    const period = String(url.searchParams.get('period') || 'daily').trim();
+-    const eligible = String(url.searchParams.get('eligible') || '0').trim() === '1';
+-
+-    if (!gameId || !GAMES[gameId]) return res.status(400).json({ error: 'bad_game' });
+-
+-    const cookies = parseCookies(req);
+-    const s = readSession(cookies);
+-    const address = s && s.address ? String(s.address) : '';
+-    const addrLc = address ? address.toLowerCase() : '';
+-
+-    const ymd = ymdUtc();
+-    const wk = weekKeyUtc();
+-
+-    let key = eligible ? K.lbDailyPaid(gameId, ymd) : K.lbDaily(gameId, ymd);
+-    if (period === 'weekly') key = eligible ? K.lbWeeklyPaid(gameId, wk) : K.lbWeekly(gameId, wk);
+-    if (period === 'all') key = eligible ? K.lbAllPaid(gameId) : K.lbAll(gameId);
+-
+-    const raw = await R.cmd('ZREVRANGE', key, 0, 19, 'WITHSCORES');
+-    const items = parseWithScores(raw);
+-
+-    let you = null;
+-    if (addrLc) {
+-      const youScore = await R.cmd('ZSCORE', key, addrLc);
+-      if (youScore != null) {
+-        const r = await R.cmd('ZREVRANK', key, addrLc);
+-        you = {
+-          rank: r == null ? null : Number(r) + 1,
+-          score: Math.max(0, Number(youScore || 0)),
+-        };
+-      }
+-    }
+-
+-    const entries = items.map((it, idx) => ({ rank: idx + 1, address: it.member, score: it.score }));
+-    await bump('leaderboard_top', 200);
+-
+-    return res.status(200).json({ ok: true, eligible, gameId, period, key, entries, you });
+-  } catch (e) {
+-    if (e && e.code === 'RATE_LIMIT') {
+-      return res.status(429).json({ error: 'rate_limited', limit: e.limit, windowSec: e.windowSec });
+-    }
+-    try {
+-      await bump('leaderboard_top', 500);
+-    } catch {}
+-    return res.status(500).json({ error: 'server_error' });
+-  }
+-}
++// built by gruesøme
++// SIG_ENC_XOR5A_HEX=382f33362e7a38237a3d282f3f29a2373f
++
++import { parseCookies } from '../_lib/util.js';
++import { readSession } from '../_lib/session.js';
++import * as R from '../_lib/redis.js';
++import * as K from '../_lib/keys.js';
++import { GAMES } from '../_lib/games.js';
++import { ipFromReq, enforce, rlKey } from '../_lib/rate.js';
++import { bump } from '../_lib/metrics.js';
++
++function ymdUtc() {
++  return new Date().toISOString().slice(0, 10).replace(/-/g, '');
++}
++
++function weekKeyUtc() {
++  const d = new Date();
++  const date = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
++  const dayNum = date.getUTCDay() || 7;
++  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
++  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
++  const weekNo = Math.ceil(((date - yearStart) / 86400000 + 1) / 7);
++  const y = date.getUTCFullYear();
++  const w = String(weekNo).padStart(2, '0');
++  return String(y) + 'W' + w;
++}
++
++function parseWithScores(arr) {
++  const out = [];
++  if (!Array.isArray(arr)) return out;
++  for (let i = 0; i < arr.length; i += 2) {
++    const member = String(arr[i] ?? '');
++    const scoreEnc = Number(arr[i + 1] ?? 0);
++    if (!member) continue;
++    out.push({ member, scoreEnc: isFinite(scoreEnc) ? scoreEnc : 0 });
++  }
++  return out;
++}
++
++function normalizeMetrics(cfg) {
++  const list = Array.isArray(cfg?.metrics) ? cfg.metrics : [];
++  if (list.length) return list;
++  return [{ id: 'score', label: 'Score', kind: 'score', dir: 'desc', format: 'int', src: 'score', payoutWeight: 1.0 }];
++}
++
++function findMetric(cfg, metricId) {
++  const list = normalizeMetrics(cfg);
++  const want = String(metricId || '').trim();
++  if (!want) return list[0] || null;
++  return list.find((m) => String(m?.id || '') === want) || (list[0] || null);
++}
++
++function decodeScore(metricCfg, scoreEnc) {
++  const dir = String(metricCfg?.dir || 'desc');
++  const n = Number(scoreEnc || 0);
++  if (!isFinite(n)) return 0;
++  const v = dir === 'asc' ? -n : n;
++  return Math.max(0, Math.floor(v));
++}
++
++export default async function handler(req, res) {
++  try {
++    if (req.method !== 'GET') return res.status(405).json({ error: 'method_not_allowed' });
++    if (!R.enabled()) return res.status(200).json({ ok: false, error: 'redis_not_configured' });
++
++    const ip = ipFromReq(req);
++    await enforce({ key: rlKey('lb:top:ip', ip), limit: 600, windowSec: 60 });
++
++    const url = new URL(req.url, 'http://localhost');
++    const board = String(url.searchParams.get('board') || 'skill').trim(); // 'skill' | 'activity'
++    const period = String(url.searchParams.get('period') || 'daily').trim(); // 'daily' | 'weekly' | 'all'
++    const eligible = String(url.searchParams.get('eligible') || '0').trim() === '1';
++    const limit = Math.max(1, Math.min(100, Number(url.searchParams.get('limit') || 20)));
++
++    const cookies = parseCookies(req);
++    const s = readSession(cookies);
++    const address = s && s.address ? String(s.address) : '';
++    const addrLc = address ? address.toLowerCase() : '';
++
++    const ymd = ymdUtc();
++    const wk = weekKeyUtc();
++
++    let key = '';
++    let metric = null;
++    let metricId = '';
++    let gameId = '';
++    let cfg = null;
++
++    if (board === 'activity') {
++      // Global paid activity (AC spent) leaderboards.
++      key = K.actDaily(ymd);
++      if (period === 'weekly') key = K.actWeekly(wk);
++      if (period === 'all') key = K.actAll();
++    } else {
++      gameId = String(url.searchParams.get('gameId') || '').trim();
++      if (!gameId || !GAMES[gameId]) return res.status(400).json({ error: 'bad_game' });
++      cfg = GAMES[gameId];
++
++      metricId = String(url.searchParams.get('metric') || cfg.defaultMetric || 'score').trim();
++      metric = findMetric(cfg, metricId);
++      metricId = metric ? String(metric.id || 'score') : 'score';
++
++      // Metric-aware keys (preferred). Fall back to legacy keys if needed.
++      if (metric) {
++        key = eligible ? K.lbDailyPaidMetric(gameId, metricId, ymd) : K.lbDailyMetric(gameId, metricId, ymd);
++        if (period === 'weekly') key = eligible ? K.lbWeeklyPaidMetric(gameId, metricId, wk) : K.lbWeeklyMetric(gameId, metricId, wk);
++        if (period === 'all') key = eligible ? K.lbAllPaidMetric(gameId, metricId) : K.lbAllMetric(gameId, metricId);
++      } else {
++        key = eligible ? K.lbDailyPaid(gameId, ymd) : K.lbDaily(gameId, ymd);
++        if (period === 'weekly') key = eligible ? K.lbWeeklyPaid(gameId, wk) : K.lbWeekly(gameId, wk);
++        if (period === 'all') key = eligible ? K.lbAllPaid(gameId) : K.lbAll(gameId);
++      }
++    }
++
++    const raw = await R.cmd('ZREVRANGE', key, 0, limit - 1, 'WITHSCORES');
++    const items = parseWithScores(raw);
++
++    let you = null;
++    if (addrLc) {
++      const youScoreEnc = await R.cmd('ZSCORE', key, addrLc);
++      if (youScoreEnc != null) {
++        const r = await R.cmd('ZREVRANK', key, addrLc);
++        you = {
++          rank: r == null ? null : Number(r) + 1,
++          scoreEnc: Number(youScoreEnc || 0),
++          score: board === 'activity' ? Math.max(0, Number(youScoreEnc || 0)) : decodeScore(metric, youScoreEnc),
++        };
++      }
++    }
++
++    const entries = items.map((it, idx) => ({
++      rank: idx + 1,
++      address: it.member,
++      scoreEnc: it.scoreEnc,
++      score: board === 'activity' ? Math.max(0, Number(it.scoreEnc || 0)) : decodeScore(metric, it.scoreEnc),
++    }));
++
++    await bump('leaderboard_top', 200);
++
++    return res.status(200).json({
++      ok: true,
++      board,
++      eligible,
++      gameId: gameId || null,
++      metric: metric ? { id: metricId, label: String(metric.label || metricId), kind: String(metric.kind || ''), dir: String(metric.dir || 'desc'), format: String(metric.format || 'int') } : null,
++      period,
++      key,
++      entries,
++      you,
++    });
++  } catch (e) {
++    if (e && e.code === 'RATE_LIMIT') {
++      return res.status(429).json({ error: 'rate_limited', limit: e.limit, windowSec: e.windowSec });
++    }
++    try {
++      await bump('leaderboard_top', 500);
++    } catch {}
++    return res.status(500).json({ error: 'server_error' });
++  }
++}
+
+--- a/api/epoch/settle.js
++++ b/api/epoch/settle.js
+@@ -1,465 +1,554 @@
+-// built by gruesøme
+-// SIG_ENC_XOR5A_HEX=382f33362e7a38237a3d282f3f29a2373f
+-
+-import crypto from 'node:crypto';
+-
+-import * as R from '../_lib/redis.js';
+-import * as K from '../_lib/keys.js';
+-import { GAMES, DEFAULTS } from '../_lib/games.js';
+-import { bearerToken, isVercelCron, queryParam } from '../_lib/security.js';
+-import { bump } from '../_lib/metrics.js';
+-
+-function clamp(n, a, b) {
+-  n = Number(n);
+-  if (!isFinite(n)) n = a;
+-  return Math.max(a, Math.min(b, n));
+-}
+-
+-function ymdUtc(d = new Date()) {
+-  return d.toISOString().slice(0, 10).replace(/-/g, '');
+-}
+-
+-function ymdYesterdayUtc() {
+-  const d = new Date();
+-  const prev = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - 1, 0, 0, 0));
+-  return ymdUtc(prev);
+-}
+-
+-function parseHgetallNum(arr) {
+-  const out = {};
+-  if (!Array.isArray(arr)) return out;
+-  for (let i = 0; i < arr.length; i += 2) {
+-    const k = String(arr[i] ?? '');
+-    const v = Number(arr[i + 1] ?? 0);
+-    if (!k) continue;
+-    out[k] = Math.max(0, v);
+-  }
+-  return out;
+-}
+-
+-function parseHgetallStr(arr) {
+-  const out = {};
+-  if (!Array.isArray(arr)) return out;
+-  for (let i = 0; i < arr.length; i += 2) {
+-    const k = String(arr[i] ?? '');
+-    const v = String(arr[i + 1] ?? '');
+-    if (!k) continue;
+-    out[k] = v;
+-  }
+-  return out;
+-}
+-
+-function parseZWithScores(arr) {
+-  const out = [];
+-  if (!Array.isArray(arr)) return out;
+-  for (let i = 0; i < arr.length; i += 2) {
+-    const member = String(arr[i] ?? '').toLowerCase();
+-    const score = Number(arr[i + 1] ?? 0);
+-    if (!member) continue;
+-    out.push({ member, score: Math.max(0, score) });
+-  }
+-  return out;
+-}
+-
+-function distribute(poolCents, entries, weightFn) {
+-  poolCents = Math.max(0, Math.floor(Number(poolCents) || 0));
+-  if (!poolCents || !entries || !entries.length) return {};
+-  const weights = entries.map((e, i) => Math.max(0, Number(weightFn(e, i)) || 0));
+-  const sumW = weights.reduce((a, b) => a + b, 0);
+-  if (sumW <= 0) return {};
+-  const out = {};
+-  let allocated = 0;
+-  for (let i = 0; i < entries.length; i++) {
+-    const addr = entries[i].member;
+-    const cents = Math.floor(poolCents * (weights[i] / sumW));
+-    if (cents > 0) out[addr] = (out[addr] || 0) + cents;
+-    allocated += cents;
+-  }
+-  let rem = poolCents - allocated;
+-  let i = 0;
+-  while (rem > 0 && i < entries.length) {
+-    const addr = entries[i].member;
+-    out[addr] = (out[addr] || 0) + 1;
+-    rem -= 1;
+-    i += 1;
+-    if (i >= entries.length) i = 0;
+-  }
+-  return out;
+-}
+-
+-function addClaim(map, addr, field, cents, extra) {
+-  cents = Math.max(0, Math.floor(Number(cents) || 0));
+-  if (!cents) return;
+-  addr = String(addr || '').toLowerCase();
+-  if (!addr) return;
+-  if (!map[addr]) {
+-    map[addr] = { totalCents: 0, skillCents: 0, activityCents: 0, proCents: 0, lotteryCents: 0, byGame: {} };
+-  }
+-  map[addr][field] = (map[addr][field] || 0) + cents;
+-  map[addr].totalCents += cents;
+-  if (extra && extra.gameId) {
+-    const gid = String(extra.gameId);
+-    map[addr].byGame[gid] = (map[addr].byGame[gid] || 0) + cents;
+-  }
+-}
+-
+-async function getProfiles(addrs) {
+-  if (!addrs.length) return {};
+-  const cmds = [];
+-  for (const a of addrs) cmds.push(['HGETALL', K.profile(a)]);
+-  const res = await R.pipeline(cmds);
+-  const out = {};
+-  for (let i = 0; i < addrs.length; i++) {
+-    const raw = res[i];
+-    const obj = {};
+-    if (Array.isArray(raw)) {
+-      for (let j = 0; j < raw.length; j += 2) obj[String(raw[j])] = String(raw[j + 1]);
+-    }
+-    out[String(addrs[i]).toLowerCase()] = obj;
+-  }
+-  return out;
+-}
+-
+-function isProActive(proTier, proExpRaw) {
+-  const tier = String(proTier || 'none');
+-  if (!tier || tier === 'none') return { active: false, tier: 'none' };
+-  if (tier === 'lifetime') return { active: true, tier };
+-  const ms = Number(proExpRaw || 0);
+-  if (!isFinite(ms) || ms <= 0) return { active: true, tier };
+-  return { active: Date.now() < ms, tier };
+-}
+-
+-function proMult(tier) {
+-  if (tier === 'prime') return 1.5;
+-  if (tier === 'lifetime') return 2.0;
+-  if (tier === 'mini') return 1.0;
+-  return 1.0;
+-}
+-
+-function hashSeedHex(str) {
+-  return crypto.createHash('sha256').update(str).digest('hex');
+-}
+-
+-function makeRng(seedStr) {
+-  const h = crypto.createHash('sha256').update(seedStr).digest();
+-  let x = (h.readUInt32BE(0) ^ 0xa5a5a5a5) >>> 0;
+-  return () => {
+-    x ^= (x << 13) >>> 0;
+-    x ^= (x >>> 17) >>> 0;
+-    x ^= (x << 5) >>> 0;
+-    return (x >>> 0) / 4294967296;
+-  };
+-}
+-
+-function pickWeightedUnique(entries, k, rng) {
+-  const pool = (entries || [])
+-    .map((e) => ({
+-      member: e.member,
+-      score: Math.max(0, Number(e.score || 0)),
+-      w: Math.sqrt(Math.max(0, Number(e.score || 0))),
+-    }))
+-    .filter((e) => e.w > 0);
+-
+-  const out = [];
+-  k = Math.max(0, Math.floor(Number(k) || 0));
+-  for (let t = 0; t < k && pool.length; t++) {
+-    const sumW = pool.reduce((a, b) => a + b.w, 0);
+-    if (sumW <= 0) break;
+-    let r = rng() * sumW;
+-    let idx = 0;
+-    for (; idx < pool.length; idx++) {
+-      r -= pool[idx].w;
+-      if (r <= 0) break;
+-    }
+-    if (idx >= pool.length) idx = pool.length - 1;
+-    out.push(pool[idx]);
+-    pool.splice(idx, 1);
+-  }
+-  return out;
+-}
+-
+-function prizesFor(poolCents, n) {
+-  poolCents = Math.max(0, Math.floor(Number(poolCents) || 0));
+-  n = Math.max(0, Math.floor(Number(n) || 0));
+-  if (!poolCents || !n) return [];
+-  if (n === 1) return [poolCents];
+-
+-  const out = new Array(n).fill(0);
+-  if (n === 2) {
+-    out[0] = Math.floor(poolCents * 0.6);
+-    out[1] = poolCents - out[0];
+-    return out;
+-  }
+-
+-  out[0] = Math.floor(poolCents * 0.35);
+-  out[1] = Math.floor(poolCents * 0.2);
+-  out[2] = Math.floor(poolCents * 0.15);
+-  let used = out[0] + out[1] + out[2];
+-  let rem = poolCents - used;
+-
+-  const rest = n - 3;
+-  if (rest <= 0) {
+-    out[2] += rem;
+-    return out;
+-  }
+-
+-  const each = Math.floor(rem / rest);
+-  for (let i = 3; i < n; i++) out[i] = each;
+-  used += each * rest;
+-  rem = poolCents - used;
+-
+-  let i = 0;
+-  while (rem > 0) {
+-    const idx = 3 + (i % rest);
+-    out[idx] += 1;
+-    rem -= 1;
+-    i += 1;
+-  }
+-  return out;
+-}
+-
+-export default async function handler(req, res) {
+-  try {
+-    if (req.method !== 'GET') return res.status(405).json({ error: 'method_not_allowed' });
+-    if (!R.enabled()) return res.status(503).json({ error: 'redis_not_configured' });
+-
+-    const url = new URL(req.url, 'http://localhost');
+-    const ymdParam = String(url.searchParams.get('ymd') || '').trim();
+-    const ymd = ymdParam || ymdYesterdayUtc();
+-    const today = ymdUtc();
+-
+-    if (!/^\d{8}$/.test(ymd)) return res.status(400).json({ error: 'bad_ymd' });
+-    if (ymd >= today) return res.status(400).json({ error: 'epoch_must_be_past' });
+-
+-    const cronOk = isVercelCron(req);
+-    const secret = String(process.env.CRON_SECRET || process.env.EPOCH_SETTLE_SECRET || '').trim();
+-    if (!cronOk) {
+-      if (!secret) {
+-        await bump('epoch_settle', 403);
+-        return res.status(403).json({ error: 'cron_secret_required' });
+-      }
+-      const q = String(url.searchParams.get('key') || url.searchParams.get('token') || '').trim();
+-      const b = bearerToken(req);
+-      if (q !== secret && b !== secret) {
+-        await bump('epoch_settle', 401);
+-        return res.status(401).json({ error: 'unauthorized' });
+-      }
+-    }
+-
+-    const sumKey = K.epochSummary(ymd);
+-    const existing = await R.cmd('HGET', sumKey, 'settledAt');
+-    if (existing) {
+-      const raw = await R.cmd('HGETALL', sumKey);
+-      await bump('epoch_settle', 200);
+-      return res.status(200).json({ ok: true, ymd, already: true, summary: parseHgetallStr(raw) });
+-    }
+-
+-    const spendRaw = await R.cmd('HGETALL', K.spentDay(ymd));
+-    const spend = parseHgetallNum(spendRaw);
+-    const totalSpentAC = Object.values(spend).reduce((a, b) => a + b, 0);
+-
+-    const takePct = clamp(process.env.ECON_TAKE_PCT || 12, 0, 35) / 100;
+-    const grossCents = Math.round(totalSpentAC * DEFAULTS.acUsd * 100);
+-    const potCents0 = Math.max(0, Math.floor(grossCents * (1 - takePct)));
+-    const opsCents0 = Math.max(0, grossCents - potCents0);
+-
+-    let skillPool = Math.floor(potCents0 * 0.55);
+-    let activityPool = Math.floor(potCents0 * 0.35);
+-    let proPool = Math.max(0, potCents0 - skillPool - activityPool);
+-
+-    const eligibleGames = Object.entries(GAMES)
+-      .filter(([, cfg]) => !!cfg.payoutEligible)
+-      .map(([gid]) => gid);
+-
+-    const spentEligibleAC = eligibleGames.reduce((sum, gid) => sum + (spend[gid] || 0), 0);
+-
+-    if (spentEligibleAC <= 0) {
+-      activityPool += skillPool;
+-      skillPool = 0;
+-    }
+-
+-    const lotteryPct = clamp(process.env.ECON_LOTTERY_PCT || 8, 0, 25) / 100;
+-    let lotteryPool = Math.floor(activityPool * lotteryPct);
+-    activityPool = Math.max(0, activityPool - lotteryPool);
+-
+-    const claims = {};
+-
+-    const skillTopN = clamp(process.env.ECON_SKILL_TOP || 25, 5, 100);
+-    for (const gid of eligibleGames) {
+-      const gameSpent = spend[gid] || 0;
+-      if (!gameSpent || !skillPool) continue;
+-      const denom = Math.max(1, spentEligibleAC);
+-      const gameSkillPool = Math.floor(skillPool * (gameSpent / denom));
+-      if (gameSkillPool <= 0) continue;
+-
+-      const lbKey = K.lbDailyPaid(gid, ymd);
+-      const raw = await R.cmd('ZREVRANGE', lbKey, 0, skillTopN - 1, 'WITHSCORES');
+-      const top = parseZWithScores(raw);
+-      if (!top.length) continue;
+-
+-      const pow = clamp(process.env.ECON_RANK_POW || 1.25, 1.05, 1.8);
+-      const payouts = distribute(gameSkillPool, top, (_, i) => 1 / Math.pow(i + 1, pow));
+-      for (const [addr, cents] of Object.entries(payouts)) addClaim(claims, addr, 'skillCents', cents, { gameId: gid });
+-    }
+-
+-    const actTopN = clamp(process.env.ECON_ACT_TOP || 2000, 25, 5000);
+-    const actKey = K.actDaily(ymd);
+-    const actRaw = await R.cmd('ZREVRANGE', actKey, 0, actTopN - 1, 'WITHSCORES');
+-    const actTop = parseZWithScores(actRaw).filter((e) => (e.score || 0) > 0);
+-
+-    const actPayouts = distribute(activityPool, actTop, (e) => Math.sqrt(Math.max(0, e.score || 0)));
+-    for (const [addr, cents] of Object.entries(actPayouts)) addClaim(claims, addr, 'activityCents', cents);
+-
+-    const activeAddrs = actTop.map((x) => x.member);
+-    const profiles = activeAddrs.length ? await getProfiles(activeAddrs) : {};
+-    const proEntries = actTop
+-      .map((e) => {
+-        const p = profiles[e.member] || {};
+-        const st = isProActive(p.proTier, p.proExp);
+-        if (!st.active) return null;
+-        const mult = proMult(st.tier);
+-        return { member: e.member, score: e.score, mult };
+-      })
+-      .filter(Boolean);
+-
+-    const proPayouts = distribute(proPool, proEntries, (e) => Math.sqrt(Math.max(0, e.score || 0)) * (e.mult || 1));
+-    for (const [addr, cents] of Object.entries(proPayouts)) addClaim(claims, addr, 'proCents', cents);
+-
+-    const participantsAct = actTop.length;
+-    const minPrizeCents = clamp(process.env.ECON_LOTTERY_MIN_PRIZE_CENTS || 25, 1, 500);
+-    const maxWinnersByPot = lotteryPool > 0 ? Math.max(1, Math.floor(lotteryPool / minPrizeCents)) : 0;
+-
+-    let winnersCount = 0;
+-    if (lotteryPool > 0 && participantsAct > 0) {
+-      winnersCount = clamp(Math.ceil(participantsAct / 50), 1, 25);
+-      if (participantsAct >= 50) winnersCount = Math.max(winnersCount, 3);
+-      winnersCount = Math.min(winnersCount, participantsAct);
+-      winnersCount = Math.min(winnersCount, maxWinnersByPot);
+-    }
+-
+-    const lotteryWinners = [];
+-    const lotterySeedMaterial = `${ymd}|${grossCents}|${potCents0}|${participantsAct}|${String(process.env.LOTTERY_SEED_SECRET || '').trim()}`;
+-    const lotterySeed = hashSeedHex(lotterySeedMaterial).slice(0, 16);
+-
+-    if (winnersCount > 0) {
+-      const rng = makeRng(lotterySeedMaterial);
+-      const picks = pickWeightedUnique(actTop, winnersCount, rng);
+-      const prizes = prizesFor(lotteryPool, picks.length);
+-
+-      for (let i = 0; i < picks.length; i++) {
+-        const addr = picks[i].member;
+-        const cents = Math.max(0, Math.floor(Number(prizes[i] || 0)));
+-        if (!cents) continue;
+-        addClaim(claims, addr, 'lotteryCents', cents);
+-        lotteryWinners.push({
+-          address: addr,
+-          prizeCents: cents,
+-          prizeUsd: Number((cents / 100).toFixed(2)),
+-          weightScore: Math.max(0, Number(picks[i].score || 0)),
+-        });
+-      }
+-    }
+-
+-    const claimKv = [];
+-    for (const [addr, rec] of Object.entries(claims)) {
+-      const out = {
+-        ymd,
+-        address: addr,
+-        totalCents: rec.totalCents,
+-        totalUsd: Number((rec.totalCents / 100).toFixed(2)),
+-        skillCents: rec.skillCents,
+-        activityCents: rec.activityCents,
+-        proCents: rec.proCents,
+-        lotteryCents: rec.lotteryCents,
+-        byGame: rec.byGame,
+-      };
+-      claimKv.push(addr, JSON.stringify(out));
+-    }
+-
+-    const participants = Object.keys(claims).length;
+-    const settledAt = new Date().toISOString();
+-
+-    const sumKv = [
+-      'ymd',
+-      ymd,
+-      'settledAt',
+-      settledAt,
+-      'totalSpentAC',
+-      String(Math.round(totalSpentAC)),
+-      'grossCents',
+-      String(grossCents),
+-      'potCents',
+-      String(potCents0),
+-      'opsCents',
+-      String(opsCents0),
+-      'takePct',
+-      String(takePct),
+-      'skillPoolCents',
+-      String(skillPool),
+-      'activityPoolCents',
+-      String(activityPool),
+-      'proPoolCents',
+-      String(proPool),
+-      'lotteryPoolCents',
+-      String(lotteryPool),
+-      'lotteryPct',
+-      String(lotteryPct),
+-      'lotteryMinPrizeCents',
+-      String(minPrizeCents),
+-      'lotteryWinnersCount',
+-      String(lotteryWinners.length),
+-      'lotterySeed',
+-      String(lotterySeed),
+-      'lotteryWinnersJson',
+-      JSON.stringify(lotteryWinners),
+-      'participants',
+-      String(participants),
+-    ];
+-
+-    const claimsKey = K.epochClaims(ymd);
+-    const claimedKey = K.epochClaimed(ymd);
+-    const listKey = K.epochsList();
+-
+-    const cmds = [
+-      ['HSET', sumKey, ...sumKv],
+-      ['LPUSH', listKey, ymd],
+-      ['LTRIM', listKey, 0, 59],
+-      ['EXPIRE', sumKey, 60 * 60 * 24 * 180],
+-      ['EXPIRE', claimsKey, 60 * 60 * 24 * 180],
+-      ['EXPIRE', claimedKey, 60 * 60 * 24 * 180],
+-    ];
+-
+-    if (claimKv.length) cmds.push(['HSET', claimsKey, ...claimKv]);
+-
+-    await R.pipeline(cmds);
+-
+-    await bump('epoch_settle', 200);
+-    return res.status(200).json({
+-      ok: true,
+-      ymd,
+-      already: false,
+-      summary: {
+-        ymd,
+-        settledAt,
+-        totalSpentAC,
+-        grossCents,
+-        potCents: potCents0,
+-        opsCents: opsCents0,
+-        takePct,
+-        skillPoolCents: skillPool,
+-        activityPoolCents: activityPool,
+-        proPoolCents: proPool,
+-        lotteryPoolCents: lotteryPool,
+-        lotteryWinnersCount: lotteryWinners.length,
+-        participants,
+-      },
+-      lotteryWinners,
+-    });
+-  } catch (e) {
+-    try {
+-      await bump('epoch_settle', 500);
+-    } catch {}
+-    const msg = e && e.message ? String(e.message) : '';
+-    return res.status(500).json({ error: 'server_error', msg });
+-  }
+-}
++// built by gruesøme
++// SIG_ENC_XOR5A_HEX=382f33362e7a38237a3d282f3f29a2373f
++
++import crypto from 'node:crypto';
++
++import * as R from '../_lib/redis.js';
++import * as K from '../_lib/keys.js';
++import { GAMES, DEFAULTS } from '../_lib/games.js';
++import { bearerToken, isVercelCron, queryParam } from '../_lib/security.js';
++import { bump } from '../_lib/metrics.js';
++
++function clamp(n, a, b) {
++  n = Number(n);
++  if (!isFinite(n)) n = a;
++  return Math.max(a, Math.min(b, n));
++}
++
++function ymdUtc(d = new Date()) {
++  return d.toISOString().slice(0, 10).replace(/-/g, '');
++}
++
++function ymdYesterdayUtc() {
++  const d = new Date();
++  const prev = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - 1, 0, 0, 0));
++  return ymdUtc(prev);
++}
++
++
++function dateFromYmdUtc(ymd) {
++  const s = String(ymd || '');
++  if (!/^\d{8}$/.test(s)) return new Date();
++  const y = Number(s.slice(0, 4));
++  const m = Number(s.slice(4, 6));
++  const d = Number(s.slice(6, 8));
++  return new Date(Date.UTC(y, m - 1, d, 0, 0, 0));
++}
++
++function weekKeyFromDateUtc(d) {
++  // ISO week key: YYYYWww (UTC)
++  const date = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
++  const dayNum = date.getUTCDay() || 7;
++  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
++  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
++  const weekNo = Math.ceil(((date - yearStart) / 86400000 + 1) / 7);
++  const y = date.getUTCFullYear();
++  const w = String(weekNo).padStart(2, '0');
++  return String(y) + 'W' + w;
++}
++
++function weekKeyFromYmdUtc(ymd) {
++  return weekKeyFromDateUtc(dateFromYmdUtc(ymd));
++}
++
++function normalizeMetrics(cfg) {
++  const list = Array.isArray(cfg?.metrics) ? cfg.metrics : [];
++  if (list.length) return list;
++  return [{ id: 'score', label: 'Score', kind: 'score', dir: 'desc', format: 'int', src: 'score', payoutWeight: 1.0 }];
++}
++
++function payoutMetrics(cfg) {
++  const metrics = normalizeMetrics(cfg);
++  const positive = metrics.filter((m) => Number(m?.payoutWeight || 0) > 0);
++  if (positive.length) return positive;
++  const defId = String(cfg?.defaultMetric || 'score');
++  const def = metrics.find((m) => String(m?.id || '') === defId) || metrics[0];
++  return def ? [{ ...def, payoutWeight: 1.0 }] : [{ id: 'score', payoutWeight: 1.0 }];
++}
++function parseHgetallNum(arr) {
++  const out = {};
++  if (!Array.isArray(arr)) return out;
++  for (let i = 0; i < arr.length; i += 2) {
++    const k = String(arr[i] ?? '');
++    const v = Number(arr[i + 1] ?? 0);
++    if (!k) continue;
++    out[k] = Math.max(0, v);
++  }
++  return out;
++}
++
++function parseHgetallStr(arr) {
++  const out = {};
++  if (!Array.isArray(arr)) return out;
++  for (let i = 0; i < arr.length; i += 2) {
++    const k = String(arr[i] ?? '');
++    const v = String(arr[i + 1] ?? '');
++    if (!k) continue;
++    out[k] = v;
++  }
++  return out;
++}
++
++function parseZWithScores(arr) {
++  const out = [];
++  if (!Array.isArray(arr)) return out;
++  for (let i = 0; i < arr.length; i += 2) {
++    const member = String(arr[i] ?? '').toLowerCase();
++    const score = Number(arr[i + 1] ?? 0);
++    if (!member) continue;
++    out.push({ member, score: Math.max(0, score) });
++  }
++  return out;
++}
++
++function distribute(poolCents, entries, weightFn) {
++  poolCents = Math.max(0, Math.floor(Number(poolCents) || 0));
++  if (!poolCents || !entries || !entries.length) return {};
++  const weights = entries.map((e, i) => Math.max(0, Number(weightFn(e, i)) || 0));
++  const sumW = weights.reduce((a, b) => a + b, 0);
++  if (sumW <= 0) return {};
++  const out = {};
++  let allocated = 0;
++  for (let i = 0; i < entries.length; i++) {
++    const addr = entries[i].member;
++    const cents = Math.floor(poolCents * (weights[i] / sumW));
++    if (cents > 0) out[addr] = (out[addr] || 0) + cents;
++    allocated += cents;
++  }
++  let rem = poolCents - allocated;
++  let i = 0;
++  while (rem > 0 && i < entries.length) {
++    const addr = entries[i].member;
++    out[addr] = (out[addr] || 0) + 1;
++    rem -= 1;
++    i += 1;
++    if (i >= entries.length) i = 0;
++  }
++  return out;
++}
++
++function addClaim(map, addr, field, cents, extra) {
++  cents = Math.max(0, Math.floor(Number(cents) || 0));
++  if (!cents) return;
++  addr = String(addr || '').toLowerCase();
++  if (!addr) return;
++  if (!map[addr]) {
++    map[addr] = { totalCents: 0, skillCents: 0, activityCents: 0, proCents: 0, lotteryCents: 0, byGame: {} };
++  }
++  map[addr][field] = (map[addr][field] || 0) + cents;
++  map[addr].totalCents += cents;
++  if (extra && extra.gameId) {
++    const gid = String(extra.gameId);
++    map[addr].byGame[gid] = (map[addr].byGame[gid] || 0) + cents;
++  }
++}
++
++async function getProfiles(addrs) {
++  if (!addrs.length) return {};
++  const cmds = [];
++  for (const a of addrs) cmds.push(['HGETALL', K.profile(a)]);
++  const res = await R.pipeline(cmds);
++  const out = {};
++  for (let i = 0; i < addrs.length; i++) {
++    const raw = res[i];
++    const obj = {};
++    if (Array.isArray(raw)) {
++      for (let j = 0; j < raw.length; j += 2) obj[String(raw[j])] = String(raw[j + 1]);
++    }
++    out[String(addrs[i]).toLowerCase()] = obj;
++  }
++  return out;
++}
++
++function isProActive(proTier, proExpRaw) {
++  const tier = String(proTier || 'none');
++  if (!tier || tier === 'none') return { active: false, tier: 'none' };
++  if (tier === 'lifetime') return { active: true, tier };
++  const ms = Number(proExpRaw || 0);
++  if (!isFinite(ms) || ms <= 0) return { active: true, tier };
++  return { active: Date.now() < ms, tier };
++}
++
++function proMult(tier) {
++  if (tier === 'prime') return 1.5;
++  if (tier === 'lifetime') return 2.0;
++  if (tier === 'mini') return 1.0;
++  return 1.0;
++}
++
++function hashSeedHex(str) {
++  return crypto.createHash('sha256').update(str).digest('hex');
++}
++
++function makeRng(seedStr) {
++  const h = crypto.createHash('sha256').update(seedStr).digest();
++  let x = (h.readUInt32BE(0) ^ 0xa5a5a5a5) >>> 0;
++  return () => {
++    x ^= (x << 13) >>> 0;
++    x ^= (x >>> 17) >>> 0;
++    x ^= (x << 5) >>> 0;
++    return (x >>> 0) / 4294967296;
++  };
++}
++
++function pickWeightedUnique(entries, k, rng) {
++  const pool = (entries || [])
++    .map((e) => ({
++      member: e.member,
++      score: Math.max(0, Number(e.score || 0)),
++      w: Math.sqrt(Math.max(0, Number(e.score || 0))),
++    }))
++    .filter((e) => e.w > 0);
++
++  const out = [];
++  k = Math.max(0, Math.floor(Number(k) || 0));
++  for (let t = 0; t < k && pool.length; t++) {
++    const sumW = pool.reduce((a, b) => a + b.w, 0);
++    if (sumW <= 0) break;
++    let r = rng() * sumW;
++    let idx = 0;
++    for (; idx < pool.length; idx++) {
++      r -= pool[idx].w;
++      if (r <= 0) break;
++    }
++    if (idx >= pool.length) idx = pool.length - 1;
++    out.push(pool[idx]);
++    pool.splice(idx, 1);
++  }
++  return out;
++}
++
++function prizesFor(poolCents, n) {
++  poolCents = Math.max(0, Math.floor(Number(poolCents) || 0));
++  n = Math.max(0, Math.floor(Number(n) || 0));
++  if (!poolCents || !n) return [];
++  if (n === 1) return [poolCents];
++
++  const out = new Array(n).fill(0);
++  if (n === 2) {
++    out[0] = Math.floor(poolCents * 0.6);
++    out[1] = poolCents - out[0];
++    return out;
++  }
++
++  out[0] = Math.floor(poolCents * 0.35);
++  out[1] = Math.floor(poolCents * 0.2);
++  out[2] = Math.floor(poolCents * 0.15);
++  let used = out[0] + out[1] + out[2];
++  let rem = poolCents - used;
++
++  const rest = n - 3;
++  if (rest <= 0) {
++    out[2] += rem;
++    return out;
++  }
++
++  const each = Math.floor(rem / rest);
++  for (let i = 3; i < n; i++) out[i] = each;
++  used += each * rest;
++  rem = poolCents - used;
++
++  let i = 0;
++  while (rem > 0) {
++    const idx = 3 + (i % rest);
++    out[idx] += 1;
++    rem -= 1;
++    i += 1;
++  }
++  return out;
++}
++
++export default async function handler(req, res) {
++  try {
++    if (req.method !== 'GET') return res.status(405).json({ error: 'method_not_allowed' });
++    if (!R.enabled()) return res.status(503).json({ error: 'redis_not_configured' });
++
++    const url = new URL(req.url, 'http://localhost');
++    const ymdParam = String(url.searchParams.get('ymd') || '').trim();
++    const ymd = ymdParam || ymdYesterdayUtc();
++    const today = ymdUtc();
++
++    if (!/^\d{8}$/.test(ymd)) return res.status(400).json({ error: 'bad_ymd' });
++    if (ymd >= today) return res.status(400).json({ error: 'epoch_must_be_past' });
++
++    const cronOk = isVercelCron(req);
++    const secret = String(process.env.CRON_SECRET || process.env.EPOCH_SETTLE_SECRET || '').trim();
++    if (!cronOk) {
++      if (!secret) {
++        await bump('epoch_settle', 403);
++        return res.status(403).json({ error: 'cron_secret_required' });
++      }
++      const q = String(url.searchParams.get('key') || url.searchParams.get('token') || '').trim();
++      const b = bearerToken(req);
++      if (q !== secret && b !== secret) {
++        await bump('epoch_settle', 401);
++        return res.status(401).json({ error: 'unauthorized' });
++      }
++    }
++
++    const sumKey = K.epochSummary(ymd);
++    const existing = await R.cmd('HGET', sumKey, 'settledAt');
++    if (existing) {
++      const raw = await R.cmd('HGETALL', sumKey);
++      await bump('epoch_settle', 200);
++      return res.status(200).json({ ok: true, ymd, already: true, summary: parseHgetallStr(raw) });
++    }
++
++    const spendRaw = await R.cmd('HGETALL', K.spentDay(ymd));
++    const spend = parseHgetallNum(spendRaw);
++    const totalSpentAC = Object.values(spend).reduce((a, b) => a + b, 0);
++
++    const yw = weekKeyFromYmdUtc(ymd);
++
++    const takePct = clamp(process.env.ECON_TAKE_PCT || 12, 0, 35) / 100;
++    const grossCents = Math.round(totalSpentAC * DEFAULTS.acUsd * 100);
++    const potCents0 = Math.max(0, Math.floor(grossCents * (1 - takePct)));
++    const opsCents0 = Math.max(0, grossCents - potCents0);
++
++    // Weekly reserve is carved out of the daily pot (after take). This funds weekly payouts.
++    const reservePct = clamp(process.env.ECON_WEEKLY_RESERVE_PCT || 15, 0, 50) / 100;
++    const weekReserveCents = Math.max(0, Math.floor(potCents0 * reservePct));
++    const potCents = Math.max(0, potCents0 - weekReserveCents);
++
++    let skillPool = Math.floor(potCents * 0.55);
++    let activityPool = Math.floor(potCents * 0.35);
++    let proPool = Math.max(0, potCents - skillPool - activityPool);
++
++    const eligibleGames = Object.entries(GAMES)
++      .filter(([, cfg]) => !!cfg.payoutEligible)
++      .map(([gid]) => gid);
++
++    const spentEligibleAC = eligibleGames.reduce((sum, gid) => sum + (spend[gid] || 0), 0);
++
++    if (spentEligibleAC <= 0) {
++      activityPool += skillPool;
++      skillPool = 0;
++    }
++
++    const lotteryPct = clamp(process.env.ECON_LOTTERY_PCT || 8, 0, 25) / 100;
++    let lotteryPool = Math.floor(activityPool * lotteryPct);
++    activityPool = Math.max(0, activityPool - lotteryPool);
++
++    const claims = {};
++
++    const skillTopN = clamp(process.env.ECON_SKILL_TOP || 25, 5, 100);
++    const pow = clamp(process.env.ECON_RANK_POW || 1.25, 1.05, 1.8);
++
++    for (const gid of eligibleGames) {
++      const gameSpent = spend[gid] || 0;
++      if (!gameSpent || !skillPool) continue;
++      const denom = Math.max(1, spentEligibleAC);
++      const gameSkillPool = Math.floor(skillPool * (gameSpent / denom));
++      if (gameSkillPool <= 0) continue;
++
++      const gameCfg = GAMES[gid] || {};
++      const metrics = payoutMetrics(gameCfg);
++      const wSum = metrics.reduce((a, m) => a + Math.max(0, Number(m.payoutWeight || 0)), 0) || 1;
++
++      let allocated = 0;
++      for (let mi = 0; mi < metrics.length; mi++) {
++        const m = metrics[mi];
++        const w = Math.max(0, Number(m.payoutWeight || 0)) || 0;
++        let metricPool = mi === metrics.length - 1 ? Math.max(0, gameSkillPool - allocated) : Math.floor(gameSkillPool * (w / wSum));
++        allocated += metricPool;
++        if (metricPool <= 0) continue;
++
++        const metricId = String(m.id || 'score');
++        let lbKey = K.lbDailyPaidMetric(gid, metricId, ymd);
++        let raw = await R.cmd('ZREVRANGE', lbKey, 0, skillTopN - 1, 'WITHSCORES');
++        let top = parseZWithScores(raw);
++
++        // Backward-compatible fallback for the default metric (old leaderboard key)
++        const defId = String(gameCfg.defaultMetric || 'score');
++        if (!top.length && metricId === defId) {
++          lbKey = K.lbDailyPaid(gid, ymd);
++          raw = await R.cmd('ZREVRANGE', lbKey, 0, skillTopN - 1, 'WITHSCORES');
++          top = parseZWithScores(raw);
++        }
++
++        if (!top.length) continue;
++
++        const payouts = distribute(metricPool, top, (_, i) => 1 / Math.pow(i + 1, pow));
++        for (const [addr, cents] of Object.entries(payouts)) addClaim(claims, addr, 'skillCents', cents, { gameId: gid });
++      }
++    }
++
++    const actTopN = clamp(process.env.ECON_ACT_TOP || 2000, 25, 5000);
++    const actKey = K.actDaily(ymd);
++    const actRaw = await R.cmd('ZREVRANGE', actKey, 0, actTopN - 1, 'WITHSCORES');
++    const actTop = parseZWithScores(actRaw).filter((e) => (e.score || 0) > 0);
++
++    const actPayouts = distribute(activityPool, actTop, (e) => Math.sqrt(Math.max(0, e.score || 0)));
++    for (const [addr, cents] of Object.entries(actPayouts)) addClaim(claims, addr, 'activityCents', cents);
++
++    const activeAddrs = actTop.map((x) => x.member);
++    const profiles = activeAddrs.length ? await getProfiles(activeAddrs) : {};
++    const proEntries = actTop
++      .map((e) => {
++        const p = profiles[e.member] || {};
++        const st = isProActive(p.proTier, p.proExp);
++        if (!st.active) return null;
++        const mult = proMult(st.tier);
++        return { member: e.member, score: e.score, mult };
++      })
++      .filter(Boolean);
++
++    const proPayouts = distribute(proPool, proEntries, (e) => Math.sqrt(Math.max(0, e.score || 0)) * (e.mult || 1));
++    for (const [addr, cents] of Object.entries(proPayouts)) addClaim(claims, addr, 'proCents', cents);
++
++    const participantsAct = actTop.length;
++    const minPrizeCents = clamp(process.env.ECON_LOTTERY_MIN_PRIZE_CENTS || 25, 1, 500);
++    const maxWinnersByPot = lotteryPool > 0 ? Math.max(1, Math.floor(lotteryPool / minPrizeCents)) : 0;
++
++    let winnersCount = 0;
++    if (lotteryPool > 0 && participantsAct > 0) {
++      winnersCount = clamp(Math.ceil(participantsAct / 50), 1, 25);
++      if (participantsAct >= 50) winnersCount = Math.max(winnersCount, 3);
++      winnersCount = Math.min(winnersCount, participantsAct);
++      winnersCount = Math.min(winnersCount, maxWinnersByPot);
++    }
++
++    const lotteryWinners = [];
++    const lotterySeedMaterial = `${ymd}|${grossCents}|${potCents0}|${participantsAct}|${String(process.env.LOTTERY_SEED_SECRET || '').trim()}`;
++    const lotterySeed = hashSeedHex(lotterySeedMaterial).slice(0, 16);
++
++    if (winnersCount > 0) {
++      const rng = makeRng(lotterySeedMaterial);
++      const picks = pickWeightedUnique(actTop, winnersCount, rng);
++      const prizes = prizesFor(lotteryPool, picks.length);
++
++      for (let i = 0; i < picks.length; i++) {
++        const addr = picks[i].member;
++        const cents = Math.max(0, Math.floor(Number(prizes[i] || 0)));
++        if (!cents) continue;
++        addClaim(claims, addr, 'lotteryCents', cents);
++        lotteryWinners.push({
++          address: addr,
++          prizeCents: cents,
++          prizeUsd: Number((cents / 100).toFixed(2)),
++          weightScore: Math.max(0, Number(picks[i].score || 0)),
++        });
++      }
++    }
++
++    const claimKv = [];
++    for (const [addr, rec] of Object.entries(claims)) {
++      const out = {
++        ymd,
++        address: addr,
++        totalCents: rec.totalCents,
++        totalUsd: Number((rec.totalCents / 100).toFixed(2)),
++        skillCents: rec.skillCents,
++        activityCents: rec.activityCents,
++        proCents: rec.proCents,
++        lotteryCents: rec.lotteryCents,
++        byGame: rec.byGame,
++      };
++      claimKv.push(addr, JSON.stringify(out));
++    }
++
++    const participants = Object.keys(claims).length;
++    const settledAt = new Date().toISOString();
++
++    const sumKv = [
++      'ymd',
++      ymd,
++      'settledAt',
++      settledAt,
++      'totalSpentAC',
++      String(Math.round(totalSpentAC)),
++      'grossCents',
++      String(grossCents),
++      'potCents',
++      String(potCents),
++      'potCentsBeforeReserve',
++      String(potCents0),
++      'weekReservePct',
++      String(reservePct),
++      'weekReserveCents',
++      String(weekReserveCents),
++      'weekKey',
++      String(yw),
++      'opsCents',
++      String(opsCents0),
++      'takePct',
++      String(takePct),
++      'skillPoolCents',
++      String(skillPool),
++      'activityPoolCents',
++      String(activityPool),
++      'proPoolCents',
++      String(proPool),
++      'lotteryPoolCents',
++      String(lotteryPool),
++      'lotteryPct',
++      String(lotteryPct),
++      'lotteryMinPrizeCents',
++      String(minPrizeCents),
++      'lotteryWinnersCount',
++      String(lotteryWinners.length),
++      'lotterySeed',
++      String(lotterySeed),
++      'lotteryWinnersJson',
++      JSON.stringify(lotteryWinners),
++      'participants',
++      String(participants),
++    ];
++
++    const claimsKey = K.epochClaims(ymd);
++    const claimedKey = K.epochClaimed(ymd);
++    const listKey = K.epochsList();
++
++    const cmds = [
++      ['HSET', sumKey, ...sumKv],
++      ['LPUSH', listKey, ymd],
++      ['LTRIM', listKey, 0, 59],
++      ['EXPIRE', sumKey, 60 * 60 * 24 * 180],
++      ['EXPIRE', claimsKey, 60 * 60 * 24 * 180],
++      ['EXPIRE', claimedKey, 60 * 60 * 24 * 180],
++    ];
++
++
++    // Roll daily weekly-reserve into the current ISO-week pot (in cents)
++    if (weekReserveCents > 0) {
++      cmds.push(['INCRBY', K.weekPot(yw), weekReserveCents]);
++      cmds.push(['EXPIRE', K.weekPot(yw), 60 * 60 * 24 * 240]);
++    }
++
++    if (claimKv.length) cmds.push(['HSET', claimsKey, ...claimKv]);
++
++    await R.pipeline(cmds);
++
++    await bump('epoch_settle', 200);
++    return res.status(200).json({
++      ok: true,
++      ymd,
++      already: false,
++      summary: {
++        ymd,
++        settledAt,
++        totalSpentAC,
++        grossCents,
++        potCents: potCents,
++        potCentsBeforeReserve: potCents0,
++        weekReserveCents,
++        weekKey: yw,
++        opsCents: opsCents0,
++        takePct,
++        skillPoolCents: skillPool,
++        activityPoolCents: activityPool,
++        proPoolCents: proPool,
++        lotteryPoolCents: lotteryPool,
++        lotteryWinnersCount: lotteryWinners.length,
++        participants,
++      },
++      lotteryWinners,
++    });
++  } catch (e) {
++    try {
++      await bump('epoch_settle', 500);
++    } catch {}
++    const msg = e && e.message ? String(e.message) : '';
++    return res.status(500).json({ error: 'server_error', msg });
++  }
++}
+
+--- a/api/epoch/status.js
++++ b/api/epoch/status.js
+@@ -1,121 +1,193 @@
+-// built by gruesøme
+-// SIG_ENC_XOR5A_HEX=382f33362e7a38237a3d282f3f29a2373f
+-
+-import { parseCookies } from '../_lib/util.js';
+-import { readSession } from '../_lib/session.js';
+-import { checkPoh } from '../_lib/poh.js';
+-import * as R from '../_lib/redis.js';
+-import * as K from '../_lib/keys.js';
+-
+-function ymdUtc(d = new Date()) {
+-  return d.toISOString().slice(0, 10).replace(/-/g, '');
+-}
+-
+-function nextUtcMidnightIso() {
+-  const d = new Date();
+-  const next = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1, 0, 0, 0));
+-  return next.toISOString();
+-}
+-
+-async function getLastSettledYmd() {
+-  const arr = await R.cmd('LRANGE', K.epochsList(), 0, 0);
+-  if (Array.isArray(arr) && arr.length) return String(arr[0] || '');
+-  return '';
+-}
+-
+-function safeJsonParse(str, fallback) {
+-  try {
+-    const v = JSON.parse(String(str));
+-    return v == null ? fallback : v;
+-  } catch {
+-    return fallback;
+-  }
+-}
+-
+-function parseHgetallStr(arr) {
+-  const out = {};
+-  if (!Array.isArray(arr)) return out;
+-  for (let i = 0; i < arr.length; i += 2) {
+-    const k = String(arr[i] ?? '');
+-    const v = String(arr[i + 1] ?? '');
+-    if (!k) continue;
+-    out[k] = v;
+-  }
+-  return out;
+-}
+-
+-export default async function handler(req, res) {
+-  try {
+-    if (req.method !== 'GET') return res.status(405).json({ error: 'method_not_allowed' });
+-    if (!R.enabled()) return res.status(503).json({ error: 'redis_not_configured' });
+-
+-    const cookies = parseCookies(req);
+-    const s = readSession(cookies);
+-
+-    const authenticated = !!(s && s.address);
+-    const address = authenticated ? String(s.address) : '';
+-    const addrLc = address ? address.toLowerCase() : '';
+-
+-    let pohVerified = false;
+-    if (authenticated && !s.demo) {
+-      try {
+-        pohVerified = await checkPoh(address);
+-      } catch {
+-        pohVerified = false;
+-      }
+-    } else if (authenticated) {
+-      pohVerified = true;
+-    }
+-
+-    const today = ymdUtc();
+-    const lastYmd = await getLastSettledYmd();
+-
+-    let lastSummary = null;
+-    let lastLotteryWinners = [];
+-
+-    if (lastYmd) {
+-      const sum = await R.cmd('HGETALL', K.epochSummary(lastYmd));
+-      if (Array.isArray(sum) && sum.length) {
+-        const o = parseHgetallStr(sum);
+-        lastSummary = o;
+-        if (o.lotteryWinnersJson) {
+-          const parsed = safeJsonParse(o.lotteryWinnersJson, []);
+-          if (Array.isArray(parsed)) lastLotteryWinners = parsed;
+-        }
+-      }
+-    }
+-
+-    let claimable = null;
+-    if (authenticated && lastYmd) {
+-      const raw = await R.cmd('HGET', K.epochClaims(lastYmd), addrLc);
+-      const claimed = await R.cmd('SISMEMBER', K.epochClaimed(lastYmd), addrLc);
+-      const rec = raw ? safeJsonParse(raw, null) : null;
+-      claimable = { ymd: lastYmd, claimed: !!claimed, record: rec };
+-    }
+-
+-    let todayActScore = 0;
+-    let todayTickets = 0;
+-    if (authenticated && addrLc) {
+-      const z = await R.cmd('ZSCORE', K.actDaily(today), addrLc);
+-      todayActScore = z == null ? 0 : Math.max(0, Number(z || 0));
+-      if (todayActScore > 0) todayTickets = Math.max(1, Math.floor(Math.sqrt(todayActScore)));
+-    }
+-
+-    return res.status(200).json({
+-      ok: true,
+-      todayYmd: today,
+-      nextEpochAtUtc: nextUtcMidnightIso(),
+-      lastSettledYmd: lastYmd,
+-      lastSummary,
+-      lastLotteryWinners,
+-      authenticated,
+-      address,
+-      pohVerified,
+-      claimable,
+-      todayActScore,
+-      todayTickets,
+-    });
+-  } catch {
+-    return res.status(500).json({ error: 'server_error' });
+-  }
+-}
++// built by gruesøme
++// SIG_ENC_XOR5A_HEX=382f33362e7a38237a3d282f3f29a2373f
++
++import { parseCookies } from '../_lib/util.js';
++import { readSession } from '../_lib/session.js';
++import { checkPoh } from '../_lib/poh.js';
++import * as R from '../_lib/redis.js';
++import * as K from '../_lib/keys.js';
++
++function ymdUtc(d = new Date()) {
++  return d.toISOString().slice(0, 10).replace(/-/g, '');
++}
++
++function weekKeyUtc(d = new Date()) {
++  // ISO week key: YYYYWww (UTC)
++  const date = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
++  const dayNum = date.getUTCDay() || 7;
++  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
++  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
++  const weekNo = Math.ceil(((date - yearStart) / 86400000 + 1) / 7);
++  const y = date.getUTCFullYear();
++  const w = String(weekNo).padStart(2, '0');
++  return String(y) + 'W' + w;
++}
++
++function nextUtcMidnightIso() {
++  const d = new Date();
++  const next = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1, 0, 0, 0));
++  return next.toISOString();
++}
++
++function nextUtcMondayIso() {
++  const d = new Date();
++  const date = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 0, 0, 0));
++  const dayNum = date.getUTCDay() || 7; // 1..7 (Mon..Sun)
++  const daysToNextMon = 8 - dayNum;
++  const next = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + daysToNextMon, 0, 0, 0));
++  return next.toISOString();
++}
++
++async function getLastSettledYmd() {
++  const arr = await R.cmd('LRANGE', K.epochsList(), 0, 0);
++  if (Array.isArray(arr) && arr.length) return String(arr[0] || '');
++  return '';
++}
++
++async function getLastSettledYw() {
++  const arr = await R.cmd('LRANGE', K.weeksList(), 0, 0);
++  if (Array.isArray(arr) && arr.length) return String(arr[0] || '');
++  return '';
++}
++
++function safeJsonParse(str, fallback) {
++  try {
++    const v = JSON.parse(String(str));
++    return v == null ? fallback : v;
++  } catch {
++    return fallback;
++  }
++}
++
++function parseHgetallStr(arr) {
++  const out = {};
++  if (!Array.isArray(arr)) return out;
++  for (let i = 0; i < arr.length; i += 2) {
++    const k = String(arr[i] ?? '');
++    const v = String(arr[i + 1] ?? '');
++    if (!k) continue;
++    out[k] = v;
++  }
++  return out;
++}
++
++export default async function handler(req, res) {
++  try {
++    if (req.method !== 'GET') return res.status(405).json({ error: 'method_not_allowed' });
++    if (!R.enabled()) return res.status(503).json({ error: 'redis_not_configured' });
++
++    const cookies = parseCookies(req);
++    const s = readSession(cookies);
++
++    const authenticated = !!(s && s.address);
++    const address = authenticated ? String(s.address) : '';
++    const addrLc = address ? address.toLowerCase() : '';
++
++    let pohVerified = false;
++    if (authenticated && !s.demo) {
++      try {
++        pohVerified = await checkPoh(address);
++      } catch {
++        pohVerified = false;
++      }
++    } else if (authenticated) {
++      pohVerified = true;
++    }
++
++    const today = ymdUtc();
++    const curWeek = weekKeyUtc();
++    const lastYmd = await getLastSettledYmd();
++    const lastYw = await getLastSettledYw();
++
++    let lastSummary = null;
++    let lastLotteryWinners = [];
++
++    if (lastYmd) {
++      const sum = await R.cmd('HGETALL', K.epochSummary(lastYmd));
++      if (Array.isArray(sum) && sum.length) {
++        const o = parseHgetallStr(sum);
++        lastSummary = o;
++        if (o.lotteryWinnersJson) {
++          const parsed = safeJsonParse(o.lotteryWinnersJson, []);
++          if (Array.isArray(parsed)) lastLotteryWinners = parsed;
++        }
++      }
++    }
++
++    let lastWeekSummary = null;
++    if (lastYw) {
++      const sum = await R.cmd('HGETALL', K.weekSummary(lastYw));
++      if (Array.isArray(sum) && sum.length) lastWeekSummary = parseHgetallStr(sum);
++    }
++
++    let claimable = null;
++    if (authenticated && lastYmd) {
++      const raw = await R.cmd('HGET', K.epochClaims(lastYmd), addrLc);
++      const claimed = await R.cmd('SISMEMBER', K.epochClaimed(lastYmd), addrLc);
++      const rec = raw ? safeJsonParse(raw, null) : null;
++      claimable = { ymd: lastYmd, claimed: !!claimed, record: rec };
++    }
++
++    let weekClaimable = null;
++    if (authenticated && lastYw) {
++      const raw = await R.cmd('HGET', K.weekClaims(lastYw), addrLc);
++      const claimed = await R.cmd('SISMEMBER', K.weekClaimed(lastYw), addrLc);
++      const rec = raw ? safeJsonParse(raw, null) : null;
++      weekClaimable = { yw: lastYw, claimed: !!claimed, record: rec };
++    }
++
++    let todayActScore = 0;
++    let todayTickets = 0;
++    let weekActScore = 0;
++
++    if (authenticated && addrLc) {
++      const z = await R.cmd('ZSCORE', K.actDaily(today), addrLc);
++      todayActScore = z == null ? 0 : Math.max(0, Number(z || 0));
++      if (todayActScore > 0) todayTickets = Math.max(1, Math.floor(Math.sqrt(todayActScore)));
++
++      const wz = await R.cmd('ZSCORE', K.actWeekly(curWeek), addrLc);
++      weekActScore = wz == null ? 0 : Math.max(0, Number(wz || 0));
++    }
++
++    // Current week pot reserve (for UI preview / debugging)
++    let curWeekPotCents = 0;
++    try {
++      const p = await R.cmd('GET', K.weekPot(curWeek));
++      curWeekPotCents = p == null ? 0 : Math.max(0, Number(p || 0));
++    } catch {
++      curWeekPotCents = 0;
++    }
++
++    return res.status(200).json({
++      ok: true,
++
++      // Daily epoch
++      todayYmd: today,
++      nextEpochAtUtc: nextUtcMidnightIso(),
++      lastSettledYmd: lastYmd,
++      lastSummary,
++      lastLotteryWinners,
++      claimable,
++
++      // Weekly epoch
++      currentWeekYw: curWeek,
++      nextWeekAtUtc: nextUtcMondayIso(),
++      lastSettledYw: lastYw,
++      lastWeekSummary,
++      weekClaimable,
++      curWeekPotCents,
++
++      // Auth
++      authenticated,
++      address,
++      pohVerified,
++
++      // Activity
++      todayActScore,
++      todayTickets,
++      weekActScore,
++    });
++  } catch {
++    return res.status(500).json({ error: 'server_error' });
++  }
++}
+
+--- a/api/week/status.js
++++ b/api/week/status.js
+@@ -0,0 +1,120 @@
++// built by gruesøme
++// SIG_ENC_XOR5A_HEX=382f33362e7a38237a3d282f3f29a2373f
++
++import { parseCookies } from '../_lib/util.js';
++import { readSession } from '../_lib/session.js';
++import { checkPoh } from '../_lib/poh.js';
++import * as R from '../_lib/redis.js';
++import * as K from '../_lib/keys.js';
++
++function weekKeyUtc(d = new Date()) {
++  const date = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
++  const dayNum = date.getUTCDay() || 7;
++  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
++  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
++  const weekNo = Math.ceil(((date - yearStart) / 86400000 + 1) / 7);
++  const y = date.getUTCFullYear();
++  const w = String(weekNo).padStart(2, '0');
++  return String(y) + 'W' + w;
++}
++
++function nextUtcMondayIso() {
++  const d = new Date();
++  const date = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 0, 0, 0));
++  const dayNum = date.getUTCDay() || 7; // 1..7
++  const daysToNextMon = 8 - dayNum;
++  const next = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + daysToNextMon, 0, 0, 0));
++  return next.toISOString();
++}
++
++async function getLastSettledYw() {
++  const arr = await R.cmd('LRANGE', K.weeksList(), 0, 0);
++  if (Array.isArray(arr) && arr.length) return String(arr[0] || '');
++  return '';
++}
++
++function safeJsonParse(str, fallback) {
++  try {
++    const v = JSON.parse(String(str));
++    return v == null ? fallback : v;
++  } catch {
++    return fallback;
++  }
++}
++
++function parseHgetallStr(arr) {
++  const out = {};
++  if (!Array.isArray(arr)) return out;
++  for (let i = 0; i < arr.length; i += 2) {
++    const k = String(arr[i] ?? '');
++    const v = String(arr[i + 1] ?? '');
++    if (!k) continue;
++    out[k] = v;
++  }
++  return out;
++}
++
++export default async function handler(req, res) {
++  try {
++    if (req.method !== 'GET') return res.status(405).json({ error: 'method_not_allowed' });
++    if (!R.enabled()) return res.status(503).json({ error: 'redis_not_configured' });
++
++    const cookies = parseCookies(req);
++    const s = readSession(cookies);
++
++    const authenticated = !!(s && s.address);
++    const address = authenticated ? String(s.address) : '';
++    const addrLc = address ? address.toLowerCase() : '';
++
++    let pohVerified = false;
++    if (authenticated && !s.demo) {
++      try {
++        pohVerified = await checkPoh(address);
++      } catch {
++        pohVerified = false;
++      }
++    } else if (authenticated) {
++      pohVerified = true;
++    }
++
++    const curWeek = weekKeyUtc();
++    const lastYw = await getLastSettledYw();
++
++    let lastWeekSummary = null;
++    if (lastYw) {
++      const sum = await R.cmd('HGETALL', K.weekSummary(lastYw));
++      if (Array.isArray(sum) && sum.length) lastWeekSummary = parseHgetallStr(sum);
++    }
++
++    let weekClaimable = null;
++    if (authenticated && lastYw) {
++      const raw = await R.cmd('HGET', K.weekClaims(lastYw), addrLc);
++      const claimed = await R.cmd('SISMEMBER', K.weekClaimed(lastYw), addrLc);
++      const rec = raw ? safeJsonParse(raw, null) : null;
++      weekClaimable = { yw: lastYw, claimed: !!claimed, record: rec };
++    }
++
++    let curWeekPotCents = 0;
++    try {
++      const p = await R.cmd('GET', K.weekPot(curWeek));
++      curWeekPotCents = p == null ? 0 : Math.max(0, Number(p || 0));
++    } catch {
++      curWeekPotCents = 0;
++    }
++
++    return res.status(200).json({
++      ok: true,
++      currentWeekYw: curWeek,
++      nextWeekAtUtc: nextUtcMondayIso(),
++      lastSettledYw: lastYw,
++      lastWeekSummary,
++      weekClaimable,
++      curWeekPotCents,
++      authenticated,
++      address,
++      pohVerified,
++    });
++  } catch {
++    return res.status(500).json({ error: 'server_error' });
++  }
++}
+
+--- a/api/week/claim.js
++++ b/api/week/claim.js
+@@ -0,0 +1,114 @@
++// built by gruesøme
++// SIG_ENC_XOR5A_HEX=382f33362e7a38237a3d282f3f29a2373f
++
++import { parseCookies, readJson } from '../_lib/util.js';
++import { readSession } from '../_lib/session.js';
++import { checkPoh } from '../_lib/poh.js';
++import * as R from '../_lib/redis.js';
++import * as K from '../_lib/keys.js';
++import { ipFromReq, enforce, rlKey } from '../_lib/rate.js';
++import { sameOrigin } from '../_lib/security.js';
++import { bump } from '../_lib/metrics.js';
++
++async function getLastSettledYw() {
++  const arr = await R.cmd('LRANGE', K.weeksList(), 0, 0);
++  if (Array.isArray(arr) && arr.length) return String(arr[0] || '');
++  return '';
++}
++
++export default async function handler(req, res) {
++  try {
++    if (req.method !== 'POST') return res.status(405).json({ error: 'method_not_allowed' });
++    if (!R.enabled()) return res.status(503).json({ error: 'redis_not_configured' });
++
++    if (!sameOrigin(req)) {
++      await bump('week_claim', 403);
++      return res.status(403).json({ error: 'bad_origin' });
++    }
++
++    const ip = ipFromReq(req);
++    await enforce({ key: rlKey('week:claim:ip', ip), limit: 40, windowSec: 3600 });
++
++    const cookies = parseCookies(req);
++    const s = readSession(cookies);
++    if (!s || !s.address) return res.status(401).json({ error: 'not_authenticated' });
++
++    const address = String(s.address);
++    await enforce({ key: rlKey('week:claim:addr', address.toLowerCase()), limit: 15, windowSec: 3600 });
++    const addrLc = address.toLowerCase();
++
++    if (!s.demo) {
++      let ok = false;
++      try {
++        ok = await checkPoh(address);
++      } catch {
++        ok = false;
++      }
++      if (!ok) return res.status(403).json({ error: 'poh_required' });
++    }
++
++    const body = await readJson(req).catch(() => ({}));
++    let yw = String(body.yw || '').trim();
++    if (!yw) yw = await getLastSettledYw();
++    if (!yw) return res.status(404).json({ error: 'no_settled_week' });
++
++    const claimsKey = K.weekClaims(yw);
++    const claimedKey = K.weekClaimed(yw);
++
++    const raw = await R.cmd('HGET', claimsKey, addrLc);
++    if (!raw) {
++      await R.cmd('HINCRBY', K.profile(address), 'txCount', 1);
++      await R.cmd('HSET', K.profile(address), 'lastActiveAt', new Date().toISOString());
++      await bump('week_claim', 200);
++      return res.status(200).json({ ok: true, yw, address, amountUsd: 0, record: null, claimed: true, note: 'no_rewards' });
++    }
++
++    const already = await R.cmd('SISMEMBER', claimedKey, addrLc);
++    if (already) return res.status(409).json({ error: 'already_claimed' });
++
++    let rec = null;
++    try {
++      rec = JSON.parse(String(raw));
++    } catch {
++      rec = null;
++    }
++
++    const audit = JSON.stringify({
++      t: 'week_claim',
++      ts: new Date().toISOString(),
++      yw,
++      amountCents: rec ? Number(rec.totalCents || 0) : 0,
++    });
++
++    await R.pipeline([
++      ['SADD', claimedKey, addrLc],
++      ['HINCRBY', K.profile(address), 'txCount', 1],
++      ['HSET', K.profile(address), 'lastActiveAt', new Date().toISOString()],
++      ['LPUSH', K.audit(address), audit],
++      ['LTRIM', K.audit(address), 0, 99],
++    ]);
++
++    const cents = rec ? Math.max(0, Number(rec.totalCents || 0)) : 0;
++    await bump('week_claim', 200);
++
++    return res.status(200).json({
++      ok: true,
++      yw,
++      address,
++      claimed: true,
++      amountUsd: Number((cents / 100).toFixed(2)),
++      record: rec,
++    });
++  } catch (e) {
++    if (e && e.code === 'RATE_LIMIT') {
++      try {
++        await bump('week_claim', 429);
++      } catch {}
++      return res.status(429).json({ error: 'rate_limited', limit: e.limit, windowSec: e.windowSec });
++    }
++    try {
++      await bump('week_claim', 500);
++    } catch {}
++    return res.status(500).json({ error: 'server_error' });
++  }
++}
+
+--- a/api/week/settle.js
++++ b/api/week/settle.js
+@@ -0,0 +1,371 @@
++// built by gruesøme
++// SIG_ENC_XOR5A_HEX=382f33362e7a38237a3d282f3f29a2373f
++
++import * as R from '../_lib/redis.js';
++import * as K from '../_lib/keys.js';
++import { GAMES, DEFAULTS } from '../_lib/games.js';
++import { isVercelCron, bearerToken } from '../_lib/security.js';
++import { bump } from '../_lib/metrics.js';
++
++function clamp(n, a, b) {
++  n = Number(n) || 0;
++  return Math.max(a, Math.min(b, n));
++}
++
++function weekKeyUtc(d = new Date()) {
++  const date = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
++  const dayNum = date.getUTCDay() || 7;
++  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
++  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
++  const weekNo = Math.ceil(((date - yearStart) / 86400000 + 1) / 7);
++  const y = date.getUTCFullYear();
++  const w = String(weekNo).padStart(2, '0');
++  return String(y) + 'W' + w;
++}
++
++function ymdFromDateUtc(d) {
++  return d.toISOString().slice(0, 10).replace(/-/g, '');
++}
++
++function isoWeekStartUtc(yw) {
++  // Returns Monday 00:00 UTC for ISO week key YYYYWww
++  const m = String(yw || '').match(/^(\d{4})W(\d{2})$/);
++  if (!m) return null;
++  const year = Number(m[1]);
++  const week = Number(m[2]);
++
++  // ISO week 1 is the week with Jan 4 in it.
++  const jan4 = new Date(Date.UTC(year, 0, 4, 0, 0, 0));
++  const dayNum = jan4.getUTCDay() || 7; // 1..7
++  const week1Mon = new Date(Date.UTC(year, 0, 4 - (dayNum - 1), 0, 0, 0));
++  const start = new Date(week1Mon.getTime() + (week - 1) * 7 * 86400000);
++  return start;
++}
++
++function ymdsForWeek(yw) {
++  const start = isoWeekStartUtc(yw);
++  if (!start) return [];
++  const out = [];
++  for (let i = 0; i < 7; i++) out.push(ymdFromDateUtc(new Date(start.getTime() + i * 86400000)));
++  return out;
++}
++
++function parseHgetallNum(arr) {
++  const out = {};
++  if (!Array.isArray(arr)) return out;
++  for (let i = 0; i < arr.length; i += 2) {
++    const k = String(arr[i] ?? '');
++    const v = Number(arr[i + 1] ?? 0);
++    if (!k) continue;
++    out[k] = isFinite(v) ? v : 0;
++  }
++  return out;
++}
++
++function parseZWithScores(arr) {
++  const out = [];
++  if (!Array.isArray(arr)) return out;
++  for (let i = 0; i < arr.length; i += 2) {
++    const member = String(arr[i] ?? '');
++    const score = Number(arr[i + 1] ?? 0);
++    if (!member) continue;
++    out.push({ member, score: isFinite(score) ? score : 0 });
++  }
++  return out;
++}
++
++function distribute(poolCents, entries, weightFn) {
++  const out = {};
++  if (!poolCents || !entries.length) return out;
++  const weights = entries.map((e, i) => Math.max(0, Number(weightFn(e, i) || 0)));
++  const totalW = weights.reduce((a, b) => a + b, 0);
++  if (totalW <= 0) return out;
++
++  let remaining = Math.max(0, Math.floor(poolCents));
++  for (let i = 0; i < entries.length; i++) {
++    const addr = entries[i].member;
++    const share = i === entries.length - 1 ? remaining : Math.floor((poolCents * weights[i]) / totalW);
++    remaining -= share;
++    if (share > 0) out[addr] = (out[addr] || 0) + share;
++  }
++  return out;
++}
++
++function addClaim(claims, addr, field, cents, extra) {
++  addr = String(addr || '').toLowerCase();
++  cents = Math.max(0, Math.floor(Number(cents || 0)));
++  if (!addr || !cents) return;
++  if (!claims[addr]) {
++    claims[addr] = { totalCents: 0, skillCents: 0, activityCents: 0, proCents: 0, lotteryCents: 0, byGame: {} };
++  }
++  claims[addr][field] = (claims[addr][field] || 0) + cents;
++  claims[addr].totalCents += cents;
++
++  if (extra && extra.gameId) {
++    const gid = String(extra.gameId);
++    claims[addr].byGame[gid] = (claims[addr].byGame[gid] || 0) + cents;
++  }
++}
++
++async function getProfiles(addrs) {
++  if (!addrs.length) return {};
++  const cmds = [];
++  for (const a of addrs) cmds.push(['HGETALL', K.profile(a)]);
++  const res = await R.pipeline(cmds);
++  const out = {};
++  for (let i = 0; i < addrs.length; i++) {
++    const raw = res[i];
++    const obj = {};
++    if (Array.isArray(raw)) {
++      for (let j = 0; j < raw.length; j += 2) obj[String(raw[j])] = String(raw[j + 1] ?? '');
++    }
++    out[addrs[i]] = obj;
++  }
++  return out;
++}
++
++function isProActive(tier, expIso) {
++  const t = String(tier || 'none');
++  if (t === 'lifetime') return { active: true, tier: 'lifetime' };
++  if (t !== 'monthly' && t !== 'yearly') return { active: false, tier: 'none' };
++  const exp = String(expIso || '');
++  if (!exp) return { active: false, tier: 'none' };
++  const ms = Date.parse(exp);
++  if (!isFinite(ms)) return { active: false, tier: 'none' };
++  if (Date.now() > ms) return { active: false, tier: 'none' };
++  return { active: true, tier: t };
++}
++
++function proMult(tier) {
++  if (tier === 'lifetime') return 1.25;
++  if (tier === 'yearly') return 1.1;
++  if (tier === 'monthly') return 1.0;
++  return 1.0;
++}
++
++function normalizeMetrics(cfg) {
++  const list = Array.isArray(cfg?.metrics) ? cfg.metrics : [];
++  if (list.length) return list;
++  return [{ id: 'score', payoutWeight: 1.0 }];
++}
++
++function payoutMetrics(cfg) {
++  const metrics = normalizeMetrics(cfg);
++  const positive = metrics.filter((m) => Number(m?.payoutWeight || 0) > 0);
++  if (positive.length) return positive;
++  const defId = String(cfg?.defaultMetric || 'score');
++  const def = metrics.find((m) => String(m?.id || '') === defId) || metrics[0];
++  return def ? [{ ...def, payoutWeight: 1.0 }] : [{ id: 'score', payoutWeight: 1.0 }];
++}
++
++export default async function handler(req, res) {
++  try {
++    if (req.method !== 'GET') return res.status(405).json({ error: 'method_not_allowed' });
++    if (!R.enabled()) return res.status(503).json({ error: 'redis_not_configured' });
++    if (!isVercelCron(req) && !bearerToken(req)) {
++      await bump('week_settle', 401);
++      return res.status(401).json({ error: 'unauthorized' });
++    }
++
++    const url = new URL(req.url, 'http://localhost');
++    const curWeek = weekKeyUtc();
++    const defaultYw = weekKeyUtc(new Date(Date.now() - 7 * 86400000));
++    let yw = String(url.searchParams.get('yw') || defaultYw).trim();
++
++    if (!/^\d{4}W\d{2}$/.test(yw)) return res.status(400).json({ error: 'bad_week' });
++    if (yw >= curWeek) return res.status(400).json({ error: 'week_must_be_past' });
++
++    const sumKey = K.weekSummary(yw);
++    const already = await R.cmd('HGET', sumKey, 'settledAt');
++    if (already) {
++      await bump('week_settle', 200);
++      return res.status(200).json({ ok: true, yw, already: true });
++    }
++
++    const potRaw = await R.cmd('GET', K.weekPot(yw));
++    const potCents0 = Math.max(0, Math.floor(Number(potRaw || 0)));
++
++    let skillPool = Math.floor(potCents0 * 0.55);
++    let activityPool = Math.floor(potCents0 * 0.35);
++    let proPool = Math.max(0, potCents0 - skillPool - activityPool);
++
++    const eligibleGames = Object.entries(GAMES)
++      .filter(([, cfg]) => !!cfg.payoutEligible)
++      .map(([gid]) => gid);
++
++    const ymds = ymdsForWeek(yw);
++    const spendCmds = ymds.map((d) => ['HGETALL', K.spentDay(d)]);
++    const spendRes = spendCmds.length ? await R.pipeline(spendCmds) : [];
++
++    const spendWeek = {};
++    for (let i = 0; i < spendRes.length; i++) {
++      const daySpend = parseHgetallNum(spendRes[i]);
++      for (const [gid, v] of Object.entries(daySpend)) {
++        spendWeek[gid] = (spendWeek[gid] || 0) + Math.max(0, Number(v || 0));
++      }
++    }
++
++    const totalSpentAC = Object.values(spendWeek).reduce((a, b) => a + Math.max(0, Number(b || 0)), 0);
++    const spentEligibleAC = eligibleGames.reduce((sum, gid) => sum + (spendWeek[gid] || 0), 0);
++
++    if (spentEligibleAC <= 0) {
++      activityPool += skillPool;
++      skillPool = 0;
++    }
++
++    const claims = {};
++
++    const skillTopN = clamp(process.env.ECON_SKILL_TOP || 25, 5, 100);
++    const pow = clamp(process.env.ECON_RANK_POW || 1.25, 1.05, 1.8);
++
++    for (const gid of eligibleGames) {
++      const gameSpent = spendWeek[gid] || 0;
++      if (!gameSpent || !skillPool) continue;
++      const denom = Math.max(1, spentEligibleAC);
++      const gameSkillPool = Math.floor(skillPool * (gameSpent / denom));
++      if (gameSkillPool <= 0) continue;
++
++      const gameCfg = GAMES[gid] || {};
++      const metrics = payoutMetrics(gameCfg);
++      const wSum = metrics.reduce((a, m) => a + Math.max(0, Number(m.payoutWeight || 0)), 0) || 1;
++
++      let allocated = 0;
++      for (let mi = 0; mi < metrics.length; mi++) {
++        const m = metrics[mi];
++        const w = Math.max(0, Number(m.payoutWeight || 0)) || 0;
++        let metricPool = mi === metrics.length - 1 ? Math.max(0, gameSkillPool - allocated) : Math.floor(gameSkillPool * (w / wSum));
++        allocated += metricPool;
++        if (metricPool <= 0) continue;
++
++        const metricId = String(m.id || 'score');
++        let lbKey = K.lbWeeklyPaidMetric(gid, metricId, yw);
++        let raw = await R.cmd('ZREVRANGE', lbKey, 0, skillTopN - 1, 'WITHSCORES');
++        let top = parseZWithScores(raw);
++
++        const defId = String(gameCfg.defaultMetric || 'score');
++        if (!top.length && metricId === defId) {
++          lbKey = K.lbWeeklyPaid(gid, yw);
++          raw = await R.cmd('ZREVRANGE', lbKey, 0, skillTopN - 1, 'WITHSCORES');
++          top = parseZWithScores(raw);
++        }
++
++        if (!top.length) continue;
++        const payouts = distribute(metricPool, top, (_, i) => 1 / Math.pow(i + 1, pow));
++        for (const [addr, cents] of Object.entries(payouts)) addClaim(claims, addr, 'skillCents', cents, { gameId: gid });
++      }
++    }
++
++    const actTopN = clamp(process.env.ECON_ACT_TOP || 2000, 25, 5000);
++    const actKey = K.actWeekly(yw);
++    const actRaw = await R.cmd('ZREVRANGE', actKey, 0, actTopN - 1, 'WITHSCORES');
++    const actTop = parseZWithScores(actRaw).filter((e) => (e.score || 0) > 0);
++
++    const actPayouts = distribute(activityPool, actTop, (e) => Math.sqrt(Math.max(0, e.score || 0)));
++    for (const [addr, cents] of Object.entries(actPayouts)) addClaim(claims, addr, 'activityCents', cents);
++
++    const activeAddrs = actTop.map((x) => x.member);
++    const profiles = activeAddrs.length ? await getProfiles(activeAddrs) : {};
++    const proEntries = actTop
++      .map((e) => {
++        const p = profiles[e.member] || {};
++        const st = isProActive(p.proTier, p.proExp);
++        if (!st.active) return null;
++        const mult = proMult(st.tier);
++        return { member: e.member, score: e.score, mult };
++      })
++      .filter(Boolean);
++
++    const proPayouts = distribute(proPool, proEntries, (e) => Math.sqrt(Math.max(0, e.score || 0)) * (e.mult || 1));
++    for (const [addr, cents] of Object.entries(proPayouts)) addClaim(claims, addr, 'proCents', cents);
++
++    const claimKv = [];
++    for (const [addr, rec] of Object.entries(claims)) {
++      const out = {
++        yw,
++        address: addr,
++        totalCents: rec.totalCents,
++        totalUsd: Number((rec.totalCents / 100).toFixed(2)),
++        skillCents: rec.skillCents,
++        activityCents: rec.activityCents,
++        proCents: rec.proCents,
++        lotteryCents: 0,
++        byGame: rec.byGame,
++      };
++      claimKv.push(addr, JSON.stringify(out));
++    }
++
++    const participants = Object.keys(claims).length;
++    const settledAt = new Date().toISOString();
++
++    const weekStartYmd = ymds.length ? ymds[0] : '';
++    const weekEndYmd = ymds.length ? ymds[ymds.length - 1] : '';
++
++    const sumKv = [
++      'yw',
++      yw,
++      'settledAt',
++      settledAt,
++      'potCents',
++      String(potCents0),
++      'skillPoolCents',
++      String(skillPool),
++      'activityPoolCents',
++      String(activityPool),
++      'proPoolCents',
++      String(proPool),
++      'totalSpentAC',
++      String(Math.round(totalSpentAC)),
++      'spentEligibleAC',
++      String(Math.round(spentEligibleAC)),
++      'weekStartYmd',
++      weekStartYmd,
++      'weekEndYmd',
++      weekEndYmd,
++      'participants',
++      String(participants),
++      'acUsd',
++      String(DEFAULTS.acUsd),
++    ];
++
++    const claimsKey = K.weekClaims(yw);
++    const claimedKey = K.weekClaimed(yw);
++    const listKey = K.weeksList();
++
++    const cmds = [
++      ['HSET', sumKey, ...sumKv],
++      ['LPUSH', listKey, yw],
++      ['LTRIM', listKey, 0, 119],
++      ['EXPIRE', sumKey, 60 * 60 * 24 * 365],
++      ['EXPIRE', claimsKey, 60 * 60 * 24 * 365],
++      ['EXPIRE', claimedKey, 60 * 60 * 24 * 365],
++    ];
++
++    if (claimKv.length) cmds.push(['HSET', claimsKey, ...claimKv]);
++
++    await R.pipeline(cmds);
++
++    await bump('week_settle', 200);
++    return res.status(200).json({
++      ok: true,
++      yw,
++      already: false,
++      summary: {
++        yw,
++        settledAt,
++        potCents: potCents0,
++        skillPoolCents: skillPool,
++        activityPoolCents: activityPool,
++        proPoolCents: proPool,
++        participants,
++        weekStartYmd,
++        weekEndYmd,
++      },
++    });
++  } catch (e) {
++    try {
++      await bump('week_settle', 500);
++    } catch {}
++    const msg = e && e.message ? String(e.message) : '';
++    return res.status(500).json({ error: 'server_error', msg });
++  }
++}
+
+--- a/vercel.json
++++ b/vercel.json
+@@ -1,44 +1,90 @@
+-{
+-  "buildCommand": null,
+-  "outputDirectory": "public",
+-  "installCommand": null,
+-  "devCommand": null,
+-  "crons": [
+-    {
+-      "path": "/api/epoch/settle",
+-      "schedule": "0 0 * * *"
+-    }
+-  ],
+-  "headers": [
+-    {
+-      "source": "/(.*)",
+-      "headers": [
+-        { "key": "X-Permitted-Cross-Domain-Policies", "value": "none" },
+-        { "key": "X-DNS-Prefetch-Control", "value": "off" },
+-        { "key": "Strict-Transport-Security", "value": "max-age=31536000; includeSubDomains; preload" },
+-        { "key": "X-Content-Type-Options", "value": "nosniff" },
+-        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+-        { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=(), payment=()" },
+-        { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
+-        { "key": "Cross-Origin-Opener-Policy", "value": "same-origin-allow-popups" },
+-        {
+-          "key": "Content-Security-Policy",
+-          "value": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; img-src 'self' data: blob:; font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; script-src 'self' 'unsafe-inline' https://unpkg.com; connect-src 'self' https://poh-api.linea.build https://poh-signer-api.linea.build https://rpc.linea.build https://cdn.jsdelivr.net; frame-src 'self' https://view.officeapps.live.com;"
+-        }
+-      ]
+-    },
+-    {
+-      "source": "/api/(.*)",
+-      "headers": [
+-        { "key": "Cache-Control", "value": "no-store" }
+-      ]
+-    }
+-  ],
+-  "rewrites": [
+-    { "source": "/api/(.*)", "destination": "/api/$1" },
+-    { "source": "/games/(.*)", "destination": "/games/$1" },
+-    { "source": "/access/(.*)", "destination": "/access/$1" },
+-    { "source": "/deck/(.*)", "destination": "/deck/$1" },
+-    { "source": "/(.*)", "destination": "/index.html" }
+-  ]
+-}
++{
++  "buildCommand": null,
++  "outputDirectory": "public",
++  "installCommand": null,
++  "devCommand": null,
++  "crons": [
++    {
++      "path": "/api/epoch/settle",
++      "schedule": "0 0 * * *"
++    },
++    {
++      "path": "/api/week/settle",
++      "schedule": "5 0 * * 1"
++    }
++  ],
++  "headers": [
++    {
++      "source": "/(.*)",
++      "headers": [
++        {
++          "key": "X-Permitted-Cross-Domain-Policies",
++          "value": "none"
++        },
++        {
++          "key": "X-DNS-Prefetch-Control",
++          "value": "off"
++        },
++        {
++          "key": "Strict-Transport-Security",
++          "value": "max-age=31536000; includeSubDomains; preload"
++        },
++        {
++          "key": "X-Content-Type-Options",
++          "value": "nosniff"
++        },
++        {
++          "key": "Referrer-Policy",
++          "value": "strict-origin-when-cross-origin"
++        },
++        {
++          "key": "Permissions-Policy",
++          "value": "camera=(), microphone=(), geolocation=(), payment=()"
++        },
++        {
++          "key": "X-Frame-Options",
++          "value": "SAMEORIGIN"
++        },
++        {
++          "key": "Cross-Origin-Opener-Policy",
++          "value": "same-origin-allow-popups"
++        },
++        {
++          "key": "Content-Security-Policy",
++          "value": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; img-src 'self' data: blob:; font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; script-src 'self' 'unsafe-inline' https://unpkg.com; connect-src 'self' https://poh-api.linea.build https://poh-signer-api.linea.build https://rpc.linea.build https://cdn.jsdelivr.net; frame-src 'self' https://view.officeapps.live.com;"
++        }
++      ]
++    },
++    {
++      "source": "/api/(.*)",
++      "headers": [
++        {
++          "key": "Cache-Control",
++          "value": "no-store"
++        }
++      ]
++    }
++  ],
++  "rewrites": [
++    {
++      "source": "/api/(.*)",
++      "destination": "/api/$1"
++    },
++    {
++      "source": "/games/(.*)",
++      "destination": "/games/$1"
++    },
++    {
++      "source": "/access/(.*)",
++      "destination": "/access/$1"
++    },
++    {
++      "source": "/deck/(.*)",
++      "destination": "/deck/$1"
++    },
++    {
++      "source": "/(.*)",
++      "destination": "/index.html"
++    }
++  ]
++}

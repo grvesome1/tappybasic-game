@@ -1,0 +1,2549 @@
+diff -ruN '--exclude=.git' '--exclude=node_modules' "/mnt/data/arcade_v2_iter1_base/gruesomes.arcade - Copy/api/_lib/user.js" "/mnt/data/arcade_v2_full_v2.0/gruesomes.arcade - Copy/api/_lib/user.js"
+--- "/mnt/data/arcade_v2_iter1_base/gruesomes.arcade - Copy/api/_lib/user.js"	2025-12-29 11:42:59.000000000 +0000
++++ "/mnt/data/arcade_v2_full_v2.0/gruesomes.arcade - Copy/api/_lib/user.js"	2026-01-03 08:34:45.791830140 +0000
+@@ -1,111 +1,200 @@
+-// built by gruesøme
+-// SIG_ENC_XOR5A_HEX=382f33362e7a38237a3d282f3f29a2373f
+-
+-import * as R from './redis.js';
+-import * as K from './keys.js';
+-
+-function nowIso() {
+-  return new Date().toISOString();
+-}
+-
+-export function clamp(n, a, b) {
+-  n = Number(n) || 0;
+-  return Math.max(a, Math.min(b, n));
+-}
+-
+-function parseHgetall(arr) {
+-  const out = {};
+-  if (!Array.isArray(arr)) return out;
+-  for (let i = 0; i < arr.length; i += 2) {
+-    const k = String(arr[i] ?? '');
+-    const v = arr[i + 1];
+-    if (!k) continue;
+-    out[k] = v;
+-  }
+-  return out;
+-}
+-
+-export async function ensureUser(address) {
+-  const pKey = K.profile(address);
+-  const exists = await R.cmd('EXISTS', pKey);
+-  if (Number(exists || 0) > 0) return;
+-
+-  const createdAt = nowIso();
+-  await R.cmd(
+-    'HSET',
+-    pKey,
+-    'createdAt',
+-    createdAt,
+-    'lastActiveAt',
+-    createdAt,
+-    'xp',
+-    0,
+-    'level',
+-    1,
+-    'proTier',
+-    'none',
+-    'proExp',
+-    '',
+-    'txCount',
+-    0,
+-    'paidSpentAC',
+-    0
+-  );
+-  await R.cmd('HSET', K.bal(address), 'paid', 0);
+-}
+-
+-export async function getState(address) {
+-  await ensureUser(address);
+-
+-  const pKey = K.profile(address);
+-  const balKey = K.bal(address);
+-  const promoKey = K.promo(address);
+-  const bestKey = K.best(address);
+-
+-  const [paid, promoAll, bestAll, prof] = await R.pipeline([
+-    ['HGET', balKey, 'paid'],
+-    ['HGETALL', promoKey],
+-    ['HGETALL', bestKey],
+-    ['HGETALL', pKey],
+-  ]);
+-
+-  const promo = parseHgetall(promoAll);
+-  const best = parseHgetall(bestAll);
+-  const profile = parseHgetall(prof);
+-
+-  const xp = Math.max(0, Number(profile.xp || 0));
+-  const level = Math.max(1, Number(profile.level || 0) || (Math.floor(xp / 100) + 1));
+-
+-  return {
+-    address: String(address),
+-    paidAC: Math.max(0, Number(paid || 0)),
+-    promoAC: Object.fromEntries(Object.entries(promo).map(([gid, v]) => [gid, Math.max(0, Number(v || 0))])),
+-    best: Object.fromEntries(Object.entries(best).map(([gid, v]) => [gid, Math.max(0, Number(v || 0))])),
+-    xp,
+-    level,
+-    proTier: String(profile.proTier || 'none'),
+-    proExp: String(profile.proExp || ''),
+-    txCount: Math.max(0, Number(profile.txCount || 0)),
+-    paidSpentAC: Math.max(0, Number(profile.paidSpentAC || 0)),
+-    createdAt: String(profile.createdAt || ''),
+-    lastActiveAt: String(profile.lastActiveAt || ''),
+-  };
+-}
+-
+-export async function setProfile(address, patch) {
+-  await ensureUser(address);
+-  const pKey = K.profile(address);
+-
+-  const allowed = {
+-    proTier: true,
+-    proExp: true,
+-  };
+-  const kv = [];
+-  for (const [k, v] of Object.entries(patch || {})) {
+-    if (!allowed[k]) continue;
+-    kv.push(k, String(v == null ? '' : v));
+-  }
+-  if (!kv.length) return;
+-  kv.push('lastActiveAt', nowIso());
+-  await R.cmd('HSET', pKey, ...kv);
+-}
++// built by gruesøme
++// SIG_ENC_XOR5A_HEX=382f33362e7a38237a3d282f3f29a2373f
++
++import * as R from './redis.js';
++import * as K from './keys.js';
++
++function nowIso() { return new Date().toISOString(); }
++
++function isTruthy(v) {
++  if (v == null) return false;
++  const s = String(v).trim().toLowerCase();
++  return s === '1' || s === 'true' || s === 'yes' || s === 'on';
++}
++
++function sbtLocked() {
++  // When PRO_SBT_UNLOCKED is truthy, SBT behavior is considered "unlocked"/tradeable.
++  // Public nickname/avatar visibility is intended only while ACTIVE + SBT-locked.
++  return !isTruthy(process.env.PRO_SBT_UNLOCKED);
++}
++
++export function shortAddr(addr) {
++  const a = String(addr || '');
++  if (a.length <= 12) return a;
++  return a.slice(0, 6) + '…' + a.slice(-4);
++}
++
++export function isProActive(profile) {
++  try {
++    const tier = String(profile?.proTier || 'none');
++    const exp = String(profile?.proExp || '');
++    if (!tier || tier === 'none') return false;
++    if (!exp) return false;
++    const t = Date.parse(exp);
++    if (!Number.isFinite(t)) return false;
++    return t > Date.now();
++  } catch {
++    return false;
++  }
++}
++
++export function canShowPublicIdentity(profile) {
++  return isProActive(profile) && sbtLocked();
++}
++
++export async function ensureUser(address) {
++  const exists = await R.exists(K.profile(address));
++  if (!exists) {
++    await R.hset(K.profile(address), {
++      proTier: 'none',
++      proExp: null,
++      xp: 0,
++      level: 1,
++      lastActiveAt: nowIso(),
++
++      // Public identity (optional; set-once)
++      nickname: null,
++      nicknameSetAt: null,
++      avatarPng: null,
++      avatarTokenId: null,
++      avatarSetAt: null,
++    });
++  }
++}
++
++export async function getState(address) {
++  await ensureUser(address);
++  const p = await R.hgetall(K.profile(address));
++
++  // Normalize numeric-ish fields
++  p.xp = Number(p.xp || 0);
++  p.level = Number(p.level || 1);
++
++  return p;
++}
++
++export async function setProfile(address, patch) {
++  // Backward-compatible patch (no validation, used by internal flows).
++  patch = patch || {};
++  await ensureUser(address);
++
++  // Never allow direct overwrite of identity fields through this function.
++  const denied = new Set(['nickname', 'nicknameSetAt', 'avatarPng', 'avatarTokenId', 'avatarSetAt']);
++  const safe = {};
++  for (const [k, v] of Object.entries(patch)) {
++    if (denied.has(k)) continue;
++    safe[k] = v;
++  }
++
++  if (Object.keys(safe).length === 0) return getState(address);
++  safe.lastActiveAt = nowIso();
++  await R.hset(K.profile(address), safe);
++  return getState(address);
++}
++
++export function validateNickname(nickname) {
++  const s = String(nickname || '').trim();
++  if (s.length < 2) return { ok: false, reason: 'too_short' };
++  if (s.length > 20) return { ok: false, reason: 'too_long' };
++  // Allow: letters/numbers/space/_-.
++  if (!/^[a-zA-Z0-9 _\-\.]+$/.test(s)) return { ok: false, reason: 'invalid_chars' };
++  // Avoid pure spaces
++  if (!/[a-zA-Z0-9]/.test(s)) return { ok: false, reason: 'no_alnum' };
++  return { ok: true, value: s };
++}
++
++export function validateAvatarPng(url) {
++  const s = String(url || '').trim();
++  if (!s) return { ok: false, reason: 'missing' };
++  if (s.length > 512) return { ok: false, reason: 'too_long' };
++  if (!(s.startsWith('ipfs://') || s.startsWith('https://') || s.startsWith('http://'))) {
++    return { ok: false, reason: 'bad_scheme' };
++  }
++  return { ok: true, value: s };
++}
++
++export async function setPublicIdentity(address, patch) {
++  patch = patch || {};
++  await ensureUser(address);
++
++  const fields = await R.hmget(K.profile(address), ['nickname', 'avatarPng']);
++  const currentNick = fields?.[0] || null;
++  const currentAvatar = fields?.[1] || null;
++
++  const updates = {};
++  const t = nowIso();
++
++  if (patch.nickname != null) {
++    if (currentNick) return { ok: false, error: 'nickname_locked' };
++    const v = validateNickname(patch.nickname);
++    if (!v.ok) return { ok: false, error: 'nickname_invalid', reason: v.reason };
++    updates.nickname = v.value;
++    updates.nicknameSetAt = t;
++  }
++
++  if (patch.avatarPng != null) {
++    if (currentAvatar) return { ok: false, error: 'avatar_locked' };
++    const v = validateAvatarPng(patch.avatarPng);
++    if (!v.ok) return { ok: false, error: 'avatar_invalid', reason: v.reason };
++    updates.avatarPng = v.value;
++    updates.avatarSetAt = t;
++  }
++
++  if (patch.avatarTokenId != null) {
++    // Token id is informational. Only set alongside avatarPng.
++    updates.avatarTokenId = String(patch.avatarTokenId);
++  }
++
++  if (Object.keys(updates).length === 0) return { ok: true, state: await getState(address) };
++  updates.lastActiveAt = t;
++
++  await R.hset(K.profile(address), updates);
++  return { ok: true, state: await getState(address) };
++}
++
++export async function getPublicIdentityMany(addresses) {
++  const addrs = Array.from(new Set((addresses || []).map(a => String(a || '').toLowerCase()).filter(Boolean))).slice(0, 250);
++  if (addrs.length === 0) return {};
++
++  const pipe = [];
++  for (const a of addrs) {
++    pipe.push(['HMGET', K.profile(a), 'nickname', 'avatarPng', 'proTier', 'proExp', 'level']);
++  }
++  const rows = await R.pipeline(pipe);
++
++  const out = {};
++  for (let i = 0; i < addrs.length; i++) {
++    const a = addrs[i];
++    const r = Array.isArray(rows?.[i]?.[1]) ? rows[i][1] : null;
++    const nickname = r ? r[0] : null;
++    const avatarPng = r ? r[1] : null;
++    const proTier = r ? r[2] : 'none';
++    const proExp = r ? r[3] : null;
++    const level = r ? Number(r[4] || 1) : 1;
++
++    const profile = { proTier, proExp };
++    const show = canShowPublicIdentity(profile);
++
++    out[a] = {
++      displayName: (show && nickname) ? nickname : shortAddr(a),
++      nickname: show ? (nickname || null) : null,
++      avatarPng: show ? (avatarPng || null) : null,
++      proActive: isProActive(profile),
++      level,
++      // Expose flags for UI messaging/debug (not sensitive)
++      show,
++      sbtLocked: sbtLocked(),
++    };
++  }
++  return out;
++}
++
++export async function setPro(address, tier, expIso) {
++  await ensureUser(address);
++  await R.hset(K.profile(address), {
++    proTier: tier,
++    proExp: expIso,
++    lastActiveAt: nowIso(),
++  });
++  return getState(address);
++}
+diff -ruN '--exclude=.git' '--exclude=node_modules' "/mnt/data/arcade_v2_iter1_base/gruesomes.arcade - Copy/api/leaderboard/top.js" "/mnt/data/arcade_v2_full_v2.0/gruesomes.arcade - Copy/api/leaderboard/top.js"
+--- "/mnt/data/arcade_v2_iter1_base/gruesomes.arcade - Copy/api/leaderboard/top.js"	2026-01-03 08:37:39.048158018 +0000
++++ "/mnt/data/arcade_v2_full_v2.0/gruesomes.arcade - Copy/api/leaderboard/top.js"	2026-01-03 08:35:54.757497040 +0000
+@@ -1,160 +1,130 @@
+ // built by gruesøme
+ // SIG_ENC_XOR5A_HEX=382f33362e7a38237a3d282f3f29a2373f
+ 
+-import { parseCookies } from '../_lib/util.js';
+-import { readSession } from '../_lib/session.js';
+ import * as R from '../_lib/redis.js';
+ import * as K from '../_lib/keys.js';
+-import { GAMES } from '../_lib/games.js';
+-import { ipFromReq, enforce, rlKey } from '../_lib/rate.js';
+-import { bump } from '../_lib/metrics.js';
+-
+-function ymdUtc() {
+-  return new Date().toISOString().slice(0, 10).replace(/-/g, '');
+-}
+-
+-function weekKeyUtc() {
+-  const d = new Date();
+-  const date = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+-  const dayNum = date.getUTCDay() || 7;
+-  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+-  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+-  const weekNo = Math.ceil(((date - yearStart) / 86400000 + 1) / 7);
+-  const y = date.getUTCFullYear();
+-  const w = String(weekNo).padStart(2, '0');
+-  return String(y) + 'W' + w;
+-}
+-
+-function parseWithScores(arr) {
+-  const out = [];
+-  if (!Array.isArray(arr)) return out;
+-  for (let i = 0; i < arr.length; i += 2) {
+-    const member = String(arr[i] ?? '');
+-    const scoreEnc = Number(arr[i + 1] ?? 0);
+-    if (!member) continue;
+-    out.push({ member, scoreEnc: isFinite(scoreEnc) ? scoreEnc : 0 });
+-  }
+-  return out;
++import * as Sec from '../_lib/security.js';
++import * as G from '../_lib/games.js';
++import * as U from '../_lib/user.js';
++
++function intParam(q, k, d) {
++  const v = q && q[k] != null ? Number(q[k]) : NaN;
++  return Number.isFinite(v) ? v : d;
+ }
+ 
+-function normalizeMetrics(cfg) {
+-  const list = Array.isArray(cfg?.metrics) ? cfg.metrics : [];
+-  if (list.length) return list;
+-  return [{ id: 'score', label: 'Score', kind: 'score', dir: 'desc', format: 'int', src: 'score', payoutWeight: 1.0 }];
+-}
+-
+-function findMetric(cfg, metricId) {
+-  const list = normalizeMetrics(cfg);
+-  const want = String(metricId || '').trim();
+-  if (!want) return list[0] || null;
+-  return list.find((m) => String(m?.id || '') === want) || (list[0] || null);
+-}
+-
+-function decodeScore(metricCfg, scoreEnc) {
+-  const dir = String(metricCfg?.dir || 'desc');
+-  const n = Number(scoreEnc || 0);
+-  if (!isFinite(n)) return 0;
+-  const v = dir === 'asc' ? -n : n;
+-  return Math.max(0, Math.floor(v));
++function sParam(q, k, d) {
++  const v = q && q[k] != null ? String(q[k]) : '';
++  return v || d;
+ }
+ 
+ export default async function handler(req, res) {
+   try {
+     if (req.method !== 'GET') return res.status(405).json({ error: 'method_not_allowed' });
+-    if (!R.enabled()) return res.status(200).json({ ok: false, error: 'redis_not_configured' });
+-
+-    const ip = ipFromReq(req);
+-    await enforce({ key: rlKey('lb:top:ip', ip), limit: 600, windowSec: 60 });
+ 
+-    const url = new URL(req.url, 'http://localhost');
+-    const board = String(url.searchParams.get('board') || 'skill').trim(); // 'skill' | 'activity'
+-    const period = String(url.searchParams.get('period') || 'daily').trim(); // 'daily' | 'weekly' | 'all'
+-    const eligible = String(url.searchParams.get('eligible') || '0').trim() === '1';
+-    const limit = Math.max(1, Math.min(100, Number(url.searchParams.get('limit') || 20)));
+-
+-    const cookies = parseCookies(req);
+-    const s = readSession(cookies);
+-    const address = s && s.address ? String(s.address) : '';
+-    const addrLc = address ? address.toLowerCase() : '';
++    const board = sParam(req.query, 'board', 'skill'); // skill | activity
++    const period = sParam(req.query, 'period', 'daily'); // daily | weekly | all
++    const eligible = intParam(req.query, 'eligible', 0) ? 1 : 0;
++    const limit = Math.min(200, Math.max(1, intParam(req.query, 'limit', 50)));
++    const gameId = sParam(req.query, 'gameId', '');
++    const metricId = sParam(req.query, 'metric', 'score');
+ 
+-    const ymd = ymdUtc();
+-    const wk = weekKeyUtc();
++    // Optional "you" enrichment (requires cookie session)
++    const address = (await Sec.getSessionAddress(req)).toLowerCase();
+ 
+     let key = '';
+-    let metric = null;
+-    let metricId = '';
+-    let gameId = '';
+-    let cfg = null;
++    let metricMeta = null;
++    let desc = true; // true -> higher is better
++    let canYou = Sec.isAddress(address);
+ 
+     if (board === 'activity') {
+-      // Global paid activity (AC spent) leaderboards.
+-      key = K.actDaily(ymd);
+-      if (period === 'weekly') key = K.actWeekly(wk);
+-      if (period === 'all') key = K.actAll();
++      if (period === 'weekly') key = K.actWeekly(K.utcWeekKey());
++      else if (period === 'all') key = K.actAll();
++      else key = K.actDaily(K.utcYmd());
+     } else {
+-      gameId = String(url.searchParams.get('gameId') || '').trim();
+-      if (!gameId || !GAMES[gameId]) return res.status(400).json({ error: 'bad_game' });
+-      cfg = GAMES[gameId];
+-
+-      metricId = String(url.searchParams.get('metric') || cfg.defaultMetric || 'score').trim();
+-      metric = findMetric(cfg, metricId);
+-      metricId = metric ? String(metric.id || 'score') : 'score';
+-
+-      // Metric-aware keys (preferred). Fall back to legacy keys if needed.
+-      if (metric) {
+-        key = eligible ? K.lbDailyPaidMetric(gameId, metricId, ymd) : K.lbDailyMetric(gameId, metricId, ymd);
+-        if (period === 'weekly') key = eligible ? K.lbWeeklyPaidMetric(gameId, metricId, wk) : K.lbWeeklyMetric(gameId, metricId, wk);
+-        if (period === 'all') key = eligible ? K.lbAllPaidMetric(gameId, metricId) : K.lbAllMetric(gameId, metricId);
+-      } else {
+-        key = eligible ? K.lbDailyPaid(gameId, ymd) : K.lbDaily(gameId, ymd);
+-        if (period === 'weekly') key = eligible ? K.lbWeeklyPaid(gameId, wk) : K.lbWeekly(gameId, wk);
+-        if (period === 'all') key = eligible ? K.lbAllPaid(gameId) : K.lbAll(gameId);
++      const game = G.byId(gameId);
++      if (!game) return res.status(400).json({ error: 'bad_game' });
++
++      const metric = (game.metrics || []).find(m => m.id === metricId) || (game.metrics || [])[0];
++      if (!metric) return res.status(400).json({ error: 'bad_metric' });
++      metricMeta = metric;
++      desc = metric.kind !== 'asc'; // asc => lower is better
++
++      if (period === 'weekly') key = K.lbWeeklyMetric(gameId, K.utcWeekKey(), metric.id, eligible);
++      else if (period === 'all') key = K.lbAllMetric(gameId, metric.id, eligible);
++      else key = K.lbDailyMetric(gameId, K.utcYmd(), metric.id, eligible);
++    }
++
++    // Fetch ZSET range
++    const range = desc ? await R.zrevrangeWithScores(key, 0, limit - 1) : await R.zrangeWithScores(key, 0, limit - 1);
++
++    const entries = [];
++    for (let i = 0; i < range.length; i++) {
++      const it = range[i];
++      const addr = String(it.value || '').toLowerCase();
++      const scoreEnc = Number(it.score || 0);
++
++      let value = scoreEnc;
++      if (board !== 'activity') {
++        // Decode values for asc metrics (stored as 1e15 - value)
++        if (metricMeta && metricMeta.kind === 'asc') value = 1e15 - scoreEnc;
+       }
++
++      entries.push({
++        rank: i + 1,
++        address: addr,
++        score: Math.max(0, value),
++      });
+     }
+ 
+-    const raw = await R.cmd('ZREVRANGE', key, 0, limit - 1, 'WITHSCORES');
+-    const items = parseWithScores(raw);
++    // Enrich entries with public identity (nickname/avatar gated by PRO active + SBT locked)
++    const idMap = await U.getPublicIdentityMany(entries.map(e => e.address).concat(canYou ? [address] : []));
++    const entriesOut = entries.map(e => {
++      const id = idMap[e.address] || {};
++      return {
++        ...e,
++        displayName: id.displayName || U.shortAddr(e.address),
++        nickname: id.nickname || null,
++        avatarPng: id.avatarPng || null,
++        level: (id.level != null) ? id.level : null,
++      };
++    });
+ 
+     let you = null;
+-    if (addrLc) {
+-      const youScoreEnc = await R.cmd('ZSCORE', key, addrLc);
+-      if (youScoreEnc != null) {
+-        const r = await R.cmd('ZREVRANK', key, addrLc);
++    if (canYou) {
++      let youEnc = desc ? await R.zrevrank(key, address) : await R.zrank(key, address);
++      if (youEnc != null) {
++        let youScoreEnc = await R.zscore(key, address);
++        youScoreEnc = Number(youScoreEnc || 0);
++
++        let youScore = youScoreEnc;
++        if (board !== 'activity') {
++          if (metricMeta && metricMeta.kind === 'asc') youScore = 1e15 - youScoreEnc;
++        }
++
++        const id = idMap[address] || {};
+         you = {
+-          rank: r == null ? null : Number(r) + 1,
+-          scoreEnc: Number(youScoreEnc || 0),
+-          score: board === 'activity' ? Math.max(0, Number(youScoreEnc || 0)) : decodeScore(metric, youScoreEnc),
++          rank: Number(youEnc) + 1,
++          address,
++          score: Math.max(0, youScore),
++          displayName: id.displayName || U.shortAddr(address),
++          nickname: id.nickname || null,
++          avatarPng: id.avatarPng || null,
++          level: (id.level != null) ? id.level : null,
+         };
+       }
+     }
+ 
+-    const entries = items.map((it, idx) => ({
+-      rank: idx + 1,
+-      address: it.member,
+-      scoreEnc: it.scoreEnc,
+-      score: board === 'activity' ? Math.max(0, Number(it.scoreEnc || 0)) : decodeScore(metric, it.scoreEnc),
+-    }));
+-
+-    await bump('leaderboard_top', 200);
+-
+     return res.status(200).json({
+       ok: true,
+       board,
+-      eligible,
+-      gameId: gameId || null,
+-      metric: metric ? { id: metricId, label: String(metric.label || metricId), kind: String(metric.kind || ''), dir: String(metric.dir || 'desc'), format: String(metric.format || 'int') } : null,
+       period,
++      eligible,
+       key,
+-      entries,
++      metric: metricMeta,
++      entries: entriesOut,
+       you,
+     });
+   } catch (e) {
+-    if (e && e.code === 'RATE_LIMIT') {
+-      return res.status(429).json({ error: 'rate_limited', limit: e.limit, windowSec: e.windowSec });
+-    }
+-    try {
+-      await bump('leaderboard_top', 500);
+-    } catch {}
+     return res.status(500).json({ error: 'server_error' });
+   }
+ }
+diff -ruN '--exclude=.git' '--exclude=node_modules' "/mnt/data/arcade_v2_iter1_base/gruesomes.arcade - Copy/api/ledger/profile.js" "/mnt/data/arcade_v2_full_v2.0/gruesomes.arcade - Copy/api/ledger/profile.js"
+--- "/mnt/data/arcade_v2_iter1_base/gruesomes.arcade - Copy/api/ledger/profile.js"	2025-12-29 11:58:54.000000000 +0000
++++ "/mnt/data/arcade_v2_full_v2.0/gruesomes.arcade - Copy/api/ledger/profile.js"	2026-01-03 08:35:12.207083426 +0000
+@@ -1,50 +1,39 @@
+-// built by gruesøme
+-// SIG_ENC_XOR5A_HEX=382f33362e7a38237a3d282f3f29a2373f
+-
+-import { parseCookies, readJson } from '../_lib/util.js';
+-import { readSession } from '../_lib/session.js';
+-import * as R from '../_lib/redis.js';
+-import * as U from '../_lib/user.js';
+-import { ipFromReq, enforce, rlKey } from '../_lib/rate.js';
+-import { sameOrigin } from '../_lib/security.js';
+-import { bump } from '../_lib/metrics.js';
+-
+-export default async function handler(req, res) {
+-  try {
+-    if (req.method !== 'POST') return res.status(405).json({ error: 'method_not_allowed' });
+-    if (!R.enabled()) return res.status(503).json({ error: 'redis_not_configured' });
+-
+-    if (!sameOrigin(req)) {
+-      await bump('ledger_profile', 403);
+-      return res.status(403).json({ error: 'bad_origin' });
+-    }
+-
+-    const ip = ipFromReq(req);
+-    await enforce({ key: rlKey('ledger:profile:ip', ip), limit: 80, windowSec: 600 });
+-
+-    const cookies = parseCookies(req);
+-    const s = readSession(cookies);
+-    if (!s || !s.address) return res.status(401).json({ error: 'not_authenticated' });
+-    const address = String(s.address);
+-
+-    await enforce({ key: rlKey('ledger:profile:addr', address.toLowerCase()), limit: 60, windowSec: 600 });
+-
+-    const body = await readJson(req).catch(() => ({}));
+-    await U.setProfile(address, body || {});
+-
+-    const state = await U.getState(address);
+-    await bump('ledger_profile', 200);
+-    return res.status(200).json({ ok: true, state });
+-  } catch (e) {
+-    if (e && e.code === 'RATE_LIMIT') {
+-      try {
+-        await bump('ledger_profile', 429);
+-      } catch {}
+-      return res.status(429).json({ error: 'rate_limited', limit: e.limit, windowSec: e.windowSec });
+-    }
+-    try {
+-      await bump('ledger_profile', 500);
+-    } catch {}
+-    return res.status(500).json({ error: 'server_error' });
+-  }
+-}
++// built by gruesøme
++// SIG_ENC_XOR5A_HEX=382f33362e7a38237a3d282f3f29a2373f
++
++import * as Sec from '../_lib/security.js';
++import * as U from '../_lib/user.js';
++
++export default async function handler(req, res) {
++  try {
++    if (req.method !== 'POST') return res.status(405).json({ error: 'method_not_allowed' });
++    if (!Sec.sameOrigin(req)) return res.status(403).json({ error: 'forbidden' });
++
++    const address = String((req.query && req.query.address) || '').toLowerCase();
++    if (!Sec.isAddress(address)) return res.status(400).json({ error: 'bad_address' });
++
++    const patch = (req.body && req.body.patch) ? req.body.patch : {};
++    if (!patch || typeof patch !== 'object') return res.status(400).json({ error: 'bad_patch' });
++
++    // Split identity fields (set-once) from normal profile patch.
++    const identity = {};
++    if (patch.nickname != null) identity.nickname = patch.nickname;
++    if (patch.avatarPng != null) identity.avatarPng = patch.avatarPng;
++    if (patch.avatarTokenId != null) identity.avatarTokenId = patch.avatarTokenId;
++
++    const hasIdentity = Object.keys(identity).length > 0;
++
++    // Apply normal patch first (pro tier/exp, etc).
++    await U.setProfile(address, patch);
++
++    if (hasIdentity) {
++      const r = await U.setPublicIdentity(address, identity);
++      if (!r.ok) return res.status(400).json(r);
++      return res.status(200).json({ ok: true, state: r.state });
++    }
++
++    return res.status(200).json({ ok: true, state: await U.getState(address) });
++  } catch (e) {
++    return res.status(500).json({ error: 'server_error' });
++  }
++}
+diff -ruN '--exclude=.git' '--exclude=node_modules' "/mnt/data/arcade_v2_iter1_base/gruesomes.arcade - Copy/public/arcade-games.json" "/mnt/data/arcade_v2_full_v2.0/gruesomes.arcade - Copy/public/arcade-games.json"
+--- "/mnt/data/arcade_v2_iter1_base/gruesomes.arcade - Copy/public/arcade-games.json"	2025-12-29 11:38:29.000000000 +0000
++++ "/mnt/data/arcade_v2_full_v2.0/gruesomes.arcade - Copy/public/arcade-games.json"	2026-01-03 08:32:21.650844751 +0000
+@@ -1,6 +1,6 @@
+ {
+-  "version": "2.8",
+-  "updatedAtUtc": "2025-12-29T00:00:00Z",
++  "version": "2.9",
++  "updatedAtUtc": "2026-01-03T08:32:21Z",
+   "bridge": {
+     "name": "ArcadeBridge",
+     "version": "0.3"
+@@ -22,7 +22,27 @@
+       "promoGrantAC": 50,
+       "payoutEligible": true,
+       "scoreMax": 5000,
+-      "minDurationMs": 800
++      "minDurationMs": 800,
++      "type": "arcade-flight",
++      "defaultMetric": "score",
++      "metrics": [
++        {
++          "id": "score",
++          "label": "Score",
++          "kind": "higher",
++          "format": "int",
++          "unit": "pts",
++          "eligible": true
++        },
++        {
++          "id": "time",
++          "label": "Fastest Time",
++          "kind": "lower",
++          "format": "ms",
++          "unit": "ms",
++          "eligible": true
++        }
++      ]
+     },
+     {
+       "id": "storm-the-blockchain",
+@@ -35,7 +55,27 @@
+       "promoGrantAC": 0,
+       "payoutEligible": false,
+       "scoreMax": 100000,
+-      "minDurationMs": 0
++      "minDurationMs": 0,
++      "type": "arcade-defense",
++      "defaultMetric": "score",
++      "metrics": [
++        {
++          "id": "score",
++          "label": "Score",
++          "kind": "higher",
++          "format": "int",
++          "unit": "pts",
++          "eligible": false
++        },
++        {
++          "id": "waves",
++          "label": "Waves Cleared",
++          "kind": "higher",
++          "format": "int",
++          "unit": "waves",
++          "eligible": false
++        }
++      ]
+     }
+   ],
+   "meta": {
+@@ -45,4 +85,4 @@
+     "version": "2.8",
+     "updatedAtUtc": "2025-12-29T00:00:00Z"
+   }
+-}
+\ No newline at end of file
++}
+diff -ruN '--exclude=.git' '--exclude=node_modules' "/mnt/data/arcade_v2_iter1_base/gruesomes.arcade - Copy/public/gruesome-arcade-leaderboard-ui-v2.0/leaderboard-panel.html" "/mnt/data/arcade_v2_full_v2.0/gruesomes.arcade - Copy/public/gruesome-arcade-leaderboard-ui-v2.0/leaderboard-panel.html"
+--- "/mnt/data/arcade_v2_iter1_base/gruesomes.arcade - Copy/public/gruesome-arcade-leaderboard-ui-v2.0/leaderboard-panel.html"	1970-01-01 00:00:00.000000000 +0000
++++ "/mnt/data/arcade_v2_full_v2.0/gruesomes.arcade - Copy/public/gruesome-arcade-leaderboard-ui-v2.0/leaderboard-panel.html"	2026-01-03 08:19:23.688131184 +0000
+@@ -0,0 +1,181 @@
++<!-- built by gruesøme -->
++<!-- SIG_ENC_XOR5A_HEX=382f33362e7a38237a3d282f3f29a2373f -->
++
++<div class="gaLB" data-ga-lb>
++  <div class="gaLB__top">
++    <div class="gaLB__title">
++      <div class="gaLB__kicker">Leaderboard v2</div>
++      <h2 class="gaLB__h">Ranks · Metrics · Payouts</h2>
++      <div class="gaLB__sub">Paid-only boards drive payouts. Multi-metric support is game-aware (score, time, and more).</div>
++    </div>
++
++    <div class="gaLB__status" data-ga-lb-status>
++      <div class="gaLB__statusRow">
++        <span class="gaLB__dot" data-ga-lb-online-dot></span>
++        <span class="gaLB__statusText" data-ga-lb-online>Checking network…</span>
++      </div>
++      <div class="gaLB__statusRow">
++        <span class="gaLB__mini" data-ga-lb-session>Wallet: —</span>
++        <span class="gaLB__mini" data-ga-lb-poh>PoH: —</span>
++      </div>
++    </div>
++  </div>
++
++  <div class="gaLB__controls">
++    <div class="gaLB__seg" role="tablist" aria-label="Board">
++      <button class="gaLB__segBtn is-active" data-ga-lb-board="skill" type="button">Skill</button>
++      <button class="gaLB__segBtn" data-ga-lb-board="activity" type="button">Activity</button>
++    </div>
++
++    <div class="gaLB__filters">
++      <label class="gaLB__field" data-ga-lb-skill-only>
++        <span class="gaLB__label">Game</span>
++        <select class="gaLB__select" data-ga-lb-game aria-label="Game"></select>
++      </label>
++
++      <label class="gaLB__field" data-ga-lb-skill-only>
++        <span class="gaLB__label">Metric</span>
++        <select class="gaLB__select" data-ga-lb-metric aria-label="Metric"></select>
++      </label>
++
++      <div class="gaLB__field">
++        <span class="gaLB__label">Period</span>
++        <div class="gaLB__seg gaLB__seg--small" data-ga-lb-period role="tablist" aria-label="Period">
++          <button class="gaLB__segBtn is-active" data-ga-lb-period-btn="daily" type="button">Daily</button>
++          <button class="gaLB__segBtn" data-ga-lb-period-btn="weekly" type="button">Weekly</button>
++          <button class="gaLB__segBtn" data-ga-lb-period-btn="all" type="button">All</button>
++        </div>
++      </div>
++
++      <label class="gaLB__field gaLB__toggle" data-ga-lb-skill-only>
++        <span class="gaLB__label">Eligible</span>
++        <div class="gaLB__toggleRow">
++          <input class="gaLB__check" type="checkbox" data-ga-lb-eligible checked />
++          <span class="gaLB__toggleText">Paid-only</span>
++        </div>
++      </label>
++    </div>
++
++    <div class="gaLB__search">
++      <input class="gaLB__searchInput" type="search" placeholder="Search address or nickname" data-ga-lb-search />
++      <button class="gaLB__btn gaLB__btn--ghost" data-ga-lb-refresh type="button">Refresh</button>
++    </div>
++  </div>
++
++  <div class="gaLB__grid">
++    <div class="gaLB__main">
++      <div class="gaLB__card gaLB__card--tight">
++        <div class="gaLB__cardTop">
++          <div>
++            <div class="gaLB__cardTitle" data-ga-lb-title>Moonshot · Score · Daily</div>
++            <div class="gaLB__cardSub" data-ga-lb-sub>Showing payout-eligible runs (paid-only).</div>
++          </div>
++          <div class="gaLB__pill" data-ga-lb-pill>Paid-only</div>
++        </div>
++
++        <div class="gaLB__podium" data-ga-lb-podium></div>
++
++        <div class="gaLB__table">
++          <div class="gaLB__thead">
++            <div class="c-rank">#</div>
++            <div class="c-player">Player</div>
++            <div class="c-score" data-ga-lb-metric-label>Score</div>
++          </div>
++          <div class="gaLB__tbody" data-ga-lb-rows></div>
++        </div>
++
++        <div class="gaLB__foot">
++          <div class="gaLB__mini" data-ga-lb-you>—</div>
++          <div class="gaLB__mini" data-ga-lb-updated>Updated: —</div>
++        </div>
++
++        <div class="gaLB__empty" data-ga-lb-empty hidden>
++          <div class="gaLB__emptyTitle">No entries yet</div>
++          <div class="gaLB__emptySub">Play a run, then check back. If embedded mode is on, make sure the parent is sending RUN_GRANTED.</div>
++        </div>
++
++        <div class="gaLB__hover" data-ga-lb-hover aria-hidden="true">
++          <div class="gaLB__hoverInner">
++            <div class="gaLB__hoverAvatar" data-ga-lb-hover-avatar></div>
++            <div class="gaLB__hoverMeta">
++              <div class="gaLB__hoverName" data-ga-lb-hover-name>—</div>
++              <div class="gaLB__hoverAddr" data-ga-lb-hover-addr>—</div>
++              <div class="gaLB__hoverBadges" data-ga-lb-hover-badges></div>
++            </div>
++          </div>
++        </div>
++      </div>
++
++      <div class="gaLB__card">
++        <div class="gaLB__cardTop">
++          <div>
++            <div class="gaLB__cardTitle">How it works</div>
++            <div class="gaLB__cardSub">Two incentives: Skill (rank) + Activity (paid spend). Weekly adds longer competition cycles.</div>
++          </div>
++        </div>
++
++        <div class="gaLB__rules">
++          <div class="gaLB__rule"><span class="gaLB__ruleTag">Skill</span> Paid-only leaderboards (per game, per metric) drive the Skill pool payout.</div>
++          <div class="gaLB__rule"><span class="gaLB__ruleTag">Activity</span> Global paid AC spend drives Activity/PRO/Lottery pools with diminishing returns.</div>
++          <div class="gaLB__rule"><span class="gaLB__ruleTag">Multi-metric</span> Each game can define multiple metrics (score/time/etc). One metric = one board.</div>
++          <div class="gaLB__rule"><span class="gaLB__ruleTag">Identity</span> PRO nickname/avatar may appear while membership is active and the NFT is SBT-locked.</div>
++        </div>
++      </div>
++    </div>
++
++    <div class="gaLB__side">
++      <div class="gaLB__card">
++        <div class="gaLB__cardTop">
++          <div>
++            <div class="gaLB__cardTitle">Payouts</div>
++            <div class="gaLB__cardSub">Daily + weekly epochs settle at UTC boundaries.</div>
++          </div>
++          <div class="gaLB__pill gaLB__pill--good" data-ga-lb-next>Next: --:--:--</div>
++        </div>
++
++        <div class="gaLB__kv">
++          <div class="gaLB__k">Daily claimable</div>
++          <div class="gaLB__v" data-ga-lb-claim-daily>0.00 mUSD</div>
++
++          <div class="gaLB__k">Weekly claimable</div>
++          <div class="gaLB__v" data-ga-lb-claim-weekly>0.00 mUSD</div>
++
++          <div class="gaLB__k">Today tickets</div>
++          <div class="gaLB__v" data-ga-lb-tickets>0</div>
++
++          <div class="gaLB__k">Week activity</div>
++          <div class="gaLB__v" data-ga-lb-weekact>0</div>
++        </div>
++
++        <div class="gaLB__btnRow">
++          <button class="gaLB__btn gaLB__btn--primary" data-ga-lb-claim-daily-btn type="button">Claim daily (Tx)</button>
++          <button class="gaLB__btn" data-ga-lb-claim-weekly-btn type="button">Claim weekly (Tx)</button>
++          <button class="gaLB__btn gaLB__btn--ghost" data-ga-lb-open-wallet type="button">Open Wallet</button>
++        </div>
++
++        <div class="gaLB__mini" data-ga-lb-payout-note>
++          Daily split: 50% Skill · 35% Activity · 10% PRO · Lottery funded from Activity.
++        </div>
++      </div>
++
++      <div class="gaLB__card">
++        <div class="gaLB__cardTop">
++          <div>
++            <div class="gaLB__cardTitle">Fairness + Diversity</div>
++            <div class="gaLB__cardSub">Different games can rank on different metrics without breaking payout logic.</div>
++          </div>
++        </div>
++
++        <ul class="gaLB__bullets">
++          <li><strong>Skill</strong> boards can be multi-metric (score, time, accuracy, streak).</li>
++          <li><strong>Eligibility</strong> is paid-only for payouts; free/promo runs stay visible for hype.</li>
++          <li><strong>Game-aware scoring</strong>: time metrics are lower-is-better, score metrics are higher-is-better.</li>
++          <li><strong>Anti-farm</strong>: Activity rewards are based on paid AC spent (diminishing returns).</li>
++          <li><strong>Identity</strong>: PRO nickname/avatar can show on leaderboards while active &amp; SBT-locked.</li>
++        </ul>
++
++        <div class="gaLB__mini">Coming soon: tournament brackets, seasonal ladders, and per-mode leaderboards.</div>
++      </div>
++    </div>
++  </div>
++</div>
+diff -ruN '--exclude=.git' '--exclude=node_modules' "/mnt/data/arcade_v2_iter1_base/gruesomes.arcade - Copy/public/gruesome-arcade-leaderboard-ui-v2.0/leaderboard.css" "/mnt/data/arcade_v2_full_v2.0/gruesomes.arcade - Copy/public/gruesome-arcade-leaderboard-ui-v2.0/leaderboard.css"
+--- "/mnt/data/arcade_v2_iter1_base/gruesomes.arcade - Copy/public/gruesome-arcade-leaderboard-ui-v2.0/leaderboard.css"	1970-01-01 00:00:00.000000000 +0000
++++ "/mnt/data/arcade_v2_full_v2.0/gruesomes.arcade - Copy/public/gruesome-arcade-leaderboard-ui-v2.0/leaderboard.css"	2026-01-03 08:21:36.698621797 +0000
+@@ -0,0 +1,625 @@
++/* built by gruesøme */
++/* SIG_ENC_XOR5A_HEX=382f33362e7a38237a3d282f3f29a2373f */
++
++:root{
++  --gaLB-bg: rgba(10,14,20,.72);
++  --gaLB-bg2: rgba(18,24,34,.66);
++  --gaLB-br: rgba(255,255,255,.10);
++  --gaLB-br2: rgba(255,255,255,.16);
++  --gaLB-t: rgba(242,248,255,.92);
++  --gaLB-m: rgba(242,248,255,.62);
++  --gaLB-d: rgba(242,248,255,.38);
++  --gaLB-good: rgba(34,211,238,.22);
++  --gaLB-warn: rgba(255,180,60,.22);
++  --gaLB-bad: rgba(255,90,120,.18);
++  --gaLB-glow: 0 0 0 1px rgba(34,211,238,.18), 0 0 28px rgba(34,211,238,.12);
++  --gaLB-ease: cubic-bezier(.2,.9,.12,1);
++}
++
++/* Scoped: only affect the new leaderboard bundle */
++.gaLB{
++  position: relative;
++  padding: 18px;
++  border-radius: 18px;
++  background: linear-gradient(180deg, var(--gaLB-bg), rgba(6,8,12,.62));
++  border: 1px solid var(--gaLB-br);
++  box-shadow: 0 18px 60px rgba(0,0,0,.35);
++  overflow: hidden;
++}
++
++.gaLB::before{
++  content:"";
++  position:absolute;
++  inset:-2px;
++  background:
++    radial-gradient(800px 220px at 20% 0%, rgba(34,211,238,.16), transparent 62%),
++    radial-gradient(600px 220px at 80% 0%, rgba(167,139,250,.14), transparent 62%),
++    radial-gradient(600px 240px at 50% 110%, rgba(34,211,238,.10), transparent 60%);
++  pointer-events:none;
++  filter: blur(.2px);
++}
++
++.gaLB::after{
++  content:"";
++  position:absolute;
++  inset:0;
++  background:
++    linear-gradient(90deg, rgba(255,255,255,.08), transparent 18%, transparent 82%, rgba(255,255,255,.06));
++  opacity:.08;
++  pointer-events:none;
++  mix-blend-mode: overlay;
++}
++
++.gaLB *{ position:relative; }
++
++.gaLB__top{
++  display:flex;
++  align-items:flex-end;
++  justify-content:space-between;
++  gap:14px;
++}
++
++.gaLB__kicker{
++  font-size:12px;
++  letter-spacing:.14em;
++  text-transform:uppercase;
++  color: var(--gaLB-d);
++}
++
++.gaLB__h{
++  margin:6px 0 4px 0;
++  font-size:22px;
++  line-height:1.1;
++  color: var(--gaLB-t);
++}
++
++.gaLB__sub{
++  font-size:13px;
++  color: var(--gaLB-m);
++}
++
++.gaLB__status{
++  min-width: 220px;
++  padding:12px 14px;
++  border-radius:14px;
++  background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
++  border:1px solid var(--gaLB-br);
++  box-shadow: 0 10px 30px rgba(0,0,0,.24);
++}
++
++.gaLB__statusRow{
++  display:flex;
++  align-items:center;
++  justify-content:space-between;
++  gap:10px;
++}
++
++.gaLB__dot{
++  width:8px;
++  height:8px;
++  border-radius:50%;
++  display:inline-block;
++  background: rgba(255,255,255,.3);
++  box-shadow: 0 0 0 2px rgba(0,0,0,.14);
++}
++
++.gaLB__statusText{
++  flex:1;
++  font-size:12px;
++  color: var(--gaLB-m);
++}
++
++.gaLB__mini{
++  font-size:11px;
++  color: var(--gaLB-d);
++}
++
++.gaLB__controls{
++  margin-top: 14px;
++  display:flex;
++  flex-wrap:wrap;
++  gap:12px;
++  align-items:flex-end;
++  justify-content:space-between;
++}
++
++.gaLB__seg{
++  display:flex;
++  gap:0;
++  border-radius: 14px;
++  border:1px solid var(--gaLB-br);
++  background: rgba(255,255,255,.04);
++  overflow:hidden;
++}
++
++.gaLB__segBtn{
++  appearance:none;
++  border:0;
++  background: transparent;
++  color: var(--gaLB-m);
++  padding: 10px 14px;
++  font-size: 12px;
++  cursor:pointer;
++  transition: background 160ms var(--gaLB-ease), color 160ms var(--gaLB-ease), transform 160ms var(--gaLB-ease);
++}
++
++.gaLB__segBtn:hover{ transform: translateY(-1px); color: var(--gaLB-t); }
++.gaLB__segBtn.is-active{
++  color: var(--gaLB-t);
++  background: linear-gradient(180deg, rgba(34,211,238,.22), rgba(34,211,238,.08));
++  box-shadow: var(--gaLB-glow);
++}
++
++.gaLB__filters{
++  display:flex;
++  flex-wrap:wrap;
++  gap:10px;
++  align-items:flex-end;
++}
++
++.gaLB__field{
++  display:flex;
++  flex-direction:column;
++  gap:6px;
++}
++
++.gaLB__label{
++  font-size:11px;
++  color: var(--gaLB-d);
++}
++
++.gaLB__select{
++  min-width: 170px;
++  border-radius: 12px;
++  border:1px solid var(--gaLB-br);
++  background: rgba(0,0,0,.22);
++  color: var(--gaLB-t);
++  padding: 10px 12px;
++  outline:none;
++}
++
++.gaLB__select:focus{ border-color: rgba(34,211,238,.38); box-shadow: var(--gaLB-glow); }
++
++.gaLB__toggle{
++  display:flex;
++  align-items:center;
++  gap:8px;
++  padding: 10px 12px;
++  border-radius: 12px;
++  border:1px solid var(--gaLB-br);
++  background: rgba(255,255,255,.03);
++  color: var(--gaLB-m);
++  font-size: 12px;
++  cursor:pointer;
++  user-select:none;
++}
++
++.gaLB__toggle input{ accent-color: rgba(34,211,238,.75); }
++
++.gaLB__search{
++  display:flex;
++  gap:10px;
++  align-items:center;
++}
++
++.gaLB__input{
++  width: 220px;
++  border-radius: 12px;
++  border:1px solid var(--gaLB-br);
++  background: rgba(0,0,0,.22);
++  color: var(--gaLB-t);
++  padding: 10px 12px;
++  outline:none;
++}
++
++.gaLB__input:focus{ border-color: rgba(34,211,238,.38); box-shadow: var(--gaLB-glow); }
++
++.gaLB__btn{
++  appearance:none;
++  border:1px solid var(--gaLB-br);
++  background: rgba(255,255,255,.04);
++  color: var(--gaLB-t);
++  padding: 10px 12px;
++  border-radius: 12px;
++  cursor:pointer;
++  transition: transform 160ms var(--gaLB-ease), background 160ms var(--gaLB-ease), border-color 160ms var(--gaLB-ease);
++}
++
++.gaLB__btn:hover{ transform: translateY(-1px); border-color: var(--gaLB-br2); background: rgba(255,255,255,.06); }
++
++.gaLB__btn--primary{
++  border-color: rgba(34,211,238,.38);
++  background: linear-gradient(180deg, rgba(34,211,238,.22), rgba(34,211,238,.08));
++  box-shadow: var(--gaLB-glow);
++}
++
++.gaLB__btn--ghost{
++  background: transparent;
++}
++
++.gaLB__btn[disabled]{
++  opacity: .55;
++  cursor:not-allowed;
++  transform:none;
++}
++
++.gaLB__grid{
++  margin-top: 16px;
++  display:grid;
++  grid-template-columns: 1.1fr .9fr;
++  gap: 14px;
++}
++
++@media (max-width: 980px){
++  .gaLB__grid{ grid-template-columns: 1fr; }
++  .gaLB__status{ min-width: unset; width: 100%; }
++  .gaLB__input{ width: 100%; }
++  .gaLB__search{ flex-wrap:wrap; justify-content:flex-end; }
++}
++
++.gaLB__main{
++  padding: 14px;
++  border-radius: 16px;
++  background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.03));
++  border: 1px solid var(--gaLB-br);
++}
++
++.gaLB__meta{
++  display:flex;
++  align-items:center;
++  justify-content:space-between;
++  gap:10px;
++  margin-bottom: 12px;
++}
++
++.gaLB__metaTitle{
++  font-size: 13px;
++  color: var(--gaLB-t);
++}
++
++.gaLB__metaSub{
++  font-size: 11px;
++  color: var(--gaLB-d);
++}
++
++.gaLB__pill{
++  display:inline-flex;
++  align-items:center;
++  gap:8px;
++  padding: 8px 10px;
++  border-radius: 999px;
++  font-size: 11px;
++  border: 1px solid var(--gaLB-br);
++  background: rgba(0,0,0,.18);
++  color: var(--gaLB-t);
++  white-space:nowrap;
++}
++
++.gaLB__pill--good{ border-color: rgba(34,211,238,.38); background: rgba(34,211,238,.12); }
++.gaLB__pill--warn{ border-color: rgba(255,180,60,.42); background: rgba(255,180,60,.10); }
++
++.gaLB__podium{
++  display:grid;
++  grid-template-columns: repeat(3, 1fr);
++  gap: 10px;
++  margin-bottom: 12px;
++}
++
++@media (max-width: 720px){
++  .gaLB__podium{ grid-template-columns: 1fr; }
++}
++
++.gaLB__podiumCard{
++  position:relative;
++  padding: 12px;
++  border-radius: 14px;
++  border: 1px solid var(--gaLB-br);
++  background: linear-gradient(180deg, rgba(0,0,0,.20), rgba(0,0,0,.10));
++  overflow:hidden;
++}
++
++.gaLB__podiumCard::before{
++  content:"";
++  position:absolute;
++  inset:-1px;
++  background: radial-gradient(320px 140px at 40% 0%, rgba(34,211,238,.18), transparent 65%);
++  pointer-events:none;
++}
++
++.gaLB__podiumTop{
++  display:flex;
++  align-items:center;
++  justify-content:space-between;
++  gap:10px;
++  margin-bottom: 8px;
++}
++
++.gaLB__rankBadge{
++  width: 30px;
++  height: 30px;
++  border-radius: 10px;
++  display:flex;
++  align-items:center;
++  justify-content:center;
++  border:1px solid var(--gaLB-br);
++  background: rgba(255,255,255,.05);
++  color: var(--gaLB-t);
++  font-weight:700;
++}
++
++.gaLB__podiumName{
++  font-size: 13px;
++  color: var(--gaLB-t);
++  font-weight: 650;
++}
++
++.gaLB__podiumValue{
++  margin-top: 2px;
++  font-size: 18px;
++  color: var(--gaLB-t);
++  font-weight: 800;
++  letter-spacing: .02em;
++}
++
++.gaLB__rows{
++  display:flex;
++  flex-direction:column;
++  gap: 8px;
++}
++
++.gaLB__row{
++  display:grid;
++  grid-template-columns: 56px 1fr 170px;
++  gap: 10px;
++  align-items:center;
++  padding: 10px 12px;
++  border-radius: 14px;
++  border: 1px solid var(--gaLB-br);
++  background: rgba(0,0,0,.18);
++  cursor: default;
++  transition: transform 180ms var(--gaLB-ease), border-color 180ms var(--gaLB-ease), background 180ms var(--gaLB-ease);
++}
++
++@media (max-width: 720px){
++  .gaLB__row{ grid-template-columns: 52px 1fr 120px; }
++}
++
++.gaLB__row:hover{
++  transform: translateY(-1px);
++  border-color: rgba(34,211,238,.32);
++  background: rgba(0,0,0,.22);
++  box-shadow: 0 14px 36px rgba(0,0,0,.22);
++}
++
++.gaLB__rowRank{
++  font-size: 12px;
++  color: var(--gaLB-d);
++}
++
++.gaLB__rowPlayer{
++  display:flex;
++  flex-direction:column;
++  gap: 2px;
++}
++
++.gaLB__rowName{
++  font-size: 13px;
++  color: var(--gaLB-t);
++  font-weight: 650;
++}
++
++.gaLB__rowAddr{
++  font-size: 11px;
++  color: var(--gaLB-d);
++}
++
++.gaLB__rowValue{
++  justify-self:end;
++  text-align:right;
++  font-size: 13px;
++  color: var(--gaLB-t);
++  font-weight: 750;
++}
++
++.gaLB__rowUnit{
++  display:block;
++  font-size: 11px;
++  font-weight: 500;
++  color: var(--gaLB-d);
++}
++
++.gaLB__empty{
++  margin-top: 16px;
++  padding: 16px;
++  border-radius: 14px;
++  border: 1px dashed rgba(255,255,255,.18);
++  color: var(--gaLB-d);
++  text-align:center;
++}
++
++.gaLB__hover{
++  position:absolute;
++  width: 260px;
++  z-index: 20;
++  pointer-events:none;
++  opacity: 0;
++  transform: translateY(6px) scale(.98);
++  transition: opacity 160ms var(--gaLB-ease), transform 160ms var(--gaLB-ease);
++}
++
++.gaLB__hover.is-show{
++  opacity: 1;
++  transform: translateY(0) scale(1);
++}
++
++.gaLB__hoverInner{
++  padding: 12px;
++  border-radius: 16px;
++  border: 1px solid rgba(34,211,238,.28);
++  background: linear-gradient(180deg, rgba(12,16,24,.92), rgba(8,10,16,.84));
++  box-shadow: 0 26px 70px rgba(0,0,0,.38);
++  overflow:hidden;
++}
++
++.gaLB__hoverInner::before{
++  content:"";
++  position:absolute;
++  inset:-1px;
++  background:
++    radial-gradient(420px 200px at 40% 0%, rgba(34,211,238,.20), transparent 62%),
++    radial-gradient(420px 200px at 70% 40%, rgba(167,139,250,.14), transparent 68%);
++  pointer-events:none;
++}
++
++.gaLB__hoverTop{
++  display:flex;
++  gap: 12px;
++}
++
++.gaLB__hoverAvatar{
++  width: 64px;
++  height: 64px;
++  border-radius: 16px;
++  border: 1px solid rgba(255,255,255,.16);
++  background: rgba(255,255,255,.06);
++  overflow:hidden;
++  box-shadow: 0 0 0 1px rgba(0,0,0,.24);
++}
++
++.gaLB__hoverAvatar img{
++  width:100%;
++  height:100%;
++  object-fit: cover;
++  image-rendering: pixelated;
++}
++
++.gaLB__hoverInfo{
++  flex:1;
++  display:flex;
++  flex-direction:column;
++  gap: 4px;
++}
++
++.gaLB__hoverName{
++  font-size: 14px;
++  color: var(--gaLB-t);
++  font-weight: 800;
++}
++
++.gaLB__hoverAddr{
++  font-size: 11px;
++  color: var(--gaLB-d);
++}
++
++.gaLB__hoverBadges{
++  display:flex;
++  flex-wrap:wrap;
++  gap: 6px;
++  margin-top: 4px;
++}
++
++.gaLB__badge{
++  display:inline-flex;
++  align-items:center;
++  gap: 6px;
++  padding: 6px 8px;
++  border-radius: 999px;
++  font-size: 10px;
++  border: 1px solid rgba(255,255,255,.14);
++  background: rgba(255,255,255,.04);
++  color: var(--gaLB-t);
++}
++
++.gaLB__badge--pro{ border-color: rgba(34,211,238,.38); background: rgba(34,211,238,.12); }
++.gaLB__badge--me{ border-color: rgba(255,255,255,.22); background: rgba(255,255,255,.08); }
++
++.gaLB__side{
++  display:flex;
++  flex-direction:column;
++  gap: 14px;
++}
++
++.gaLB__card{
++  padding: 14px;
++  border-radius: 16px;
++  border: 1px solid var(--gaLB-br);
++  background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.03));
++}
++
++.gaLB__cardTop{
++  display:flex;
++  align-items:flex-start;
++  justify-content:space-between;
++  gap: 10px;
++}
++
++.gaLB__cardTitle{
++  font-size: 13px;
++  color: var(--gaLB-t);
++  font-weight: 800;
++}
++
++.gaLB__cardSub{
++  font-size: 11px;
++  color: var(--gaLB-d);
++}
++
++.gaLB__kv{
++  display:grid;
++  grid-template-columns: 1fr 1fr;
++  gap: 10px;
++  margin-top: 12px;
++}
++
++.gaLB__k{
++  font-size: 11px;
++  color: var(--gaLB-d);
++}
++
++.gaLB__v{
++  text-align:right;
++  font-size: 12px;
++  color: var(--gaLB-t);
++  font-weight: 800;
++}
++
++.gaLB__btnRow{
++  display:flex;
++  flex-wrap:wrap;
++  gap: 10px;
++  margin-top: 12px;
++}
++
++.gaLB__bullets{
++  margin: 10px 0 0 0;
++  padding-left: 16px;
++  color: var(--gaLB-m);
++  font-size: 12px;
++}
++
++.gaLB__bullets li{ margin: 8px 0; }
++.gaLB__bullets strong{ color: var(--gaLB-t); }
++
++/* micro animation for hover: subtle scanline */
++@keyframes gaLBScan{
++  0%{ transform: translateY(-20px); opacity: .0; }
++  40%{ opacity: .08; }
++  100%{ transform: translateY(180px); opacity: 0; }
++}
++
++.gaLB__hoverInner::after{
++  content:"";
++  position:absolute;
++  left:-40px;
++  right:-40px;
++  top:0;
++  height: 2px;
++  background: linear-gradient(90deg, transparent, rgba(34,211,238,.22), transparent);
++  opacity: .0;
++  animation: gaLBScan 1.6s linear infinite;
++  pointer-events:none;
++}
++
++.gaLB__hover.is-show .gaLB__hoverInner::after{
++  opacity: .12;
++}
+diff -ruN '--exclude=.git' '--exclude=node_modules' "/mnt/data/arcade_v2_iter1_base/gruesomes.arcade - Copy/public/gruesome-arcade-leaderboard-ui-v2.0/leaderboard.js" "/mnt/data/arcade_v2_full_v2.0/gruesomes.arcade - Copy/public/gruesome-arcade-leaderboard-ui-v2.0/leaderboard.js"
+--- "/mnt/data/arcade_v2_iter1_base/gruesomes.arcade - Copy/public/gruesome-arcade-leaderboard-ui-v2.0/leaderboard.js"	1970-01-01 00:00:00.000000000 +0000
++++ "/mnt/data/arcade_v2_full_v2.0/gruesomes.arcade - Copy/public/gruesome-arcade-leaderboard-ui-v2.0/leaderboard.js"	2026-01-03 08:24:58.108621500 +0000
+@@ -0,0 +1,695 @@
++// built by gruesøme
++// SIG_ENC_XOR5A_HEX=382f33362e7a38237a3d282f3f29a2373f
++
++(function () {
++  'use strict';
++
++  // ===== Config =====
++  const VERSION = '2.0';
++  const LS = {
++    board: 'arcade.ui.lbBoard',
++    game: 'arcade.ui.lbGame',
++    period: 'arcade.ui.lbPeriod',
++    metric: 'arcade.ui.lbMetric',
++    eligible: 'arcade.ui.lbEligible',
++  };
++
++  const DEFAULTS = {
++    board: 'skill',
++    period: 'daily',
++    eligible: true,
++  };
++
++  // ===== Signatures (discreet) =====
++  const SIG_PLAIN = 'built by gruesøme';
++  // XOR(0x5A) of the plain signature, hex-encoded
++  const SIG_ENC_XOR5A_HEX = '382f33362e7a38237a3d282f3f29a2373f';
++  void SIG_PLAIN;
++  void SIG_ENC_XOR5A_HEX;
++
++  // ===== Helpers =====
++  function $(sel, root) {
++    return (root || document).querySelector(sel);
++  }
++
++  function $all(sel, root) {
++    return Array.from((root || document).querySelectorAll(sel));
++  }
++
++  function lsGet(k) {
++    try {
++      return localStorage.getItem(k);
++    } catch {
++      return null;
++    }
++  }
++
++  function lsSet(k, v) {
++    try {
++      localStorage.setItem(k, String(v));
++    } catch {}
++  }
++
++  function esc(s) {
++    return String(s || '')
++      .replace(/&/g, '&amp;')
++      .replace(/</g, '&lt;')
++      .replace(/>/g, '&gt;')
++      .replace(/"/g, '&quot;')
++      .replace(/'/g, '&#039;');
++  }
++
++  function shortAddr(addr) {
++    const s = String(addr || '');
++    if (!s) return '';
++    if (!s.startsWith('0x') || s.length < 12) return s;
++    return s.slice(0, 6) + '…' + s.slice(-4);
++  }
++
++  function fmtInt(n) {
++    n = Math.floor(Number(n) || 0);
++    try {
++      return n.toLocaleString();
++    } catch {
++      return String(n);
++    }
++  }
++
++  function fmtMs(ms) {
++    ms = Math.max(0, Math.floor(Number(ms) || 0));
++    const s = Math.floor(ms / 1000);
++    const m = Math.floor(s / 60);
++    const ss = s % 60;
++    const mm = ms % 1000;
++    if (m > 0) return `${m}:${String(ss).padStart(2, '0')}.${String(mm).padStart(3, '0')}`;
++    return `${ss}.${String(mm).padStart(3, '0')}s`;
++  }
++
++  function normalizeHttpUrl(u) {
++    const s = String(u || '').trim();
++    if (!s) return '';
++    if (s.startsWith('ipfs://')) {
++      const cid = s.slice('ipfs://'.length);
++      return `https://ipfs.io/ipfs/${cid.replace(/^ipfs\//, '')}`;
++    }
++    if (s.startsWith('http://') || s.startsWith('https://')) return s;
++    if (s.startsWith('/')) return s;
++    return '';
++  }
++
++  // Deterministic, dependency-free placeholder avatar (SVG data URL)
++  function identiconSvg(seed) {
++    const s = String(seed || '').toLowerCase();
++    let h = 2166136261;
++    for (let i = 0; i < s.length; i++) {
++      h ^= s.charCodeAt(i);
++      h = Math.imul(h, 16777619);
++    }
++    const a = (h >>> 0) % 360;
++    const b = ((h >>> 8) >>> 0) % 360;
++    const c = ((h >>> 16) >>> 0) % 360;
++    const p1 = `${a} 85% 60%`;
++    const p2 = `${b} 85% 55%`;
++    const p3 = `${c} 85% 50%`;
++    const initials = s.startsWith('0x') ? s.slice(2, 4).toUpperCase() : s.slice(0, 2).toUpperCase();
++    const svg = `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">\n  <defs>\n    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">\n      <stop offset="0" stop-color="hsl(${p1})"/>\n      <stop offset="0.55" stop-color="hsl(${p2})"/>\n      <stop offset="1" stop-color="hsl(${p3})"/>\n    </linearGradient>\n    <filter id="n" x="-20%" y="-20%" width="140%" height="140%">\n      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch" result="f"/>\n      <feColorMatrix type="matrix" values="0 0 0 0 0.12  0 0 0 0 0.24  0 0 0 0 0.33  0 0 0 0.15 0" in="f" result="c"/>\n      <feBlend mode="soft-light" in="SourceGraphic" in2="c"/>\n    </filter>\n  </defs>\n  <rect rx="48" ry="48" x="0" y="0" width="256" height="256" fill="url(#g)"/>\n  <circle cx="128" cy="106" r="46" fill="rgba(255,255,255,0.18)"/>\n  <path d="M60 222c16-40 44-62 68-62s52 22 68 62" fill="rgba(255,255,255,0.14)"/>
++  <text x="128" y="136" text-anchor="middle" font-family="ui-sans-serif,system-ui" font-size="42" fill="rgba(255,255,255,0.72)" font-weight="700">${initials}</text>
++  <rect rx="48" ry="48" x="0" y="0" width="256" height="256" fill="transparent" filter="url(#n)"/>
++</svg>`;
++    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
++  }
++
++  // ===== Adapter =====
++  const AD = window.__ARCADE_LB_ADAPTER__ || {};
++  const apiJson = typeof AD.apiJson === 'function'
++    ? AD.apiJson
++    : async (url, opts) => {
++        const res = await fetch(url, {
++          method: (opts && opts.method) || 'GET',
++          headers: (opts && opts.headers) || {},
++          credentials: 'include',
++          body: opts && opts.body ? JSON.stringify(opts.body) : undefined,
++        });
++        const data = await res.json().catch(() => ({}));
++        if (!res.ok) throw new Error(data && data.error ? String(data.error) : `HTTP_${res.status}`);
++        return data;
++      };
++
++  const toast = typeof AD.toast === 'function' ? AD.toast : (t, m) => console.log('[toast]', t, m);
++  const getSession = typeof AD.getSession === 'function' ? AD.getSession : () => ({ connected: false, address: null, pohVerified: false });
++  const getEpoch = typeof AD.getEpoch === 'function' ? AD.getEpoch : () => ({});
++  const getCatalog = typeof AD.getCatalog === 'function'
++    ? AD.getCatalog
++    : async () => {
++        try {
++          const r = await fetch('/arcade-games.json', { cache: 'no-store' });
++          return await r.json();
++        } catch {
++          return { games: [] };
++        }
++      };
++
++  const claimDaily = typeof AD.claimDaily === 'function' ? AD.claimDaily : async () => toast('Claim', 'Not available');
++  const claimWeekly = typeof AD.claimWeekly === 'function' ? AD.claimWeekly : async () => toast('Claim', 'Not available');
++  const openWallet = typeof AD.openWallet === 'function' ? AD.openWallet : () => {};
++
++  // ===== DOM =====
++  const root = document.querySelector('[data-ga-lb]');
++  if (!root) return;
++
++  const elOnlineDot = $('[data-ga-lb-online-dot]', root);
++  const elOnline = $('[data-ga-lb-online]', root);
++  const elSession = $('[data-ga-lb-session]', root);
++  const elPoh = $('[data-ga-lb-poh]', root);
++
++  const elBoards = $all('[data-ga-lb-board]', root);
++  const elSkillOnly = $all('[data-ga-lb-skill-only]', root);
++
++  const elGame = $('[data-ga-lb-game]', root);
++  const elMetric = $('[data-ga-lb-metric]', root);
++  const elPeriodBtns = $all('[data-ga-lb-period]', root);
++  const elEligible = $('[data-ga-lb-eligible]', root);
++  const elSearch = $('[data-ga-lb-search]', root);
++  const elRefresh = $('[data-ga-lb-refresh]', root);
++
++  const elMeta = $('[data-ga-lb-meta]', root);
++  const elPodium = $('[data-ga-lb-podium]', root);
++  const elRows = $('[data-ga-lb-rows]', root);
++  const elEmpty = $('[data-ga-lb-empty]', root);
++
++  const elHover = $('[data-ga-lb-hover]', root);
++  const elHoverAvatar = $('[data-ga-lb-hover-avatar]', root);
++  const elHoverName = $('[data-ga-lb-hover-name]', root);
++  const elHoverAddr = $('[data-ga-lb-hover-addr]', root);
++  const elHoverBadges = $('[data-ga-lb-hover-badges]', root);
++
++  const elNext = $('[data-ga-lb-next]', root);
++  const elClaimDaily = $('[data-ga-lb-claim-daily]', root);
++  const elClaimWeekly = $('[data-ga-lb-claim-weekly]', root);
++  const elTickets = $('[data-ga-lb-tickets]', root);
++  const elWeekAct = $('[data-ga-lb-weekact]', root);
++
++  const btnClaimDaily = $('[data-ga-lb-claim-daily-btn]', root);
++  const btnClaimWeekly = $('[data-ga-lb-claim-weekly-btn]', root);
++  const btnOpenWallet = $('[data-ga-lb-open-wallet]', root);
++
++  // ===== State =====
++  const state = {
++    board: String(lsGet(LS.board) || DEFAULTS.board),
++    gameId: String(lsGet(LS.game) || ''),
++    period: String(lsGet(LS.period) || DEFAULTS.period),
++    metricId: String(lsGet(LS.metric) || ''),
++    eligible: String(lsGet(LS.eligible) || (DEFAULTS.eligible ? '1' : '0')) === '1',
++    search: '',
++    catalog: null,
++    games: [],
++    metricsByGame: {},
++    metricInfo: null,
++    entries: [],
++    you: null,
++    loading: false,
++    lastFetchAt: 0,
++    online: true,
++  };
++
++  function setOnline(ok, msg) {
++    state.online = !!ok;
++    if (elOnlineDot) elOnlineDot.className = 'gaLB__dot' + (ok ? ' is-on' : '');
++    if (elOnline) elOnline.textContent = msg || (ok ? 'Online' : 'Offline');
++  }
++
++  function setSessionText() {
++    const s = getSession() || {};
++    const conn = !!s.connected;
++    const addr = s.address ? shortAddr(s.address) : 'not connected';
++    if (elSession) elSession.textContent = `Wallet: ${conn ? addr : 'not connected'}`;
++    if (elPoh) elPoh.textContent = `PoH: ${s.pohVerified ? 'verified' : 'not verified'}`;
++  }
++
++  function getMetricList(gameId) {
++    return (state.metricsByGame[gameId] || []).slice();
++  }
++
++  function getSelectedMetric(gameId) {
++    const list = getMetricList(gameId);
++    if (!list.length) return null;
++    const found = list.find(m => m.id === state.metricId) || null;
++    return found || list[0];
++  }
++
++  function pickDefaultGame() {
++    const live = state.games.find(g => g.status === 'live');
++    return live ? live.id : (state.games[0] ? state.games[0].id : 'moonshot');
++  }
++
++  function formatValue(metric, v) {
++    if (!metric) return fmtInt(v);
++    const f = String(metric.format || 'int');
++    if (f === 'ms') return fmtMs(v);
++    if (f === 'int') return fmtInt(v);
++    return fmtInt(v);
++  }
++
++  function renderBoardControls() {
++    // Board toggle
++    elBoards.forEach(btn => {
++      const b = btn.getAttribute('data-ga-lb-board');
++      btn.classList.toggle('is-active', b === state.board);
++    });
++
++    // Period
++    elPeriodBtns.forEach(btn => {
++      const p = btn.getAttribute('data-ga-lb-period');
++      btn.classList.toggle('is-active', p === state.period);
++    });
++
++    // Skill-only controls
++    const isSkill = state.board === 'skill';
++    elSkillOnly.forEach(node => {
++      node.style.display = isSkill ? '' : 'none';
++    });
++    if (elEligible) elEligible.disabled = !isSkill;
++
++    // Eligible state
++    if (elEligible) elEligible.checked = !!state.eligible;
++  }
++
++  function renderHeader() {
++    const isSkill = state.board === 'skill';
++    if (!elMeta) return;
++
++    if (!isSkill) {
++      elMeta.innerHTML = `<div class="gaLB__metaLine"><span class="gaLB__metaKey">Activity</span><span class="gaLB__metaVal">Paid AC spent (diminishing returns)</span></div>`;
++      return;
++    }
++
++    const game = state.games.find(g => g.id === state.gameId);
++    const metric = getSelectedMetric(state.gameId);
++    const mLabel = metric ? esc(metric.label || metric.id) : '—';
++    const gLabel = game ? esc(game.name) : esc(state.gameId);
++    const elig = state.eligible ? 'Paid-only (payout eligible)' : 'All runs (bragging rights)';
++
++    elMeta.innerHTML = `
++      <div class="gaLB__metaLine"><span class="gaLB__metaKey">Game</span><span class="gaLB__metaVal">${gLabel}</span></div>
++      <div class="gaLB__metaLine"><span class="gaLB__metaKey">Metric</span><span class="gaLB__metaVal">${mLabel}</span></div>
++      <div class="gaLB__metaLine"><span class="gaLB__metaKey">Eligibility</span><span class="gaLB__metaVal">${elig}</span></div>
++    `;
++  }
++
++  function renderEmpty(msg) {
++    if (elEmpty) {
++      elEmpty.textContent = msg || 'No results.';
++      elEmpty.style.display = '';
++    }
++    if (elPodium) elPodium.innerHTML = '';
++    if (elRows) elRows.innerHTML = '';
++  }
++
++  function renderPodium(entries, metric) {
++    if (!elPodium) return;
++    const top3 = entries.slice(0, 3);
++    const cards = top3
++      .map((e, idx) => {
++        const rank = idx + 1;
++        const dn = esc(e.displayName || e.nickname || shortAddr(e.address));
++        const val = esc(formatValue(metric, e.score));
++        const tag = rank === 1 ? 'Champion' : (rank === 2 ? 'Runner-up' : 'Bronze');
++        const av = normalizeHttpUrl(e.avatarPng) || identiconSvg(e.address);
++        return `
++          <div class="gaLB__podiumCard gaLB__podiumCard--${rank}" data-ga-lb-row data-addr="${esc(e.address)}">
++            <div class="gaLB__podiumRank">#${rank}</div>
++            <div class="gaLB__podiumAvatar"><img src="${esc(av)}" alt="" loading="lazy"></div>
++            <div class="gaLB__podiumName">${dn}</div>
++            <div class="gaLB__podiumVal">${val}</div>
++            <div class="gaLB__podiumTag">${tag}</div>
++          </div>
++        `;
++      })
++      .join('');
++
++    elPodium.innerHTML = cards;
++  }
++
++  function renderRows(entries, metric) {
++    if (!elRows) return;
++
++    const s = String(state.search || '').trim().toLowerCase();
++    const filtered = !s
++      ? entries
++      : entries.filter(e => {
++          const a = String(e.address || '').toLowerCase();
++          const n = String(e.nickname || e.displayName || '').toLowerCase();
++          return a.includes(s) || n.includes(s);
++        });
++
++    const rows = filtered
++      .slice(0, 50)
++      .map((e) => {
++        const dn = esc(e.displayName || e.nickname || shortAddr(e.address));
++        const addr = esc(shortAddr(e.address));
++        const val = esc(formatValue(metric, e.score));
++        const badge = e.me ? `<span class="gaLB__badge gaLB__badge--me">YOU</span>` : '';
++        const pro = e.nickname ? `<span class="gaLB__badge">PRO</span>` : '';
++        return `
++          <div class="gaLB__row" data-ga-lb-row data-addr="${esc(e.address)}">
++            <div class="gaLB__c gaLB__c--rank">${esc(String(e.rank))}</div>
++            <div class="gaLB__c gaLB__c--player">
++              <div class="gaLB__pName">${dn} ${badge} ${pro}</div>
++              <div class="gaLB__pAddr">${addr}</div>
++            </div>
++            <div class="gaLB__c gaLB__c--score">${val}</div>
++          </div>
++        `;
++      })
++      .join('');
++
++    elRows.innerHTML = rows || '';
++    if (elEmpty) elEmpty.style.display = rows ? 'none' : '';
++  }
++
++  function findEntryByAddr(addr) {
++    const a = String(addr || '').toLowerCase();
++    return state.entries.find(e => String(e.address || '').toLowerCase() === a) || null;
++  }
++
++  function showHover(entry, anchorEl) {
++    if (!elHover || !entry || !anchorEl) return;
++    try {
++      elHover.style.display = '';
++      elHover.setAttribute('aria-hidden', 'false');
++
++      const dn = entry.displayName || entry.nickname || shortAddr(entry.address);
++      const av = normalizeHttpUrl(entry.avatarPng) || identiconSvg(entry.address);
++
++      if (elHoverAvatar) {
++        elHoverAvatar.innerHTML = `<img src="${esc(av)}" alt="" loading="lazy">`;
++      }
++      if (elHoverName) elHoverName.textContent = String(dn || '');
++      if (elHoverAddr) elHoverAddr.textContent = shortAddr(entry.address);
++
++      if (elHoverBadges) {
++        const badges = [];
++        if (entry.nickname) badges.push('Nickname');
++        if (entry.avatarPng) badges.push('Avatar');
++        if (entry.me) badges.push('You');
++        elHoverBadges.innerHTML = badges.map(b => `<span class="gaLB__pill">${esc(b)}</span>`).join('') || '';
++      }
++
++      // Position
++      const hostRect = root.getBoundingClientRect();
++      const r = anchorEl.getBoundingClientRect();
++      const x = clamp(r.left - hostRect.left + r.width - 12, 12, hostRect.width - 280);
++      const y = clamp(r.top - hostRect.top + 8, 12, hostRect.height - 180);
++      elHover.style.transform = `translate(${Math.floor(x)}px, ${Math.floor(y)}px)`;
++
++      elHover.classList.remove('is-hide');
++      elHover.classList.add('is-show');
++    } catch {}
++  }
++
++  function hideHover() {
++    if (!elHover) return;
++    elHover.classList.remove('is-show');
++    elHover.classList.add('is-hide');
++    elHover.setAttribute('aria-hidden', 'true');
++    // Leave it in DOM; CSS hides
++  }
++
++  function bindHover() {
++    if (!root) return;
++    root.addEventListener('pointerover', (ev) => {
++      const row = ev.target && ev.target.closest ? ev.target.closest('[data-ga-lb-row]') : null;
++      if (!row) return;
++      const addr = row.getAttribute('data-addr');
++      const entry = findEntryByAddr(addr);
++      if (!entry) return;
++      showHover(entry, row);
++    });
++
++    root.addEventListener('pointerout', (ev) => {
++      const row = ev.target && ev.target.closest ? ev.target.closest('[data-ga-lb-row]') : null;
++      if (!row) return;
++      // If moving to another row, pointerover will immediately re-show.
++      hideHover();
++    });
++  }
++
++  async function fetchLeaderboard() {
++    if (state.loading) return;
++    state.loading = true;
++    setOnline(true, 'Loading…');
++
++    try {
++      const isSkill = state.board === 'skill';
++      const q = new URLSearchParams();
++      q.set('board', isSkill ? 'skill' : 'activity');
++      q.set('period', state.period);
++      q.set('limit', '80');
++      if (isSkill) {
++        q.set('gameId', state.gameId);
++        const m = getSelectedMetric(state.gameId);
++        if (m && m.id) q.set('metric', m.id);
++        q.set('eligible', state.eligible ? '1' : '0');
++      }
++
++      const data = await apiJson(`/api/leaderboard/top?${q.toString()}`);
++
++      const entries = Array.isArray(data.entries) ? data.entries : [];
++      const you = data.you || null;
++
++      // Normalize + mark self
++      const s = getSession() || {};
++      const meAddr = String(s.address || '').toLowerCase();
++      state.entries = entries.map((e) => {
++        const a = String(e.address || '').toLowerCase();
++        return {
++          rank: Number(e.rank) || 0,
++          address: a,
++          score: Number(e.score) || 0,
++          displayName: e.displayName || e.nickname || null,
++          nickname: e.nickname || null,
++          avatarPng: e.avatarPng || null,
++          me: meAddr && a === meAddr,
++        };
++      });
++      state.you = you;
++      state.metricInfo = data.metric || null;
++      state.lastFetchAt = Date.now();
++
++      const metric = isSkill ? (state.metricInfo || getSelectedMetric(state.gameId) || null) : { id: 'activity', label: 'AC spent', format: 'int' };
++
++      renderBoardControls();
++      renderHeader();
++      if (!state.entries.length) {
++        renderEmpty('No results yet.');
++      } else {
++        if (elEmpty) elEmpty.style.display = 'none';
++        renderPodium(state.entries, metric);
++        renderRows(state.entries, metric);
++      }
++
++      setOnline(true, 'Online');
++    } catch (e) {
++      setOnline(false, 'Offline');
++      renderEmpty('Offline. Leaderboards unavailable.');
++      console.error(e);
++    } finally {
++      state.loading = false;
++    }
++  }
++
++  function renderPayouts() {
++    const e = getEpoch() || {};
++
++    const nextMs = Number(e.nextPayoutAt || e.nextDailyPayoutAt || 0) || 0;
++    const now = Date.now();
++    const left = Math.max(0, nextMs - now);
++    const hh = Math.floor(left / 3600000);
++    const mm = Math.floor((left % 3600000) / 60000);
++    const ss = Math.floor((left % 60000) / 1000);
++
++    if (elNext) elNext.textContent = `Next: ${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;
++
++    const d = Number(e.claimable || e.dayClaimable || 0) || 0;
++    const w = Number(e.weekClaimable || 0) || 0;
++
++    if (elClaimDaily) elClaimDaily.textContent = `${d.toFixed(2)} mUSD`;
++    if (elClaimWeekly) elClaimWeekly.textContent = `${w.toFixed(2)} mUSD`;
++
++    if (elTickets) elTickets.textContent = String(e.todayTickets || 0);
++    if (elWeekAct) elWeekAct.textContent = fmtInt(e.weekActivity || 0);
++
++    const s = getSession() || {};
++    const canClaim = !!s.connected;
++    if (btnClaimDaily) btnClaimDaily.disabled = !canClaim || d <= 0;
++    if (btnClaimWeekly) btnClaimWeekly.disabled = !canClaim || w <= 0;
++  }
++
++  async function setCatalog(cat) {
++    state.catalog = cat || { games: [] };
++    state.games = Array.isArray(state.catalog.games) ? state.catalog.games : [];
++
++    // Build metrics map
++    state.metricsByGame = {};
++    state.games.forEach(g => {
++      const list = Array.isArray(g.metrics) ? g.metrics : [];
++      state.metricsByGame[g.id] = list.map(m => ({
++        id: String(m.id || ''),
++        label: String(m.label || m.id || ''),
++        direction: String(m.direction || 'desc'),
++        format: String(m.format || 'int'),
++      })).filter(m => m.id);
++    });
++
++    // Defaults
++    if (!state.gameId) state.gameId = String(lsGet(LS.game) || '') || pickDefaultGame();
++    if (!getMetricList(state.gameId).find(m => m.id === state.metricId)) {
++      const def = getMetricList(state.gameId)[0];
++      state.metricId = def ? def.id : '';
++    }
++
++    // Populate select(s)
++    if (elGame) {
++      elGame.innerHTML = state.games
++        .filter(g => g.status === 'live')
++        .map(g => `<option value="${esc(g.id)}">${esc(g.name || g.id)}</option>`)
++        .join('');
++      elGame.value = state.gameId;
++    }
++
++    populateMetricSelect();
++  }
++
++  function populateMetricSelect() {
++    if (!elMetric) return;
++    const list = getMetricList(state.gameId);
++    elMetric.innerHTML = list.map(m => `<option value="${esc(m.id)}">${esc(m.label || m.id)}</option>`).join('');
++    if (list.find(m => m.id === state.metricId)) elMetric.value = state.metricId;
++    else if (list[0]) { state.metricId = list[0].id; elMetric.value = state.metricId; }
++  }
++
++  function bindControls() {
++    elBoards.forEach(btn => {
++      btn.addEventListener('click', () => {
++        state.board = btn.getAttribute('data-ga-lb-board') || 'skill';
++        lsSet(LS.board, state.board);
++        renderBoardControls();
++        renderHeader();
++        fetchLeaderboard();
++      });
++    });
++
++    if (elGame) {
++      elGame.addEventListener('change', () => {
++        state.gameId = String(elGame.value || '');
++        lsSet(LS.game, state.gameId);
++        populateMetricSelect();
++        renderHeader();
++        fetchLeaderboard();
++      });
++    }
++
++    if (elMetric) {
++      elMetric.addEventListener('change', () => {
++        state.metricId = String(elMetric.value || '');
++        lsSet(LS.metric, state.metricId);
++        renderHeader();
++        fetchLeaderboard();
++      });
++    }
++
++    elPeriodBtns.forEach(btn => {
++      btn.addEventListener('click', () => {
++        state.period = btn.getAttribute('data-ga-lb-period') || 'daily';
++        lsSet(LS.period, state.period);
++        renderBoardControls();
++        fetchLeaderboard();
++      });
++    });
++
++    if (elEligible) {
++      elEligible.addEventListener('change', () => {
++        state.eligible = !!elEligible.checked;
++        lsSet(LS.eligible, state.eligible ? '1' : '0');
++        renderHeader();
++        fetchLeaderboard();
++      });
++    }
++
++    if (elSearch) {
++      elSearch.addEventListener('input', () => {
++        state.search = String(elSearch.value || '');
++        // Just rerender rows; no refetch
++        const isSkill = state.board === 'skill';
++        const metric = isSkill ? (state.metricInfo || getSelectedMetric(state.gameId) || null) : { id: 'activity', label: 'AC spent', format: 'int' };
++        renderRows(state.entries, metric);
++      });
++    }
++
++    if (elRefresh) {
++      elRefresh.addEventListener('click', () => fetchLeaderboard());
++    }
++
++    btnClaimDaily?.addEventListener('click', async () => {
++      try {
++        await claimDaily();
++        renderPayouts();
++      } catch (e) {
++        toast('Claim failed', (e && e.message) ? String(e.message) : 'error');
++      }
++    });
++
++    btnClaimWeekly?.addEventListener('click', async () => {
++      try {
++        await claimWeekly();
++        renderPayouts();
++      } catch (e) {
++        toast('Claim failed', (e && e.message) ? String(e.message) : 'error');
++      }
++    });
++
++    btnOpenWallet?.addEventListener('click', () => openWallet());
++  }
++
++  // Public controller for the parent SPA.
++  window.__GA_LB_V2__ = {
++    version: VERSION,
++    onShow: () => {
++      setSessionText();
++      renderPayouts();
++      if (!state.lastFetchAt || Date.now() - state.lastFetchAt > 8000) {
++        fetchLeaderboard();
++      }
++    },
++    refresh: () => fetchLeaderboard(),
++  };
++
++  // Boot sequence
++  (async () => {
++    try {
++      setSessionText();
++      bindControls();
++      bindHover();
++
++      // Catalog
++      const cat = await getCatalog();
++      await setCatalog(cat || { games: [] });
++
++      // Initial render
++      renderBoardControls();
++      renderHeader();
++      renderPayouts();
++
++      await fetchLeaderboard();
++
++      // Periodic payout countdown refresh
++      setInterval(() => {
++        try { renderPayouts(); } catch {}
++      }, 1000);
++    } catch (e) {
++      setOnline(false, 'Offline');
++      renderEmpty('Failed to load leaderboard bundle.');
++      console.error(e);
++    }
++  })();
++})();
+diff -ruN '--exclude=.git' '--exclude=node_modules' "/mnt/data/arcade_v2_iter1_base/gruesomes.arcade - Copy/public/index.html" "/mnt/data/arcade_v2_full_v2.0/gruesomes.arcade - Copy/public/index.html"
+--- "/mnt/data/arcade_v2_iter1_base/gruesomes.arcade - Copy/public/index.html"	2025-12-31 14:24:42.000000000 +0000
++++ "/mnt/data/arcade_v2_full_v2.0/gruesomes.arcade - Copy/public/index.html"	2026-01-03 08:31:18.446205000 +0000
+@@ -651,66 +651,17 @@
+         </div>
+       </section>
+ 
+-      <!-- LEADERBOARD -->
++            <!-- LEADERBOARD -->
+       <section class="view" id="view-leaderboard" aria-label="Leaderboard view">
+         <div class="viewHeader">
+           <div>
+-            <p class="h">Leaderboards</p>
+-            <p class="p">Skill rewards are rank-based (placement percentile). Activity rewards are from paid AC spent + active days.</p>
++            <p class="h">Leaderboard</p>
++            <p class="p">Multi-metric boards (daily/weekly/all). Paid-only drives payouts. Hover a row to preview PRO avatar + nickname (if active).</p>
+           </div>
+-          <span class="pill"><strong>Daily payouts</strong> · claim mUSD · tx is user-gas-paid</span>
+         </div>
+ 
+-        <div class="grid">
+-          <div class="card">
+-            <div class="inner">
+-              <div class="row">
+-                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+-                  <h3 id="lbTitle">Leaderboard · Local</h3>
+-                  <select id="lbGameSelect" aria-label="Leaderboard game"></select>
+-                </div>
+-                <div class="tabs" aria-label="Period">
+-                  <div class="tab active" data-period="daily">Today</div>
+-                  <div class="tab" data-period="weekly">Week</div>
+-                  <div class="tab" data-period="all">All-time</div>
+-                </div>
+-              </div>
+-              <table aria-label="Local leaderboard table">
+-                <thead>
+-                  <tr><th>#</th><th>Player</th><th>Best</th><th>Runs</th><th>XP</th></tr>
+-                </thead>
+-                <tbody id="lbLocal"></tbody>
+-              </table>
+-              <div class="muted">Global leaderboard is live via /api/leaderboard/top (Redis). Local fallback still works if offline.</div>
+-            </div>
+-          </div>
+-
+-          <div class="card">
+-            <div class="inner">
+-              <h3>Daily Payout Preview</h3>
+-              <div class="kv">
+-                <div class="k">Next epoch</div><div class="v" id="lbEpoch">--:--:--</div>
+-                <div class="k">Your skill points</div><div class="v" id="lbSkillPts">0</div>
+-                <div class="k">Your activity points</div><div class="v" id="lbActPts">0</div>
+-                <div class="k">PRO boost</div><div class="v" id="lbProBoost">0</div>
+-                <div class="k">Lottery tickets (today)</div><div class="v" id="lbTickets">0</div>
+-                <div class="k">Lottery bonus (settled)</div><div class="v" id="lbLottery">0.00 mUSD <small>(settled)</small></div>
+-                <div class="k">Claimable</div><div class="v" id="lbClaim">0.00 mUSD <small>(settled)</small></div>
+-                <div class="k">Est. next</div><div class="v" id="lbNextEst">0.00 mUSD <small>(preview)</small></div>
+-              </div>
+-
+-              <div class="hr"></div>
+-              <div class="mini muted" style="margin-top:2px">Last lottery winners (yesterday):</div>
+-              <div id="lbWinners" class="txFeed" style="margin-top:8px"></div>
+-
+-              <div class="btnRow" style="display:flex;gap:8px;flex-wrap:wrap">
+-                <button class="btn primary" id="btnClaimPayout">Claim mUSD (Tx)</button>
+-                <button class="btn" id="btnMintBadge">Mint daily badge (Tx)</button>
+-              </div>
+-
+-              <div class="muted">Auto payouts: 55% skill · 35% activity (incl. lottery) · 10% PRO. Eligible scoring is paid-only.</div>
+-            </div>
+-          </div>
++        <div class="gaLbHost" data-ga-lb-host>
++          <div class="mini muted">Loading leaderboards…</div>
+         </div>
+       </section>
+ 
+@@ -1991,12 +1942,196 @@
+         : (name === 'proposals') ? 'Pay gas to submit ideas. Earn if accepted.'
+         : 'Preferences + utilities.';
+ 
++      
++
++      // Leaderboard v2 loader
++      if (name === 'leaderboard') {
++        try { ensureLeaderboardV2Loaded(); } catch {}
++      }
++
+       // Update 3D accent
+       const cssAccent = getComputedStyle(document.body).getPropertyValue('--accent').trim() || '#22d3ee';
+       try { window.__arcadeScene && window.__arcadeScene.setAccent(cssAccent); } catch {}
+     }
+     navBtns.forEach(btn => btn.addEventListener('click', ()=>setView(btn.dataset.nav)));
+ 
++    // ----- Leaderboard v2 (drop-in bundle) -----
++    let GA_LB_V2_LOADED = false;
++
++    function gaFetchText(url) {
++      return fetch(url, { cache: 'no-store' }).then(r => {
++        if (!r.ok) throw new Error('HTTP_' + r.status);
++        return r.text();
++      });
++    }
++
++    function gaLoadCssOnce(href, id) {
++      if (document.getElementById(id)) return;
++      const link = document.createElement('link');
++      link.id = id;
++      link.rel = 'stylesheet';
++      link.href = href;
++      document.head.appendChild(link);
++    }
++
++    function gaLoadScriptOnce(src, id) {
++      return new Promise((resolve, reject) => {
++        if (document.getElementById(id)) return resolve();
++        const s = document.createElement('script');
++        s.id = id;
++        s.src = src;
++        s.async = true;
++        s.onload = () => resolve();
++        s.onerror = () => reject(new Error('script_load_failed'));
++        document.head.appendChild(s);
++      });
++    }
++
++    async function serverWeekClaim(yw) {
++      return apiJson('/api/week/claim', {
++        method: 'POST',
++        headers: { 'Content-Type': 'application/json' },
++        body: { yw }
++      });
++    }
++
++    async function ensureLeaderboardV2Loaded() {
++      if (GA_LB_V2_LOADED) return;
++      GA_LB_V2_LOADED = true;
++
++      // Adapter surface consumed by /public/gruesome-arcade-leaderboard-ui-v2.0/leaderboard.js
++      window.__ARCADE_LB_ADAPTER__ = {
++        version: '2.0',
++        apiJson,
++        toast,
++        shortAddr,
++        openWallet: () => setView('wallet'),
++        getSession: () => ({
++          connected: isConnected(),
++          address: (SESSION && SESSION.address) ? SESSION.address : (lsGet(K.address) || null),
++          pohVerified: (SESSION && typeof SESSION.pohVerified === 'boolean') ? SESSION.pohVerified : getBool(K.poh),
++        }),
++        getEpoch: () => (EPOCH_CACHE && EPOCH_CACHE.data) ? EPOCH_CACHE.data : {},
++        getCatalog: async () => (CATALOG || null),
++
++        claimDaily: async () => {
++          try {
++            if (!isConnected()) return toast('Wallet', 'Connect wallet to claim.');
++            const e = (EPOCH_CACHE && EPOCH_CACHE.data) ? EPOCH_CACHE.data : null;
++            const ymd = e && e.lastSettledYmd ? String(e.lastSettledYmd) : '';
++            if (!ymd) return toast('Claim', 'No settled day available yet.');
++            const cents = (e && e.claimable && e.claimable.record) ? Number(e.claimable.record.totalCents || 0) : 0;
++            const usd = Math.max(0, cents) / 100;
++
++            openTxConfirm({
++              title: 'Claim daily payout',
++              lines: [
++                `Epoch: ${ymd}`,
++                `Estimated: ${usd.toFixed(2)} mUSD`,
++                'You will pay user gas.',
++              ],
++              onConfirm: async () => {
++                await simulateTx({
++                  title: 'Claiming…',
++                  steps: [
++                    { label: 'Prepare claim' },
++                    { label: 'Submit claim' },
++                    { label: 'Finalize' },
++                  ],
++                  run: async (step) => {
++                    step(0);
++                    await sleep(180);
++                    step(1);
++                    const r = await serverEpochClaim(ymd);
++                    await sleep(180);
++                    step(2);
++                    return r;
++                  },
++                  onDone: async (r) => {
++                    toast('Claim', `Daily claimed: ${(r && r.amountUsd != null) ? Number(r.amountUsd).toFixed(2) : '0.00'} mUSD`);
++                    try { await refreshEpochStatus(true); } catch {}
++                    try { await refreshLedger(); } catch {}
++                    try { window.__GA_LB_V2__ && window.__GA_LB_V2__.refresh && window.__GA_LB_V2__.refresh(); } catch {}
++                  }
++                });
++              }
++            });
++          } catch (err) {
++            toast('Claim', 'Failed to claim daily.');
++          }
++        },
++
++        claimWeekly: async () => {
++          try {
++            if (!isConnected()) return toast('Wallet', 'Connect wallet to claim.');
++            const e = (EPOCH_CACHE && EPOCH_CACHE.data) ? EPOCH_CACHE.data : null;
++            const yw = e && e.lastSettledYw ? String(e.lastSettledYw) : '';
++            if (!yw) return toast('Claim', 'No settled week available yet.');
++            const cents = (e && e.weekClaimable && e.weekClaimable.record) ? Number(e.weekClaimable.record.totalCents || 0) : 0;
++            const usd = Math.max(0, cents) / 100;
++
++            openTxConfirm({
++              title: 'Claim weekly payout',
++              lines: [
++                `Week: ${yw}`,
++                `Estimated: ${usd.toFixed(2)} mUSD`,
++                'You will pay user gas.',
++              ],
++              onConfirm: async () => {
++                await simulateTx({
++                  title: 'Claiming…',
++                  steps: [
++                    { label: 'Prepare claim' },
++                    { label: 'Submit claim' },
++                    { label: 'Finalize' },
++                  ],
++                  run: async (step) => {
++                    step(0);
++                    await sleep(180);
++                    step(1);
++                    const r = await serverWeekClaim(yw);
++                    await sleep(180);
++                    step(2);
++                    return r;
++                  },
++                  onDone: async (r) => {
++                    toast('Claim', `Weekly claimed: ${(r && r.amountUsd != null) ? Number(r.amountUsd).toFixed(2) : '0.00'} mUSD`);
++                    try { await refreshEpochStatus(true); } catch {}
++                    try { await refreshLedger(); } catch {}
++                    try { window.__GA_LB_V2__ && window.__GA_LB_V2__.refresh && window.__GA_LB_V2__.refresh(); } catch {}
++                  }
++                });
++              }
++            });
++          } catch (err) {
++            toast('Claim', 'Failed to claim weekly.');
++          }
++        },
++      };
++
++      gaLoadCssOnce('/gruesome-arcade-leaderboard-ui-v2.0/leaderboard.css', 'ga-lb-v2-css');
++
++      const host = document.querySelector('[data-ga-lb-host]');
++      if (!host) return;
++
++      try {
++        host.innerHTML = await gaFetchText('/gruesome-arcade-leaderboard-ui-v2.0/leaderboard-panel.html');
++      } catch (e) {
++        host.innerHTML = '<div class="card"><div class="mini muted">Failed to load Leaderboard UI bundle.</div></div>';
++        return;
++      }
++
++      try {
++        await gaLoadScriptOnce('/gruesome-arcade-leaderboard-ui-v2.0/leaderboard.js', 'ga-lb-v2-js');
++      } catch (e) {
++        host.innerHTML = '<div class="card"><div class="mini muted">Failed to load Leaderboard UI script.</div></div>';
++        return;
++      }
++
++      try { window.__GA_LB_V2__ && window.__GA_LB_V2__.onShow && window.__GA_LB_V2__.onShow(); } catch {}
++    }
++
++
+     // ----- Top chips -----
+     const chipWallet = document.getElementById('chipWallet');
+     const chipWalletT = document.getElementById('chipWalletT');
+@@ -2671,6 +2806,7 @@
+     // ----- Leaderboard (local, multi-game) -----
+     const lbLocal = document.getElementById('lbLocal');
+     const lbTitle = document.getElementById('lbTitle');
++    const lbMe = document.getElementById('lbMe');
+ 
+     function cutoffForPeriod(period) {
+       const t = now();
+@@ -2700,6 +2836,7 @@
+     }
+ 
+     function renderLocalLB() {
++      if (!lbLocal || !lbTitle) return;
+       const gameId = getLbGameId();
+       const period = getLbPeriod();
+       const g = gameById(gameId);
+@@ -2777,7 +2914,7 @@
+         </tr>
+       `).join('');
+ 
+-      lbMe.textContent = entries.find(e=>e.me)?.rank ? `Your rank: ${entries.find(e=>e.me).rank}` : 'Your rank: —';
++      if (lbMe) lbMe.textContent = entries.find(e=>e.me)?.rank ? `Your rank: ${entries.find(e=>e.me).rank}` : 'Your rank: —';
+     }
+ 
+ 
