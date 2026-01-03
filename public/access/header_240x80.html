@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Access Header</title>
+  <style>
+    :root{color-scheme: dark;}
+    html,body{height:100%;margin:0;background:transparent;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;}
+    body{display:flex;align-items:center;justify-content:center;overflow:hidden;}
+    /* Mark header state so parent fallback logic can detect it if needed. */
+    body{ }
+
+    .chip{
+      width:100%;
+      height:100%;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:10px;
+      padding:10px 12px;
+      box-sizing:border-box;
+      border-radius:16px;
+      border:1px solid rgba(255,255,255,0.10);
+      background:linear-gradient(180deg, rgba(0,0,0,0.55), rgba(0,0,0,0.30));
+      box-shadow: 0 0 0 1px rgba(34,211,238,0.10) inset;
+    }
+    .dot{width:8px;height:8px;border-radius:50%;background:#22d3ee;box-shadow:0 0 18px rgba(34,211,238,0.7);}
+    .t{font-weight:650;letter-spacing:0.2px;color:rgba(255,255,255,0.92);font-size:13px;white-space:nowrap;}
+    .s{color:rgba(255,255,255,0.60);font-size:12px;white-space:nowrap;}
+  </style>
+</head>
+<body class="is-header">
+  <div class="chip" role="img" aria-label="Access granted">
+    <span class="dot" aria-hidden="true"></span>
+    <span class="t">Access Granted</span>
+    <span class="s">Docked Gate</span>
+  </div>
+</body>
+</html>

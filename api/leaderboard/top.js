@@ -21,6 +21,8 @@ export default async function handler(req, res) {
   try {
     if (req.method !== 'GET') return res.status(405).json({ error: 'method_not_allowed' });
 
+    if (!R.enabled()) return res.status(503).json({ error: 'redis_not_configured' });
+
     const board = sParam(req.query, 'board', 'skill'); // skill | activity
     const period = sParam(req.query, 'period', 'daily'); // daily | weekly | all
     const eligible = intParam(req.query, 'eligible', 0) ? 1 : 0;

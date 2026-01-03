@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Access</title>
+  <style>
+    :root{
+      color-scheme: dark;
+    }
+    html,body{height:100%;margin:0;background:#000;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;}
+    body{display:grid;place-items:center;overflow:hidden;}
+    /* Lightweight star backdrop (2D only, no WebGL). */
+    .stars{
+      position:fixed;inset:-20%;
+      background:
+        radial-gradient(circle at 20% 30%, rgba(34,211,238,0.18) 0 2px, transparent 3px) 0 0/140px 140px,
+        radial-gradient(circle at 70% 60%, rgba(255,255,255,0.16) 0 1px, transparent 2px) 0 0/110px 110px,
+        radial-gradient(circle at 40% 80%, rgba(255,255,255,0.10) 0 1px, transparent 2px) 0 0/180px 180px,
+        radial-gradient(ellipse at 50% 30%, rgba(34,211,238,0.10), transparent 60%),
+        radial-gradient(ellipse at 50% 70%, rgba(59,130,246,0.08), transparent 60%),
+        #000;
+      filter: saturate(1.1);
+      animation: drift 12s linear infinite;
+    }
+    @keyframes drift{
+      from{transform:translate3d(0,0,0) scale(1);}
+      to{transform:translate3d(-4%, 3%, 0) scale(1.01);}
+    }
+
+    .panel{
+      position:relative;
+      width:min(720px, calc(100vw - 32px));
+      border:1px solid rgba(255,255,255,0.10);
+      background:rgba(0,0,0,0.55);
+      backdrop-filter: blur(10px);
+      border-radius:20px;
+      padding:22px 18px;
+      box-shadow: 0 0 0 1px rgba(34,211,238,0.12) inset;
+    }
+    h1{margin:0 0 6px;font-size:22px;letter-spacing:0.2px;}
+    p{margin:0;color:rgba(255,255,255,0.72);font-size:14px;line-height:1.45;}
+    .row{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-top:14px;flex-wrap:wrap;}
+    .btn{
+      appearance:none;
+      border:1px solid rgba(255,255,255,0.14);
+      background:linear-gradient(180deg, rgba(34,211,238,0.22), rgba(34,211,238,0.10));
+      color:#eaffff;
+      padding:10px 14px;
+      border-radius:14px;
+      font-weight:650;
+      cursor:pointer;
+    }
+    .btn:active{transform:translateY(1px);}
+    .hint{color:rgba(255,255,255,0.60);font-size:12px;}
+
+    /* After ENTER, mark body as header-mode for parent fallback detection. */
+    body.is-header .panel{opacity:0;pointer-events:none;transform:scale(0.98);transition:opacity 220ms ease, transform 220ms ease;}
+  </style>
+</head>
+<body>
+  <div class="stars" aria-hidden="true"></div>
+
+  <main class="panel" role="dialog" aria-label="Access gate">
+    <h1>Gruesøme’s Arcade</h1>
+    <p>Press ENTER to continue into the dashboard.</p>
+    <div class="row">
+      <button class="btn" id="btnEnter" type="button">ENTER ARCADE</button>
+      <span class="hint">(This is a local/dev access gate.)</span>
+    </div>
+  </main>
+
+  <script>
+    function sendEnter(){
+      try { document.body.classList.add('is-header'); } catch {}
+      try {
+        window.parent && window.parent.postMessage({
+          type: 'GRUESOME_ACCESS_ENTER',
+          detail: {
+            wallet: { address: '' },
+            poh: { verified: false }
+          }
+        }, '*');
+      } catch {}
+    }
+
+    const btn = document.getElementById('btnEnter');
+    if (btn) btn.addEventListener('click', sendEnter);
+
+    window.addEventListener('keydown', (e) => {
+      if (e && (e.key === 'Enter' || e.code === 'Enter' || e.code === 'NumpadEnter')) {
+        e.preventDefault();
+        sendEnter();
+      }
+    });
+  </script>
+</body>
+</html>
