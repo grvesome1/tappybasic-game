@@ -55,6 +55,15 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  const isNav = event.request.mode === 'navigate' || (event.request.headers.get('accept') || '').includes('text/html');
+
+  function offlineResponse() {
+    return new Response('Offline', {
+      status: 503,
+      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+    });
+  }
+
   event.respondWith(
     fetch(event.request)
       .then((response) => {
@@ -69,7 +78,10 @@ self.addEventListener('fetch', (event) => {
       })
       .catch(() => {
         // Network failed, use cache as fallback
-        return caches.match(event.request);
+        if (isNav) {
+          return caches.match('/index.html').then((r) => r || offlineResponse());
+        }
+        return caches.match(event.request).then((r) => r || offlineResponse());
       })
   );
 });
