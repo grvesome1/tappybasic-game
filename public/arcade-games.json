@@ -1,0 +1,88 @@
+{
+  "version": "2.9",
+  "updatedAtUtc": "2026-01-03T08:32:21Z",
+  "bridge": {
+    "name": "ArcadeBridge",
+    "version": "0.3"
+  },
+  "defaults": {
+    "acUsd": 0.01,
+    "maxBonusPct": 0.15,
+    "bonusCurveK": 40
+  },
+  "games": [
+    {
+      "id": "moonshot",
+      "name": "Moonshot",
+      "tagline": "Precision flight \u2022 dodge debris \u2022 climb the stars",
+      "embedUrl": "/games/moonshot/",
+      "status": "live",
+      "runCostAC": 10,
+      "promoRuns": 5,
+      "promoGrantAC": 50,
+      "payoutEligible": true,
+      "scoreMax": 5000,
+      "minDurationMs": 800,
+      "type": "arcade-flight",
+      "defaultMetric": "score",
+      "metrics": [
+        {
+          "id": "score",
+          "label": "Score",
+          "kind": "higher",
+          "format": "int",
+          "unit": "pts",
+          "eligible": true
+        },
+        {
+          "id": "time",
+          "label": "Fastest Time",
+          "kind": "lower",
+          "format": "ms",
+          "unit": "ms",
+          "eligible": true
+        }
+      ]
+    },
+    {
+      "id": "storm-the-blockchain",
+      "name": "Storm the Blockchain (3D Remaster)",
+      "tagline": "Classic defense \u2022 rebuilt for the onchain arcade",
+      "embedUrl": "/games/stormblockchain/",
+      "status": "coming_soon",
+      "runCostAC": 0,
+      "promoRuns": 0,
+      "promoGrantAC": 0,
+      "payoutEligible": false,
+      "scoreMax": 100000,
+      "minDurationMs": 0,
+      "type": "arcade-defense",
+      "defaultMetric": "score",
+      "metrics": [
+        {
+          "id": "score",
+          "label": "Score",
+          "kind": "higher",
+          "format": "int",
+          "unit": "pts",
+          "eligible": false
+        },
+        {
+          "id": "waves",
+          "label": "Waves Cleared",
+          "kind": "higher",
+          "format": "int",
+          "unit": "waves",
+          "eligible": false
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "schema": "gruesome-arcade.catalog.v1",
+    "signaturePlain": "built by grues\u00f8me",
+    "signatureEnc": "SIG_ENC_XOR5A_HEX=382f33362e7a38237a3d282f3f29a2373f",
+    "version": "2.8",
+    "updatedAtUtc": "2025-12-29T00:00:00Z"
+  }
+}

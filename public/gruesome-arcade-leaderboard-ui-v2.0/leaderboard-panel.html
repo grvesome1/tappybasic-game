@@ -1,0 +1,181 @@
+<!-- built by gruesøme -->
+<!-- SIG_ENC_XOR5A_HEX=382f33362e7a38237a3d282f3f29a2373f -->
+
+<div class="gaLB" data-ga-lb>
+  <div class="gaLB__top">
+    <div class="gaLB__title">
+      <div class="gaLB__kicker">Leaderboard v2</div>
+      <h2 class="gaLB__h">Ranks · Metrics · Payouts</h2>
+      <div class="gaLB__sub">Paid-only boards drive payouts. Multi-metric support is game-aware (score, time, and more).</div>
+    </div>
+
+    <div class="gaLB__status" data-ga-lb-status>
+      <div class="gaLB__statusRow">
+        <span class="gaLB__dot" data-ga-lb-online-dot></span>
+        <span class="gaLB__statusText" data-ga-lb-online>Checking network…</span>
+      </div>
+      <div class="gaLB__statusRow">
+        <span class="gaLB__mini" data-ga-lb-session>Wallet: —</span>
+        <span class="gaLB__mini" data-ga-lb-poh>PoH: —</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="gaLB__controls">
+    <div class="gaLB__seg" role="tablist" aria-label="Board">
+      <button class="gaLB__segBtn is-active" data-ga-lb-board="skill" type="button">Skill</button>
+      <button class="gaLB__segBtn" data-ga-lb-board="activity" type="button">Activity</button>
+    </div>
+
+    <div class="gaLB__filters">
+      <label class="gaLB__field" data-ga-lb-skill-only>
+        <span class="gaLB__label">Game</span>
+        <select class="gaLB__select" data-ga-lb-game aria-label="Game"></select>
+      </label>
+
+      <label class="gaLB__field" data-ga-lb-skill-only>
+        <span class="gaLB__label">Metric</span>
+        <select class="gaLB__select" data-ga-lb-metric aria-label="Metric"></select>
+      </label>
+
+      <div class="gaLB__field">
+        <span class="gaLB__label">Period</span>
+        <div class="gaLB__seg gaLB__seg--small" data-ga-lb-period role="tablist" aria-label="Period">
+          <button class="gaLB__segBtn is-active" data-ga-lb-period-btn="daily" type="button">Daily</button>
+          <button class="gaLB__segBtn" data-ga-lb-period-btn="weekly" type="button">Weekly</button>
+          <button class="gaLB__segBtn" data-ga-lb-period-btn="all" type="button">All</button>
+        </div>
+      </div>
+
+      <label class="gaLB__field gaLB__toggle" data-ga-lb-skill-only>
+        <span class="gaLB__label">Eligible</span>
+        <div class="gaLB__toggleRow">
+          <input class="gaLB__check" type="checkbox" data-ga-lb-eligible checked />
+          <span class="gaLB__toggleText">Paid-only</span>
+        </div>
+      </label>
+    </div>
+
+    <div class="gaLB__search">
+      <input class="gaLB__searchInput" type="search" placeholder="Search address or nickname" data-ga-lb-search />
+      <button class="gaLB__btn gaLB__btn--ghost" data-ga-lb-refresh type="button">Refresh</button>
+    </div>
+  </div>
+
+  <div class="gaLB__grid">
+    <div class="gaLB__main">
+      <div class="gaLB__card gaLB__card--tight">
+        <div class="gaLB__cardTop">
+          <div>
+            <div class="gaLB__cardTitle" data-ga-lb-title>Moonshot · Score · Daily</div>
+            <div class="gaLB__cardSub" data-ga-lb-sub>Showing payout-eligible runs (paid-only).</div>
+          </div>
+          <div class="gaLB__pill" data-ga-lb-pill>Paid-only</div>
+        </div>
+
+        <div class="gaLB__podium" data-ga-lb-podium></div>
+
+        <div class="gaLB__table">
+          <div class="gaLB__thead">
+            <div class="c-rank">#</div>
+            <div class="c-player">Player</div>
+            <div class="c-score" data-ga-lb-metric-label>Score</div>
+          </div>
+          <div class="gaLB__tbody" data-ga-lb-rows></div>
+        </div>
+
+        <div class="gaLB__foot">
+          <div class="gaLB__mini" data-ga-lb-you>—</div>
+          <div class="gaLB__mini" data-ga-lb-updated>Updated: —</div>
+        </div>
+
+        <div class="gaLB__empty" data-ga-lb-empty hidden>
+          <div class="gaLB__emptyTitle">No entries yet</div>
+          <div class="gaLB__emptySub">Play a run, then check back. If embedded mode is on, make sure the parent is sending RUN_GRANTED.</div>
+        </div>
+
+        <div class="gaLB__hover" data-ga-lb-hover aria-hidden="true">
+          <div class="gaLB__hoverInner">
+            <div class="gaLB__hoverAvatar" data-ga-lb-hover-avatar></div>
+            <div class="gaLB__hoverMeta">
+              <div class="gaLB__hoverName" data-ga-lb-hover-name>—</div>
+              <div class="gaLB__hoverAddr" data-ga-lb-hover-addr>—</div>
+              <div class="gaLB__hoverBadges" data-ga-lb-hover-badges></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="gaLB__card">
+        <div class="gaLB__cardTop">
+          <div>
+            <div class="gaLB__cardTitle">How it works</div>
+            <div class="gaLB__cardSub">Two incentives: Skill (rank) + Activity (paid spend). Weekly adds longer competition cycles.</div>
+          </div>
+        </div>
+
+        <div class="gaLB__rules">
+          <div class="gaLB__rule"><span class="gaLB__ruleTag">Skill</span> Paid-only leaderboards (per game, per metric) drive the Skill pool payout.</div>
+          <div class="gaLB__rule"><span class="gaLB__ruleTag">Activity</span> Global paid AC spend drives Activity/PRO/Lottery pools with diminishing returns.</div>
+          <div class="gaLB__rule"><span class="gaLB__ruleTag">Multi-metric</span> Each game can define multiple metrics (score/time/etc). One metric = one board.</div>
+          <div class="gaLB__rule"><span class="gaLB__ruleTag">Identity</span> PRO nickname/avatar may appear while membership is active and the NFT is SBT-locked.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="gaLB__side">
+      <div class="gaLB__card">
+        <div class="gaLB__cardTop">
+          <div>
+            <div class="gaLB__cardTitle">Payouts</div>
+            <div class="gaLB__cardSub">Daily + weekly epochs settle at UTC boundaries.</div>
+          </div>
+          <div class="gaLB__pill gaLB__pill--good" data-ga-lb-next>Next: --:--:--</div>
+        </div>
+
+        <div class="gaLB__kv">
+          <div class="gaLB__k">Daily claimable</div>
+          <div class="gaLB__v" data-ga-lb-claim-daily>0.00 mUSD</div>
+
+          <div class="gaLB__k">Weekly claimable</div>
+          <div class="gaLB__v" data-ga-lb-claim-weekly>0.00 mUSD</div>
+
+          <div class="gaLB__k">Today tickets</div>
+          <div class="gaLB__v" data-ga-lb-tickets>0</div>
+
+          <div class="gaLB__k">Week activity</div>
+          <div class="gaLB__v" data-ga-lb-weekact>0</div>
+        </div>
+
+        <div class="gaLB__btnRow">
+          <button class="gaLB__btn gaLB__btn--primary" data-ga-lb-claim-daily-btn type="button">Claim daily (Tx)</button>
+          <button class="gaLB__btn" data-ga-lb-claim-weekly-btn type="button">Claim weekly (Tx)</button>
+          <button class="gaLB__btn gaLB__btn--ghost" data-ga-lb-open-wallet type="button">Open Wallet</button>
+        </div>
+
+        <div class="gaLB__mini" data-ga-lb-payout-note>
+          Daily split: 50% Skill · 35% Activity · 10% PRO · Lottery funded from Activity.
+        </div>
+      </div>
+
+      <div class="gaLB__card">
+        <div class="gaLB__cardTop">
+          <div>
+            <div class="gaLB__cardTitle">Fairness + Diversity</div>
+            <div class="gaLB__cardSub">Different games can rank on different metrics without breaking payout logic.</div>
+          </div>
+        </div>
+
+        <ul class="gaLB__bullets">
+          <li><strong>Skill</strong> boards can be multi-metric (score, time, accuracy, streak).</li>
+          <li><strong>Eligibility</strong> is paid-only for payouts; free/promo runs stay visible for hype.</li>
+          <li><strong>Game-aware scoring</strong>: time metrics are lower-is-better, score metrics are higher-is-better.</li>
+          <li><strong>Anti-farm</strong>: Activity rewards are based on paid AC spent (diminishing returns).</li>
+          <li><strong>Identity</strong>: PRO nickname/avatar can show on leaderboards while active &amp; SBT-locked.</li>
+        </ul>
+
+        <div class="gaLB__mini">Coming soon: tournament brackets, seasonal ladders, and per-mode leaderboards.</div>
+      </div>
+    </div>
+  </div>
+</div>
