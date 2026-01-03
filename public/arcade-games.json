@@ -30,7 +30,12 @@
           "id": "score",
           "label": "Score",
           "kind": "higher",
+          "direction": "desc",
           "format": "int",
+          "clamp": {
+            "min": 0,
+            "max": 5000
+          },
           "unit": "pts",
           "eligible": true
         },
@@ -38,7 +43,12 @@
           "id": "time",
           "label": "Fastest Time",
           "kind": "lower",
+          "direction": "asc",
           "format": "ms",
+          "clamp": {
+            "min": 0,
+            "max": 86400000
+          },
           "unit": "ms",
           "eligible": true
         }
@@ -63,7 +73,12 @@
           "id": "score",
           "label": "Score",
           "kind": "higher",
+          "direction": "desc",
           "format": "int",
+          "clamp": {
+            "min": 0,
+            "max": 100000
+          },
           "unit": "pts",
           "eligible": false
         },
@@ -71,7 +86,12 @@
           "id": "waves",
           "label": "Waves Cleared",
           "kind": "higher",
+          "direction": "desc",
           "format": "int",
+          "clamp": {
+            "min": 0,
+            "max": 1000000
+          },
           "unit": "waves",
           "eligible": false
         }

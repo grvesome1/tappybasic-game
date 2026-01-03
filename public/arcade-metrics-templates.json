@@ -1,0 +1,284 @@
+{
+  "_meta": {
+    "name": "Gruesome Arcade GameType Metric Templates",
+    "version": "3.1",
+    "sig": "built by gruesøme",
+    "sig_enc": "OC8zNi56OCN6PSgvPymZ4jc/",
+    "sig_alg": "xor(0x5A)+base64",
+    "updatedAt": "2026-01-03"
+  },
+  "templates": [
+    {
+      "gameType": "shooter",
+      "payoutMetrics": [
+        {
+          "id": "score",
+          "weight": 0.6
+        },
+        {
+          "id": "accuracyBp",
+          "weight": 0.4
+        }
+      ],
+      "telemetry": [
+        "kills",
+        "headshotBp",
+        "damageTaken",
+        "streak",
+        "durationMs"
+      ]
+    },
+    {
+      "gameType": "defense",
+      "payoutMetrics": [
+        {
+          "id": "waves",
+          "weight": 0.5
+        },
+        {
+          "id": "baseHpLeft",
+          "weight": 0.2
+        },
+        {
+          "id": "efficiency",
+          "weight": 0.3
+        }
+      ],
+      "telemetry": [
+        "kills",
+        "damageTaken",
+        "spentInRunAC",
+        "durationMs",
+        "objectiveCount"
+      ]
+    },
+    {
+      "gameType": "puzzle",
+      "payoutMetrics": [
+        {
+          "id": "levelsCleared",
+          "weight": 0.6
+        },
+        {
+          "id": "timeMs",
+          "weight": 0.4
+        }
+      ],
+      "telemetry": [
+        "hintsUsed",
+        "moves",
+        "mistakes",
+        "attempts",
+        "completionBp"
+      ]
+    },
+    {
+      "gameType": "rhythm",
+      "payoutMetrics": [
+        {
+          "id": "score",
+          "weight": 0.5
+        },
+        {
+          "id": "accuracyBp",
+          "weight": 0.3
+        },
+        {
+          "id": "maxCombo",
+          "weight": 0.2
+        }
+      ],
+      "telemetry": [
+        "notesHit",
+        "notesMissed",
+        "timingStdDevMs",
+        "streak"
+      ]
+    },
+    {
+      "gameType": "racing",
+      "payoutMetrics": [
+        {
+          "id": "timeMs",
+          "weight": 0.7
+        },
+        {
+          "id": "bestLapMs",
+          "weight": 0.3
+        }
+      ],
+      "telemetry": [
+        "laps",
+        "trackResets",
+        "mistakes"
+      ]
+    },
+    {
+      "gameType": "platformer",
+      "payoutMetrics": [
+        {
+          "id": "timeMs",
+          "weight": 0.5
+        },
+        {
+          "id": "completionBp",
+          "weight": 0.5
+        }
+      ],
+      "telemetry": [
+        "deaths",
+        "mistakes",
+        "objectiveCount",
+        "streak"
+      ]
+    },
+    {
+      "gameType": "strategy",
+      "payoutMetrics": [
+        {
+          "id": "objectiveCount",
+          "weight": 0.5
+        },
+        {
+          "id": "efficiency",
+          "weight": 0.3
+        },
+        {
+          "id": "durationMs",
+          "weight": 0.2
+        }
+      ],
+      "telemetry": [
+        "resourcesCollected",
+        "resourcesSpent",
+        "buildVariety",
+        "mistakes",
+        "spentInRunAC"
+      ]
+    },
+    {
+      "gameType": "idle",
+      "payoutMetrics": [
+        {
+          "id": "objectiveCount",
+          "weight": 0.5
+        },
+        {
+          "id": "efficiency",
+          "weight": 0.5
+        }
+      ],
+      "telemetry": [
+        "durationMs",
+        "spentInRunAC",
+        "resourcesCollected",
+        "resourcesSpent",
+        "apm"
+      ]
+    },
+    {
+      "gameType": "launcher",
+      "payoutMetrics": [
+        {
+          "id": "distance",
+          "weight": 0.7
+        },
+        {
+          "id": "efficiency",
+          "weight": 0.3
+        }
+      ],
+      "telemetry": [
+        "durationMs",
+        "spentInRunAC",
+        "purchasesInRun",
+        "upgradesBought",
+        "coinsCollected"
+      ]
+    },
+    {
+      "gameType": "simulation",
+      "payoutMetrics": [
+        {
+          "id": "objectiveCount",
+          "weight": 0.5
+        },
+        {
+          "id": "completionBp",
+          "weight": 0.3
+        },
+        {
+          "id": "efficiency",
+          "weight": 0.2
+        }
+      ],
+      "telemetry": [
+        "durationMs",
+        "resourcesCollected",
+        "resourcesSpent",
+        "spentInRunAC",
+        "apm"
+      ]
+    },
+    {
+      "gameType": "multiplayer",
+      "payoutMetrics": [
+        {
+          "id": "win",
+          "weight": 0.6
+        },
+        {
+          "id": "score",
+          "weight": 0.4
+        }
+      ],
+      "telemetry": [
+        "assists",
+        "revives",
+        "damageTaken",
+        "durationMs",
+        "placement"
+      ]
+    },
+    {
+      "gameType": "survival",
+      "payoutMetrics": [
+        {
+          "id": "durationMs",
+          "weight": 0.6
+        },
+        {
+          "id": "score",
+          "weight": 0.4
+        }
+      ],
+      "telemetry": [
+        "kills",
+        "damageTaken",
+        "deaths",
+        "efficiency",
+        "spentInRunAC"
+      ]
+    },
+    {
+      "gameType": "card",
+      "payoutMetrics": [
+        {
+          "id": "win",
+          "weight": 0.7
+        },
+        {
+          "id": "durationMs",
+          "weight": 0.3
+        }
+      ],
+      "telemetry": [
+        "mistakes",
+        "attempts",
+        "placement",
+        "efficiency",
+        "spentInRunAC"
+      ]
+    }
+  ]
+}

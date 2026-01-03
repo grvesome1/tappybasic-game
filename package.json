@@ -8,7 +8,8 @@
   "scripts": {
     "dev": "npx serve public",
     "deploy": "vercel --prod",
-    "preview": "vercel dev"
+    "preview": "vercel dev",
+    "validate:metrics": "node tools/validate-arcade-catalog-metrics.mjs"
   },
   "keywords": [
     "web3",
