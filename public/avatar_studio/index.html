@@ -44,8 +44,7 @@
       <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>Avatar Studio (Disabled)</title>
-        <meta http-equiv="refresh" content="0; url=/" />
+        <title>Avatar Studio</title>
         <style>
           :root{color-scheme:dark;}
           html,body{height:100%;margin:0;background:#07090d;color:rgba(255,255,255,0.86);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;}
@@ -59,15 +58,21 @@
       <body>
         <div class="card">
           <div><strong>Avatar Studio is embedded in the dashboard.</strong></div>
-          <div class="muted">
-            The arcade runs as a single dashboard URL; standalone pages are disabled.
-            Redirecting to <a href="/">/</a>…
-          </div>
+          <div class="muted" id="msg">Loading…</div>
         </div>
 
         <script>
-          // Hard redirect (in case meta refresh is blocked)
-          try { window.location.replace('/'); } catch {}
+          // Enforce iframe-only usage: if opened directly, bounce to the dashboard.
+          try {
+            if (window.self === window.top) {
+              window.location.replace('/');
+            } else {
+              const msg = document.getElementById('msg');
+              if (msg) msg.textContent = 'Embedded mode enabled. Replace this file with your saved Avatar Studio copy to restore the original UI.';
+            }
+          } catch {
+            try { window.location.replace('/'); } catch {}
+          }
         </script>
       </body>
       </html>
