@@ -504,68 +504,7 @@
 
       <!-- LEADERBOARD -->
       <section class="view" id="view-leaderboard" aria-label="Leaderboard view">
-        <div class="viewHeader">
-          <div>
-            <p class="h">Leaderboards</p>
-            <p class="p">Skill rewards are rank-based (placement percentile). Activity rewards are from paid Credits spent + active days.</p>
-          </div>
-          <span class="pill"><strong>Daily payouts</strong> · claim mUSD · tx is user-gas-paid</span>
-        </div>
-
-        <div class="grid">
-          <div class="card">
-            <div class="inner">
-              <div class="row">
-                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-                  <h3 id="lbTitle">Leaderboard · Local</h3>
-                  <select id="lbGameSelect" aria-label="Leaderboard game"></select>
-                </div>
-                <div class="tabs" aria-label="Period">
-                  <div class="tab active" data-period="daily">Today</div>
-                  <div class="tab" data-period="weekly">Week</div>
-                  <div class="tab" data-period="all">All-time</div>
-                </div>
-              </div>
-              <table aria-label="Local leaderboard table">
-                <thead>
-                  <tr><th>#</th><th>Player</th><th>Best</th><th>Runs</th><th>XP</th></tr>
-                </thead>
-                <tbody id="lbLocal"></tbody>
-              </table>
-              <div class="muted">Global leaderboard is live via /api/leaderboard/top (Redis). Local fallback still works if offline.</div>
-            </div>
-          </div>
-
-          <div class="card">
-            <div class="inner">
-              <h3>Daily Payout Preview</h3>
-              <div class="kv">
-                <div class="k">Next epoch</div><div class="v" id="lbEpoch">--:--:--</div>
-                <div class="k">Your skill points</div><div class="v" id="lbSkillPts">0</div>
-                <div class="k">Your activity points</div><div class="v" id="lbActPts">0</div>
-                <div class="k">PRO boost</div><div class="v" id="lbProBoost">0</div>
-                <div class="k">Lottery tickets (today)</div><div class="v" id="lbTickets">0</div>
-                <div class="k">Lottery bonus (settled)</div><div class="v" id="lbLottery">0.00 mUSD <small>(settled)</small></div>
-                <div class="k">Claimable</div><div class="v" id="lbClaim">0.00 mUSD <small>(settled)</small></div>
-                <div class="k">Est. next</div><div class="v" id="lbNextEst">0.00 mUSD <small>(preview)</small></div>
-              </div>
-
-              <div class="hr"></div>
-              <div class="mini muted" style="margin-top:2px">Last lottery winners (yesterday):</div>
-              <div id="lbWinners" class="txFeed" style="margin-top:8px"></div>
-
-              <div class="btnRow" style="display:flex;gap:8px;flex-wrap:wrap">
-                <button class="btn primary" id="btnClaimPayout">Claim mUSD (Tx)</button>
-                <button class="btn" id="btnMintBadge">Mint daily badge (Tx)</button>
-              </div>
-
-              <div class="muted" style="margin-top:8px"><strong>How payouts work:</strong> daily epoch settles at UTC midnight.</div>
-              <div class="mini muted">50% Skill (paid-only eligible scores) · 35% Activity (paid activity) · 10% PRO boost pool.</div>
-              <div class="mini muted">Lottery is funded by: 8% of the Activity pool + an extra 5% moved from Skill.</div>
-              <div class="mini muted">Lottery tickets are PRO-only: you need active Studio ($2+) or higher to earn tickets.</div>
-            </div>
-          </div>
-        </div>
+        <div id="lbV2Host" data-ga-lb-host></div>
       </section>
 
       <!-- PROPOSALS -->
@@ -1982,11 +1921,229 @@
         try { stopAvatarPromoRotation(); } catch {}
       }
 
+      // Leaderboard v2 loader
+      if (name === 'leaderboard') {
+        try { ensureLeaderboardV2Loaded(); } catch {}
+      }
+
       // Update 3D accent
       const cssAccent = getComputedStyle(document.body).getPropertyValue('--accent').trim() || '#22d3ee';
       try { window.__arcadeScene && window.__arcadeScene.setAccent(cssAccent); } catch {}
     }
     navBtns.forEach(btn => btn.addEventListener('click', ()=>setView(btn.dataset.nav)));
+
+    // ----- Leaderboard v2 (drop-in bundle) -----
+    let GA_LB_V2_LOADED = false;
+
+    function gaFetchText(url) {
+      return fetch(url, { cache: 'no-store' }).then(r => {
+        if (!r.ok) throw new Error('HTTP_' + r.status);
+        return r.text();
+      });
+    }
+
+    function gaLoadCssOnce(href, id) {
+      if (document.getElementById(id)) return;
+      const link = document.createElement('link');
+      link.id = id;
+      link.rel = 'stylesheet';
+      link.href = href;
+      document.head.appendChild(link);
+    }
+
+    function gaLoadScriptOnce(src, id) {
+      return new Promise((resolve, reject) => {
+        if (document.getElementById(id)) return resolve();
+        const s = document.createElement('script');
+        s.id = id;
+        s.src = src;
+        s.async = true;
+        s.onload = () => resolve();
+        s.onerror = () => reject(new Error('script_load_failed'));
+        document.head.appendChild(s);
+      });
+    }
+
+    async function serverWeekClaim(yw) {
+      return apiJson('/api/week/claim', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: { yw }
+      });
+    }
+
+    function getEpochForLbV2() {
+      const d = (EPOCH_CACHE && EPOCH_CACHE.data) ? EPOCH_CACHE.data : {};
+      const nextPayoutAt = (() => {
+        try {
+          if (d && d.nextPayoutAt != null) {
+            const x = Number(d.nextPayoutAt);
+            if (Number.isFinite(x) && x > 0) return x;
+          }
+          if (d && d.nextDailyPayoutAt != null) {
+            const x = Number(d.nextDailyPayoutAt);
+            if (Number.isFinite(x) && x > 0) return x;
+          }
+        } catch {}
+        try { return nextUtcMidnightMs(); } catch {}
+        return 0;
+      })();
+
+      const dayUsd = (() => {
+        try {
+          if (d && typeof d.claimable === 'number') return Number(d.claimable) || 0;
+          if (d && typeof d.dayClaimable === 'number') return Number(d.dayClaimable) || 0;
+          if (d && d.claimable && d.claimable.record) return Number(d.claimable.record.totalUsd || 0) || 0;
+        } catch {}
+        return 0;
+      })();
+
+      const weekUsd = (() => {
+        try {
+          if (d && typeof d.weekClaimable === 'number') return Number(d.weekClaimable) || 0;
+          if (d && d.weekClaimable && d.weekClaimable.record) return Number(d.weekClaimable.record.totalUsd || 0) || 0;
+        } catch {}
+        return 0;
+      })();
+
+      return {
+        nextPayoutAt,
+        nextDailyPayoutAt: nextPayoutAt,
+        claimable: Math.max(0, Number(dayUsd || 0)),
+        dayClaimable: Math.max(0, Number(dayUsd || 0)),
+        weekClaimable: Math.max(0, Number(weekUsd || 0)),
+        todayTickets: (d && Number.isFinite(d.todayTickets)) ? Math.max(0, Math.floor(Number(d.todayTickets))) : 0,
+        weekActivity: (d && Number.isFinite(d.weekActivity)) ? Math.max(0, Math.floor(Number(d.weekActivity))) : 0,
+      };
+    }
+
+    async function ensureLeaderboardV2Loaded() {
+      if (GA_LB_V2_LOADED) {
+        try { window.__GA_LB_V2__ && window.__GA_LB_V2__.onShow && window.__GA_LB_V2__.onShow(); } catch {}
+        return;
+      }
+      GA_LB_V2_LOADED = true;
+
+      // Adapter surface consumed by /public/gruesome-arcade-leaderboard-ui-v2.0/leaderboard.js
+      window.__ARCADE_LB_ADAPTER__ = {
+        version: '2.0',
+        apiJson,
+        toast,
+        shortAddr,
+        openWallet: () => setView('wallet'),
+        getSession: () => ({
+          connected: !!(SESSION && SESSION.authenticated),
+          address: (SESSION && SESSION.address) ? SESSION.address : (lsGet(K.address) || null),
+          pohVerified: (SESSION && typeof SESSION.pohVerified === 'boolean') ? SESSION.pohVerified : getBool(K.poh),
+        }),
+        getEpoch: () => getEpochForLbV2(),
+        getCatalog: async () => (CATALOG || null),
+        claimDaily: async () => {
+          try {
+            const e = (EPOCH_CACHE && EPOCH_CACHE.data) ? EPOCH_CACHE.data : null;
+            const ymd = e && e.lastSettledYmd ? String(e.lastSettledYmd) : (e && e.claimable && e.claimable.record ? String(e.claimable.record.ymd || '') : '');
+            const amt = Number(getEpochForLbV2().claimable || 0) || 0;
+            const claimed = !!(e && e.claimable && typeof e.claimable.claimed === 'boolean' ? e.claimable.claimed : false);
+
+            if (!SESSION.authenticated) return toast('Connect wallet', 'Required to claim.');
+            if (!SESSION.pohVerified) return toast('PoH required', 'Verify Proof of Humanity to claim payouts.');
+            if (!ymd) return toast('Claim', 'No settled day available yet.');
+            if (amt <= 0) return toast('No claimable rewards', 'Play more to earn rewards.');
+            if (claimed) return toast('Already claimed', 'This day is already claimed.');
+
+            openTxConfirm({
+              title: 'Claim daily payout',
+              desc: `Claim ${amt.toFixed(2)} mUSD from the last settled day. (User pays gas)`,
+              gasEth: '0.00006',
+              preview: `Writes: daily claim (${ymd}) · Server records claim + audit.`,
+              onConfirm: () => {
+                simulateTx({
+                  kind: 'claim',
+                  label: `Claim ${amt.toFixed(2)} mUSD`,
+                  gasEth: '0.00006',
+                  apply: async () => {
+                    try {
+                      await serverEpochClaim(ymd);
+                      await refreshEpochStatus(true);
+                      await refreshLedger();
+                      try { window.__GA_LB_V2__ && window.__GA_LB_V2__.refresh && window.__GA_LB_V2__.refresh(); } catch {}
+                    } catch (err) {
+                      toast('Claim failed', (err && err.message) ? String(err.message) : 'server error');
+                    }
+                  }
+                });
+              }
+            });
+          } catch (err) {
+            toast('Claim', 'Failed to claim daily.');
+          }
+        },
+        claimWeekly: async () => {
+          try {
+            const e = (EPOCH_CACHE && EPOCH_CACHE.data) ? EPOCH_CACHE.data : null;
+            const yw = e && e.lastSettledYw ? String(e.lastSettledYw) : (e && e.weekClaimable && e.weekClaimable.record ? String(e.weekClaimable.record.yw || '') : '');
+            const amt = Number(getEpochForLbV2().weekClaimable || 0) || 0;
+            const claimed = !!(e && e.weekClaimable && typeof e.weekClaimable.claimed === 'boolean' ? e.weekClaimable.claimed : false);
+
+            if (!SESSION.authenticated) return toast('Connect wallet', 'Required to claim.');
+            if (!SESSION.pohVerified) return toast('PoH required', 'Verify Proof of Humanity to claim payouts.');
+            if (!yw) return toast('Claim', 'No settled week available yet.');
+            if (amt <= 0) return toast('No claimable rewards', 'Play more to earn rewards.');
+            if (claimed) return toast('Already claimed', 'This week is already claimed.');
+
+            openTxConfirm({
+              title: 'Claim weekly payout',
+              desc: `Claim ${amt.toFixed(2)} mUSD from the last settled week. (User pays gas)`,
+              gasEth: '0.00006',
+              preview: `Writes: weekly claim (${yw}) · Server records claim + audit.`,
+              onConfirm: () => {
+                simulateTx({
+                  kind: 'claim',
+                  label: `Claim ${amt.toFixed(2)} mUSD`,
+                  gasEth: '0.00006',
+                  apply: async () => {
+                    try {
+                      await serverWeekClaim(yw);
+                      await refreshEpochStatus(true);
+                      await refreshLedger();
+                      try { window.__GA_LB_V2__ && window.__GA_LB_V2__.refresh && window.__GA_LB_V2__.refresh(); } catch {}
+                    } catch (err) {
+                      toast('Claim failed', (err && err.message) ? String(err.message) : 'server error');
+                    }
+                  }
+                });
+              }
+            });
+          } catch (err) {
+            toast('Claim', 'Failed to claim weekly.');
+          }
+        },
+      };
+
+      // Warm caches so v2 can render payouts quickly.
+      try { await refreshEpochStatus(true); } catch {}
+
+      gaLoadCssOnce('/gruesome-arcade-leaderboard-ui-v2.0/leaderboard.css', 'ga-lb-v2-css');
+
+      const host = document.getElementById('lbV2Host');
+      if (!host) return;
+
+      try {
+        host.innerHTML = await gaFetchText('/gruesome-arcade-leaderboard-ui-v2.0/leaderboard-panel.html');
+      } catch (e) {
+        host.innerHTML = '<div class="card"><div class="mini muted">Failed to load Leaderboard UI bundle.</div></div>';
+        return;
+      }
+
+      try {
+        await gaLoadScriptOnce('/gruesome-arcade-leaderboard-ui-v2.0/leaderboard.js', 'ga-lb-v2-js');
+      } catch (e) {
+        host.innerHTML = '<div class="card"><div class="mini muted">Failed to load Leaderboard UI script.</div></div>';
+        return;
+      }
+
+      try { window.__GA_LB_V2__ && window.__GA_LB_V2__.onShow && window.__GA_LB_V2__.onShow(); } catch {}
+    }
 
     // ----- Top chips -----
     const chipWallet = document.getElementById('chipWallet');
@@ -3061,6 +3218,9 @@
     }
 
     function renderLocalLB() {
+      // Legacy leaderboard elements are removed when v2 is enabled.
+      if (!lbLocal || !lbTitle) return;
+
       const gameId = getLbGameId();
       const period = getLbPeriod();
       const g = gameById(gameId);

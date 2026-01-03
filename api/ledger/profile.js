@@ -3,22 +3,16 @@
 
 import * as Sec from '../_lib/security.js';
 import * as U from '../_lib/user.js';
-import { parseCookies, readJson } from '../_lib/util.js';
-import { readSession } from '../_lib/session.js';
 
 export default async function handler(req, res) {
   try {
     if (req.method !== 'POST') return res.status(405).json({ error: 'method_not_allowed' });
     if (!Sec.sameOrigin(req)) return res.status(403).json({ error: 'forbidden' });
 
-    const cookies = parseCookies(req);
-    const s = readSession(cookies);
-    if (!s || !s.address) return res.status(401).json({ error: 'not_authenticated' });
-    const address = String(s.address).toLowerCase();
+    const address = String((req.query && req.query.address) || '').toLowerCase();
     if (!Sec.isAddress(address)) return res.status(400).json({ error: 'bad_address' });
 
-    const body = await readJson(req).catch(() => ({}));
-    const patch = (body && typeof body === 'object' && body.patch && typeof body.patch === 'object') ? body.patch : (body && typeof body === 'object' ? body : {});
+    const patch = (req.body && req.body.patch) ? req.body.patch : {};
     if (!patch || typeof patch !== 'object') return res.status(400).json({ error: 'bad_patch' });
 
     // Split identity fields (set-once) from normal profile patch.
