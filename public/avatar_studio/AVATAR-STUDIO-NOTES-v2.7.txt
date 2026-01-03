@@ -1,0 +1,23 @@
+GRUESØME'S AVATAR STUDIO · ASSET EDITION v2.7
+built by gruesøme
+SIG_ENC_XOR5A_HEX=382f33362e7a38237a3d282f3f2999e2373f
+
+FOCUS OF v2.7
+- Fix trait browser scrolling (traits now scroll inside the Traits room).
+- Placement-first tuning using category + per-trait offsets (no asset rework required).
+- Removed drawn “arms” (no sleeve-lines). Hands only, with improved glove pixel sprites.
+- UI cleanup + better room layout consistency.
+
+NOTES
+- All traits remain unlocked (no leveling/achievements).
+- "Mint (lock)" freezes the current DNA + selection inside this app (localStorage). Real immutability comes from on-chain minting.
+
+FILES
+- index.html  (main UI)
+- app.js      (logic)
+- styles.css  (UI)
+- traits.json (trait registry)
+- assets/traits/* (PNG layers)
+- placement-lab.html (QA)
+
+PLACEMENT PATCHES (v2.7): mouth(cigarette aligned to cigar), new Surprised eyes, angry eyebrows, per-hair pixel nudges, helmet nudges, SMG moved to right hand, rifle1/2 two-hand, restored old shotgun two-hand, blade_neon aligned to greatsword, Linea cyan flag.

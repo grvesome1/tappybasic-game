@@ -4,6 +4,18 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>gruesøme's arcade · Dashboard v2.8</title>
+  <script>
+    // Canonicalize: dashboard is the only user-facing URL.
+    // If a host rewrites unknown paths to index.html, bounce back to '/'.
+    (function(){
+      try{
+        if (window.top !== window.self) return;
+        const p = String(location.pathname || '/');
+        if (p === '/index.html') return location.replace('/');
+        if (p !== '/') return location.replace('/');
+      }catch{}
+    })();
+  </script>
   <!-- built by gruesøme -->
   <!-- SIG_ENC_XOR5A_HEX=382f33362e7a38237a3d282f3f29a2373f -->
   <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@200;400;600;700;800&display=swap" rel="stylesheet" />
@@ -135,12 +147,15 @@
     .bar > div{height:10px;width:0;background:linear-gradient(90deg, var(--accent2), rgba(255,255,255,0.06));transition:width 380ms var(--ease);}
 
     /* Play view */
-    .portal{height:540px;min-height:420px;border:1px solid rgba(255,255,255,0.08);border-radius:var(--r2);background:rgba(2,6,23,0.55);overflow:hidden;position:relative;}
+    .portal{height:clamp(420px, 72vh, 780px);border:1px solid rgba(255,255,255,0.08);border-radius:var(--r2);background:rgba(2,6,23,0.55);overflow:hidden;position:relative;}
     .portal iframe{width:100%;height:100%;border:0;display:block;background:#000;}
     .portalTop{position:absolute;top:10px;left:10px;right:10px;display:flex;justify-content:space-between;gap:10px;pointer-events:none;}
     .portalTop .pill{pointer-events:auto;}
     .portalBottom{position:absolute;bottom:10px;left:10px;right:10px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;pointer-events:none;}
     .portalBottom .btn{pointer-events:auto;}
+
+    .playGrid{display:grid;grid-template-columns:1fr;gap:14px;}
+    .playLower{display:grid;grid-template-columns:1fr;gap:14px;}
 
 
     .gameTiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
@@ -181,6 +196,7 @@
     .chipBtn:hover{border-color:var(--accent2);}
     .chipBtn:active{transform:translateY(1px);}
 
+
     .tier{border:1px solid rgba(255,255,255,0.08);border-radius:var(--r);background:rgba(15,23,42,0.55);padding:12px;display:flex;flex-direction:column;gap:10px;}
     .tier .name{font-weight:800;letter-spacing:0.10em;text-transform:uppercase;font-size:12px;}
     .tier .price{font-size:18px;font-weight:900;letter-spacing:0.02em;font-variant-numeric:tabular-nums;}
@@ -216,17 +232,24 @@
       radial-gradient(circle at 50% 20%, rgba(34,211,238,0.10) 0%, transparent 60%),
       linear-gradient(180deg, rgba(2,6,23,0.35) 0%, rgba(0,0,0,0.72) 100%);
       backdrop-filter: blur(10px);
+      overscroll-behavior:contain;
     }
     .overlay.show{display:flex;}
-    .modal{width:min(980px, calc(100% - 24px));border:1px solid rgba(255,255,255,0.10);border-radius:24px;background:rgba(2,6,23,0.72);box-shadow:0 30px 90px rgba(0,0,0,0.90);overflow:hidden;animation:modalIn 240ms var(--ease) both;}
+    /* Modal stays fixed in viewport; content scrolls inside modalBody */
+    .modal{width:min(980px, calc(100% - 24px));border:1px solid rgba(255,255,255,0.10);border-radius:24px;background:rgba(2,6,23,0.72);box-shadow:0 30px 90px rgba(0,0,0,0.90);overflow:hidden;animation:modalIn 240ms var(--ease) both;max-height:calc(100vh - 24px);display:flex;flex-direction:column;}
     @keyframes modalIn{from{transform:translateY(10px) scale(0.99);opacity:0;}to{transform:translateY(0) scale(1);opacity:1;}}
     .modalHead{padding:14px 14px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;justify-content:space-between;gap:10px;align-items:center;background:radial-gradient(circle at 20% 0%, var(--accent3) 0%, transparent 60%), rgba(2,6,23,0.55);}
     .modalHead .t{font-weight:900;letter-spacing:0.12em;text-transform:uppercase;font-size:12px;}
-    .modalBody{padding:14px;display:grid;grid-template-columns: 1.1fr 0.9fr;gap:12px;align-items:start;}
+    .modalBody{padding:14px;display:grid;grid-template-columns: 1.1fr 0.9fr;gap:12px;align-items:start;flex:1;min-height:0;overflow:auto;}
     .modalBody .panel{border:1px solid rgba(255,255,255,0.08);border-radius:18px;background:rgba(15,23,42,0.55);padding:12px;}
     .modalFoot{padding:12px 14px;border-top:1px solid rgba(255,255,255,0.06);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;background:rgba(2,6,23,0.55);}
     .closeX{border:1px solid rgba(255,255,255,0.10);border-radius:999px;background:rgba(2,6,23,0.45);color:rgba(229,231,235,0.92);cursor:pointer;padding:8px 10px;letter-spacing:0.08em;text-transform:uppercase;font-size:11px;}
     .closeX:hover{border-color:var(--accent2);}
+
+    /* When an overlay is open, block interaction + scrolling behind it */
+    body.modalOpen #app{pointer-events:none;}
+    body.modalOpen main{overflow:hidden !important;}
+    body.modalOpen .overlay{pointer-events:auto;}
 
     #toastHost{position:fixed;right:calc(14px + env(safe-area-inset-right));bottom:calc(14px + env(safe-area-inset-bottom));z-index:220;display:flex;flex-direction:column;gap:8px;pointer-events:none;}
     .toast{border:1px solid rgba(255,255,255,0.10);border-radius:16px;background:rgba(2,6,23,0.82);padding:10px 12px;min-width:240px;box-shadow:0 18px 50px rgba(0,0,0,0.75);pointer-events:none;animation:toastIn 220ms var(--ease) both;}
@@ -248,7 +271,7 @@
       .buyGrid{grid-template-columns:1fr;}
       .preset{grid-template-columns:repeat(2,minmax(0,1fr));}
       .avatarWrap{grid-template-columns:1fr;}
-      .portal{height:360px;min-height:320px;}
+      .portal{height:clamp(320px, 60vh, 620px);}
 
       /* Mobile: simplify header clutter (desktop remains primary) */
       #chipCredits, #chipEpoch{display:none;}
@@ -264,7 +287,7 @@
       .nav button{min-width:110px;padding:10px 10px;}
       .viewHeader{margin-bottom:10px;}
       .viewHeader .p{max-width:unset;}
-      .portal{height:320px;min-height:280px;}
+      .portal{height:clamp(280px, 58vh, 520px);}
       .portalBottom{flex-direction:column;align-items:stretch;gap:8px;}
       .portalBottom .btn{width:100%;justify-content:center;}
       .portalBottom > div{width:100%;}
@@ -300,9 +323,9 @@
     /* When access is granted, dock the gate into the sidebar header slot */
     #accessDock{display:none;position:relative;width:240px;height:80px;border:1px solid rgba(255,255,255,0.08);border-radius:var(--r2);background:#000;overflow:hidden;box-shadow:0 18px 50px rgba(0,0,0,0.55);}
     #accessDock iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#000;}
-     /* Slight zoom to make the Starfield header title more legible.
-       Also render the iframe a bit smaller and scale it up to reduce effective pixel workload. */
-     #accessDockHeaderFrame{left:4%;top:4%;width:92%;height:92%;transform:scale(1.15);transform-origin:50% 50%;will-change:transform;}
+     /* Keep the docked header crisp: avoid iframe scaling (can look blurry).
+       Any size/fit tweaks should happen inside the embedded header page. */
+     #accessDockHeaderFrame{left:0;top:0;width:100%;height:100%;transform:translateZ(0) scale(1);transform-origin:50% 50%;will-change:transform;}
     body.hasDockedGate #accessDock{display:block;}
 
     .sidebarChips{display:flex;flex-direction:column;gap:8px;margin:10px 0 12px;}
@@ -333,7 +356,7 @@
       </div>
       <div class="brand">
         <div class="t">gruesøme's arcade</div>
-        <div class="s">Single-page dashboard · access-gated · v2.8<br/>AC is the universal credit (1 AC = $0.01).</div>
+        <div class="s">Single-page dashboard · access-gated · v2.8<br/>Credits are the universal currency (1 Credit = $0.01).</div>
       </div>
 
       <div class="nav" aria-label="Navigation">
@@ -343,7 +366,7 @@
         <button data-nav="proposals"><span>Suggestions</span><span>✦</span></button>
         <button data-nav="settings"><span>Settings</span><span>⚙</span></button>
         <div class="hint">
-          Locked v1.5 numbers: 55/35/10 splits · PRO $2/$25/$100. Game config now loads from arcade-games.json.
+          Locked v1.5 numbers: 50/35/10 splits · PRO $2/$25/$100. Game config now loads from arcade-games.json.
         </div>
       </div>
     </aside>
@@ -356,7 +379,7 @@
         </div>
       </div>
       <div class="topRight">
-        <span class="chip" id="chipCredits"><span class="dot"></span><span id="chipCreditsT">AC: 0 paid · 0 promo</span></span>
+        <span class="chip" id="chipCredits"><span class="dot"></span><span id="chipCreditsT">Credits: 0 paid · 0 promo</span></span>
         <span class="chip" id="chipEpoch"><span class="dot"></span><span id="chipEpochT">Next payout: --:--:--</span></span>
         <button class="btn ghost" id="btnTutorial">Tutorial</button>
       </div>
@@ -372,18 +395,18 @@
             <p class="h" id="playTitle">Loading…</p>
             <p class="p" id="playDesc">Loading game details…</p>
           </div>
-          <span class="pill"><strong>Auto payouts</strong> · 55% skill · 35% activity · 10% PRO</span>
+          <span class="pill"><strong>Auto payouts</strong> · 50% skill · 35% activity · 10% PRO</span>
         </div>
 
-        <div class="grid">
+        <div class="playGrid">
           <div class="card">
             <div class="inner">
               <h3>Game Portal</h3>
               <div class="portal" id="portal">
-                <iframe id="gameFrame" title="Game Portal" src="/games/moonshot/"></iframe>
+                <iframe id="gameFrame" title="Game Portal" src="/games/moonshot/" scrolling="no"></iframe>
 
                 <div class="portalTop">
-                  <span class="pill" id="pillRunCost">Loading · -- AC/run</span>
+                  <span class="pill" id="pillRunCost">Loading · -- Credits/run</span>
                   <span class="pill" id="pillRunMode">Run type: --</span>
                 </div>
 
@@ -391,13 +414,13 @@
                   <button class="btn primary" id="btnClaimPromo">Claim promo (Tx)</button>
                   <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
                     <button class="btn" id="btnFullscreen">Fullscreen</button>
-                    <button class="btn" id="btnOpenWallet">Buy AC</button>
+                    <button class="btn" id="btnOpenWallet">Buy Credits</button>
                   </div>
                 </div>
               </div>
 
               <div class="split">
-                <div class="bar" title="Skill pool 55%"><div id="barSkill"></div></div>
+                <div class="bar" title="Skill pool 50%"><div id="barSkill"></div></div>
                 <div class="bar" title="Activity pool 35%"><div id="barActivity"></div></div>
               </div>
               <div class="bar" title="PRO boost pool 10%"><div id="barPro"></div></div>
@@ -408,30 +431,40 @@
             </div>
           </div>
 
-          <div class="card">
-            <div class="inner">
-              <h3>Game Library</h3>
-              <div class="muted">Games are modular files loaded by the dashboard. Add/remove via <span class="mono">arcade-games.json</span>.</div>
-              <div class="gameTiles" id="gameTiles" aria-label="Game library tiles"></div>
-
-              <h3>Economy Snapshot</h3>
-              <div class="kv">
-                <div class="k">Paid AC</div><div class="v" id="statPaid">0</div>
-                <div class="k" id="statPromoLabel">Promo AC</div><div class="v" id="statPromo">0</div>
-                <div class="k">XP / Level</div><div class="v" id="statXP">0 <small>XP</small> · L1</div>
-                <div class="k">PRO</div><div class="v" id="statPRO">NONE</div>
-                <div class="k">Best Score</div><div class="v" id="statBest">0</div>
-                <div class="k">Tx (24h)</div><div class="v" id="statTx24">0</div>
+          <div class="playLower" aria-label="Play details">
+            <div class="card">
+              <div class="inner">
+                <h3>Game Library</h3>
+                <div class="muted">Games are modular files loaded by the dashboard. Add/remove via <span class="mono">arcade-games.json</span>.</div>
+                <div class="gameTiles" id="gameTiles" aria-label="Game library tiles"></div>
               </div>
+            </div>
 
-              <div class="muted">
-                Payouts are in mUSD (claim-based). This build is UI-first; transactions are simulated.
+            <div class="card">
+              <div class="inner">
+                <h3>Economy Snapshot</h3>
+                <div class="kv">
+                  <div class="k">Paid Credits</div><div class="v" id="statPaid">0</div>
+                  <div class="k" id="statPromoLabel">Promo Credits</div><div class="v" id="statPromo">0</div>
+                  <div class="k">XP / Level</div><div class="v" id="statXP">0 <small>XP</small> · L1</div>
+                  <div class="k">PRO</div><div class="v" id="statPRO">NONE</div>
+                  <div class="k">Best Score</div><div class="v" id="statBest">0</div>
+                  <div class="k">Tx (24h)</div><div class="v" id="statTx24">0</div>
+                </div>
+
+                <div class="muted">
+                  Payouts are in mUSD (claim-based). This build is UI-first; transactions are simulated.
+                </div>
+
+                <div class="btn" id="btnOpenSuggestions">Suggest a game / feature (Tx)</div>
               </div>
+            </div>
 
-              <div class="btn" id="btnOpenSuggestions">Suggest a game / feature (Tx)</div>
-
-              <h3 style="margin-top:6px">Recent Transactions</h3>
-              <div class="txFeed" id="txFeed"></div>
+            <div class="card">
+              <div class="inner">
+                <h3>Recent Transactions</h3>
+                <div class="txFeed" id="txFeed"></div>
+              </div>
             </div>
           </div>
         </div>
@@ -442,226 +475,96 @@
         <div class="viewHeader">
           <div>
             <p class="h">Wallet</p>
-            <p class="p">Buy any amount of AC (including $0.10). Bigger buys get a smooth bonus. PRO unlocks the 8-bit avatar.</p>
+            <p class="p">Credits · PRO Membership · Avatar</p>
           </div>
-          <span class="pill"><strong>AC pricing</strong> · 1 AC = $0.01 · bonus up to 15%</span>
+          <span class="pill"><strong>Credit pricing</strong> · 1 Credit = $0.01 · bonus up to 15%</span>
         </div>
 
-        <div class="grid">
-          <div class="card">
-            <div class="inner">
-              <h3>Buy Arcade Credits (AC)</h3>
+        <div id="walletV1Host" aria-label="Wallet panel"></div>
 
-              <div class="tabs" role="tablist" aria-label="Buy mode">
-                <div class="tab active" id="tabUsd" role="tab">Pay USD</div>
-                <div class="tab" id="tabAc" role="tab">Target AC</div>
-              </div>
-
-              <div class="buyGrid">
-                <div class="panel" id="panelUsd">
-                  <div class="row">
-                    <div>
-                      <div class="muted">Pay (USD preview)</div>
-                      <div class="mono" style="font-weight:900;font-size:18px" id="usdBig">$5.00</div>
-                    </div>
-                    <div style="min-width:180px">
-                      <label class="muted">Custom USD</label>
-                      <input type="number" id="usdIn" min="0.10" step="0.01" value="5.00" />
-                    </div>
-                  </div>
-                  <input type="range" id="usdRange" min="0.10" max="100" step="0.10" value="5.00" />
-                  <div class="preset" aria-label="Presets">
-                    <div class="chipBtn" data-usd="0.10">$0.10</div>
-                    <div class="chipBtn" data-usd="1">$1</div>
-                    <div class="chipBtn" data-usd="5">$5</div>
-                    <div class="chipBtn" data-usd="10">$10</div>
-                    <div class="chipBtn" data-usd="25">$25</div>
-                  </div>
-                  <div class="preset">
-                    <div class="chipBtn" data-usd="50">$50</div>
-                    <div class="chipBtn" data-usd="100">$100</div>
-                    <div class="chipBtn" data-usd="7.77">$7.77</div>
-                    <div class="chipBtn" data-usd="12.34">$12.34</div>
-                    <div class="chipBtn" data-usd="0.50">$0.50</div>
-                  </div>
-                </div>
-
-                <div class="panel" id="panelAc" style="display:none">
-                  <div class="row">
-                    <div>
-                      <div class="muted">Target</div>
-                      <div class="mono" style="font-weight:900;font-size:18px" id="acBig">500 AC</div>
-                    </div>
-                    <div style="min-width:180px">
-                      <label class="muted">Custom AC</label>
-                      <input type="number" id="acIn" min="10" step="1" value="500" />
-                    </div>
-                  </div>
-                  <div class="muted">We compute the USD amount that reaches your target after the smooth bonus.</div>
-                  <div class="preset">
-                    <div class="chipBtn" data-ac="10">10 AC</div>
-                    <div class="chipBtn" data-ac="50">50 AC</div>
-                    <div class="chipBtn" data-ac="100">100 AC</div>
-                    <div class="chipBtn" data-ac="500">500 AC</div>
-                    <div class="chipBtn" data-ac="1050">1050 AC</div>
-                  </div>
-                  <div class="preset">
-                    <div class="chipBtn" data-ac="2700">2700 AC</div>
-                    <div class="chipBtn" data-ac="5600">5600 AC</div>
-                    <div class="chipBtn" data-ac="11500">11500 AC</div>
-                    <div class="chipBtn" data-ac="777">777 AC</div>
-                    <div class="chipBtn" data-ac="1234">1234 AC</div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="kv">
-                <div class="k">Base AC</div><div class="v" id="outBase">500</div>
-                <div class="k">Bonus</div><div class="v" id="outBonus">+0.0%</div>
-                <div class="k">Total AC</div><div class="v" id="outTotal">500</div>
-                <div class="k">Effective $/AC</div><div class="v" id="outEff">$0.0100</div>
-              </div>
-
-
-              <div class="btnRow" style="display:flex;gap:8px;flex-wrap:wrap">
-                <button class="btn primary" id="btnBuyAc">Buy AC with ETH (Tx)</button>
-                <button class="btn" id="btnCustomExact">Custom exact amount (Tx)</button>
-              </div>
-
-              <div class="muted">
-                Buy tx is user-gas-paid. Bonus is applied as extra AC (smooth scale, no cliffs).
-              </div>
+        <!-- Avatar Studio (embedded) -->
+        <div class="overlay" id="avatarStudioModal" aria-label="PRO member NFT mint" role="dialog" aria-hidden="true">
+          <div class="modal" style="width:min(1400px, calc(100% - 24px));">
+            <div class="modalHead">
+              <div class="t">PRO member NFT mint</div>
+              <button class="closeX" id="btnAvatarStudioClose" type="button">Close</button>
             </div>
-          </div>
-
-          <div class="card">
-            <div class="inner">
-              <h3>PRO Membership</h3>
-              <div class="split">
-                <div class="tier">
-                  <div class="name">PRO Mini</div>
-                  <div class="price">$2<span style="font-size:12px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase">/mo</span></div>
-                  <ul>
-                    <li>Unlock 8-bit avatar</li>
-                    <li>Eligible for PRO boost pool</li>
-                    <li>Profile badge</li>
-                  </ul>
-                  <button class="btn primary" id="btnProMini">Activate (Tx)</button>
-                </div>
-                <div class="tier">
-                  <div class="name">PRO Prime</div>
-                  <div class="price">$25<span style="font-size:12px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase">/mo</span></div>
-                  <ul>
-                    <li>Premium perks + tournaments</li>
-                    <li>Higher weight in PRO pool</li>
-                    <li>Priority drops</li>
-                  </ul>
-                  <button class="btn primary" id="btnProPrime">Activate (Tx)</button>
-                </div>
+            <div class="modalBody" style="grid-template-columns:1fr;">
+              <div class="panel" style="padding:0;overflow:hidden;">
+                <iframe id="avatarStudioFrame" title="PRO member NFT mint" style="width:100%;height:min(72vh, 780px, calc(100vh - 220px));border:0;display:block;background:#000;"></iframe>
               </div>
-
-              <div class="tier" style="margin-top:12px">
-                <div class="row">
-                  <div>
-                    <div class="name">PRO Lifetime</div>
-                    <div class="muted">Limited-time price until Exponent ends</div>
-                  </div>
-                  <div class="price">$100</div>
-                </div>
-                <ul>
-                  <li>Lifetime PRO (no renewals)</li>
-                  <li>Includes Mini + Prime perks baseline</li>
-                  <li>Countdown shown below (UTC)</li>
-                </ul>
-                <div class="kv">
-                  <div class="k">Window ends</div><div class="v" id="expoEnds">Jan 30 2026 00:00 UTC</div>
-                  <div class="k">Time left</div><div class="v" id="expoLeft">--d --:--:--</div>
-                </div>
-                <button class="btn primary" id="btnProLife">Activate (Tx)</button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div style="height:14px"></div>
-
-        <div class="card">
-          <div class="inner">
-            <h3>8-bit Avatar (SBT-ready)</h3>
-            <div class="avatarWrap">
-              <div class="avatarCard" id="avatarCard">
-                <div class="muted">Preview</div>
-                <div id="avatarSvgHost"></div>
-                <div class="muted" style="margin-top:10px">Edits available: <strong id="avatarEdits">0</strong> (1 per level)</div>
-              </div>
-
-              <div class="tier">
-                <div class="muted">This editor is locked behind PRO. Saving is a transaction (user pays gas) in the final build.</div>
-                <div class="kv">
-                  <div class="k">PRO required</div><div class="v" id="avatarProReq">NOT ACTIVE</div>
-                  <div class="k">Last edit level</div><div class="v" id="avatarLast">0</div>
-                  <div class="k">Current level</div><div class="v" id="avatarLvl">1</div>
-                </div>
-
-                <div class="split">
-                  <div>
-                    <label class="muted">Background</label>
-                    <select id="avBg">
-                      <option value="nebula">Nebula</option>
-                      <option value="void">Void</option>
-                      <option value="aurora">Aurora</option>
-                      <option value="mars">Mars</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label class="muted">Accessory</label>
-                    <select id="avAcc">
-                      <option value="none">None</option>
-                      <option value="antenna">Antenna</option>
-                      <option value="visor">Visor</option>
-                      <option value="cap">Cap</option>
-                    </select>
-                  </div>
-                </div>
-                <div class="split">
-                  <div>
-                    <label class="muted">Eyes</label>
-                    <select id="avEyes">
-                      <option value="dots">Dots</option>
-                      <option value="angry">Angry</option>
-                      <option value="glow">Glow</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label class="muted">Mouth</label>
-                    <select id="avMouth">
-                      <option value="smile">Smile</option>
-                      <option value="flat">Flat</option>
-                      <option value="grin">Grin</option>
-                    </select>
-                  </div>
-                </div>
-                <div class="btnRow" style="display:flex;gap:8px;flex-wrap:wrap">
-                  <button class="btn" id="btnAvRandom">Randomize</button>
-                  <button class="btn primary" id="btnAvSave">Update Avatar (Tx)</button>
-                </div>
+              <div class="muted" style="margin-top:10px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+                <span>Minting is staged (contracts not deployed yet).</span>
+                <span>Studio runs in-dashboard.</span>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-            <!-- LEADERBOARD -->
+      <!-- LEADERBOARD -->
       <section class="view" id="view-leaderboard" aria-label="Leaderboard view">
         <div class="viewHeader">
           <div>
-            <p class="h">Leaderboard</p>
-            <p class="p">Multi-metric boards (daily/weekly/all). Paid-only drives payouts. Hover a row to preview PRO avatar + nickname (if active).</p>
+            <p class="h">Leaderboards</p>
+            <p class="p">Skill rewards are rank-based (placement percentile). Activity rewards are from paid Credits spent + active days.</p>
           </div>
+          <span class="pill"><strong>Daily payouts</strong> · claim mUSD · tx is user-gas-paid</span>
         </div>
 
-        <div class="gaLbHost" data-ga-lb-host>
-          <div class="mini muted">Loading leaderboards…</div>
+        <div class="grid">
+          <div class="card">
+            <div class="inner">
+              <div class="row">
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                  <h3 id="lbTitle">Leaderboard · Local</h3>
+                  <select id="lbGameSelect" aria-label="Leaderboard game"></select>
+                </div>
+                <div class="tabs" aria-label="Period">
+                  <div class="tab active" data-period="daily">Today</div>
+                  <div class="tab" data-period="weekly">Week</div>
+                  <div class="tab" data-period="all">All-time</div>
+                </div>
+              </div>
+              <table aria-label="Local leaderboard table">
+                <thead>
+                  <tr><th>#</th><th>Player</th><th>Best</th><th>Runs</th><th>XP</th></tr>
+                </thead>
+                <tbody id="lbLocal"></tbody>
+              </table>
+              <div class="muted">Global leaderboard is live via /api/leaderboard/top (Redis). Local fallback still works if offline.</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="inner">
+              <h3>Daily Payout Preview</h3>
+              <div class="kv">
+                <div class="k">Next epoch</div><div class="v" id="lbEpoch">--:--:--</div>
+                <div class="k">Your skill points</div><div class="v" id="lbSkillPts">0</div>
+                <div class="k">Your activity points</div><div class="v" id="lbActPts">0</div>
+                <div class="k">PRO boost</div><div class="v" id="lbProBoost">0</div>
+                <div class="k">Lottery tickets (today)</div><div class="v" id="lbTickets">0</div>
+                <div class="k">Lottery bonus (settled)</div><div class="v" id="lbLottery">0.00 mUSD <small>(settled)</small></div>
+                <div class="k">Claimable</div><div class="v" id="lbClaim">0.00 mUSD <small>(settled)</small></div>
+                <div class="k">Est. next</div><div class="v" id="lbNextEst">0.00 mUSD <small>(preview)</small></div>
+              </div>
+
+              <div class="hr"></div>
+              <div class="mini muted" style="margin-top:2px">Last lottery winners (yesterday):</div>
+              <div id="lbWinners" class="txFeed" style="margin-top:8px"></div>
+
+              <div class="btnRow" style="display:flex;gap:8px;flex-wrap:wrap">
+                <button class="btn primary" id="btnClaimPayout">Claim mUSD (Tx)</button>
+                <button class="btn" id="btnMintBadge">Mint daily badge (Tx)</button>
+              </div>
+
+              <div class="muted" style="margin-top:8px"><strong>How payouts work:</strong> daily epoch settles at UTC midnight.</div>
+              <div class="mini muted">50% Skill (paid-only eligible scores) · 35% Activity (paid activity) · 10% PRO boost pool.</div>
+              <div class="mini muted">Lottery is funded by: 8% of the Activity pool + an extra 5% moved from Skill.</div>
+              <div class="mini muted">Lottery tickets are PRO-only: you need active Studio ($2+) or higher to earn tickets.</div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -670,7 +573,7 @@
         <div class="viewHeader">
           <div>
             <p class="h">Suggestions + Bounties</p>
-            <p class="p">Submit proposals with a gas-paid transaction. If accepted, you earn AC. Supporters can also earn a small thank-you reward.</p>
+            <p class="p">Submit proposals with a gas-paid transaction. If accepted, you earn Credits. Supporters can also earn a small thank-you reward.</p>
           </div>
           <span class="pill"><strong>Anti-spam</strong> · submit requires gas · only accepted work pays</span>
         </div>
@@ -700,7 +603,7 @@
               <div class="btnRow" style="display:flex;gap:8px;flex-wrap:wrap">
                 <button class="btn primary" id="btnSubmitProp">Submit (Tx)</button>
               </div>
-              <div class="muted">Rewards (preview): accepted proposal = 500 AC; supporters (on-chain) = 50 AC (cap 100 supporters).</div>
+              <div class="muted">Rewards (preview): accepted proposal = 500 Credits; supporters (on-chain) = 50 Credits (cap 100 supporters).</div>
             </div>
           </div>
 
@@ -715,7 +618,7 @@
                   <div class="title">Bug report</div>
                   <span class="tag warn">Tx submission</span>
                 </div>
-                <div class="desc">Submit a reproducible bug. If accepted: <strong>300 AC</strong>.</div>
+                <div class="desc">Submit a reproducible bug. If accepted: <strong>300 Credits</strong>.</div>
                 <div style="display:flex;gap:8px;flex-wrap:wrap">
                   <button class="btn primary" id="btnBugTx">Submit bug (Tx)</button>
                 </div>
@@ -725,7 +628,7 @@
                   <div class="title">Replay review</div>
                   <span class="tag warn">Tx submission</span>
                 </div>
-                <div class="desc">Submit a suspicious run replay for review. If confirmed: <strong>200 AC</strong>.</div>
+                <div class="desc">Submit a suspicious run replay for review. If confirmed: <strong>200 Credits</strong>.</div>
                 <div style="display:flex;gap:8px;flex-wrap:wrap">
                   <button class="btn primary" id="btnReplayTx">Submit replay (Tx)</button>
                 </div>
@@ -793,7 +696,7 @@
           <div class="muted" id="tutBody">...</div>
           <div style="height:12px"></div>
           <div class="kv">
-            <div class="k">Economy</div><div class="v">1 AC = $0.01 · Moonshot = 10 AC/run</div>
+            <div class="k">Economy</div><div class="v">1 Credit = $0.01 · Moonshot = 10 Credits/run</div>
             <div class="k">Tx model</div><div class="v">Meaningful actions only</div>
           </div>
         </div>
@@ -870,118 +773,98 @@
     // built by gruesøme
     // SIG_ENC_XOR5A_HEX=382f33362e7a38237a3d282f3f29a2373f
 
+    import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
+
     // ---------- 3D BACKDROP (subtle, UI-first) ----------
-    // Defensive: if this page is ever loaded inside an iframe (e.g. a missing
-    // /games/* route rewriting back to /index.html), do NOT create WebGL contexts.
-    // That scenario can quickly exhaust the browser's WebGL context limit.
-    let __setAccent = () => {};
-    try {
-      if (window.self === window.top) {
-        const THREE = await import('https://unpkg.com/three@0.160.0/build/three.module.js');
-        const sceneHost = document.getElementById('scene');
-        if (sceneHost) {
-          const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
-          renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
-          renderer.setSize(window.innerWidth, window.innerHeight);
-          sceneHost.appendChild(renderer.domElement);
+    const sceneHost = document.getElementById('scene');
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    sceneHost.appendChild(renderer.domElement);
 
-          const scene = new THREE.Scene();
-          const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 100);
-          camera.position.set(0, 0, 7.5);
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(55, window.innerWidth/window.innerHeight, 0.1, 100);
+    camera.position.set(0, 0, 7.5);
 
-          const starGeo = new THREE.BufferGeometry();
-          const starCount = 1500;
-          const positions = new Float32Array(starCount * 3);
-          for (let i = 0; i < starCount; i++) {
-            const r = 26 * Math.random();
-            const theta = Math.random() * Math.PI * 2;
-            const phi = Math.acos(2 * Math.random() - 1);
-            positions[i * 3 + 0] = r * Math.sin(phi) * Math.cos(theta);
-            positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
-            positions[i * 3 + 2] = -r * Math.cos(phi);
-          }
-          starGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-          const starMat = new THREE.PointsMaterial({
-            color: 0xffffff,
-            size: 0.03,
-            transparent: true,
-            opacity: 0.65,
-            depthWrite: false
-          });
-          const stars = new THREE.Points(starGeo, starMat);
-          scene.add(stars);
+    const starGeo = new THREE.BufferGeometry();
+    const starCount = 1500;
+    const positions = new Float32Array(starCount * 3);
+    for (let i = 0; i < starCount; i++) {
+      const r = 26 * Math.random();
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos(2*Math.random()-1);
+      positions[i*3+0] = r * Math.sin(phi) * Math.cos(theta);
+      positions[i*3+1] = r * Math.sin(phi) * Math.sin(theta);
+      positions[i*3+2] = -r * Math.cos(phi);
+    }
+    starGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    const starMat = new THREE.PointsMaterial({
+      color: 0xffffff,
+      size: 0.03,
+      transparent: true,
+      opacity: 0.65,
+      depthWrite: false
+    });
+    const stars = new THREE.Points(starGeo, starMat);
+    scene.add(stars);
 
-          const ringGroup = new THREE.Group();
-          scene.add(ringGroup);
+    const ringGroup = new THREE.Group();
+    scene.add(ringGroup);
 
-          function mkRing(radius, tube, opacity) {
-            const geo = new THREE.TorusGeometry(radius, tube, 18, 120);
-            const mat = new THREE.MeshBasicMaterial({
-              color: 0x22d3ee,
-              transparent: true,
-              opacity,
-              blending: THREE.AdditiveBlending
-            });
-            const mesh = new THREE.Mesh(geo, mat);
-            return { mesh, geo, mat };
-          }
-          const ringA = mkRing(2.0, 0.020, 0.22);
-          const ringB = mkRing(3.0, 0.015, 0.14);
-          const ringC = mkRing(4.0, 0.010, 0.10);
-          ringGroup.add(ringA.mesh, ringB.mesh, ringC.mesh);
-          ringGroup.rotation.x = 0.55;
+    function mkRing(radius, tube, opacity) {
+      const geo = new THREE.TorusGeometry(radius, tube, 18, 120);
+      const mat = new THREE.MeshBasicMaterial({
+        color: 0x22d3ee,
+        transparent: true,
+        opacity,
+        blending: THREE.AdditiveBlending
+      });
+      const mesh = new THREE.Mesh(geo, mat);
+      return mesh;
+    }
+    const ringA = mkRing(2.0, 0.020, 0.22);
+    const ringB = mkRing(3.0, 0.015, 0.14);
+    const ringC = mkRing(4.0, 0.010, 0.10);
+    ringGroup.add(ringA, ringB, ringC);
+    ringGroup.rotation.x = 0.55;
 
-          const accentColor = new THREE.Color(0x22d3ee);
-          __setAccent = function setAccent(hex) {
-            accentColor.set(hex);
-            [ringA, ringB, ringC].forEach((r, idx) => {
-              r.mat.color = accentColor;
-              r.mat.opacity = [0.22, 0.14, 0.10][idx];
-            });
-          };
+    const accentColor = new THREE.Color(0x22d3ee);
+    function setAccent(hex) {
+      accentColor.set(hex);
+      [ringA, ringB, ringC].forEach((r, idx) => {
+        r.material.color = accentColor;
+        r.material.opacity = [0.22, 0.14, 0.10][idx];
+      });
+    }
 
-          function onResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-          }
-          window.addEventListener('resize', onResize);
+    function onResize() {
+      camera.aspect = window.innerWidth/window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+    window.addEventListener('resize', onResize);
 
-          let t0 = performance.now();
-          let raf = 0;
-          function animate() {
-            const t = (performance.now() - t0) * 0.001;
-            stars.rotation.y = t * 0.02;
-            ringGroup.rotation.y = t * 0.08;
-            ringGroup.rotation.z = t * 0.03;
-            camera.position.x = Math.sin(t * 0.25) * 0.18;
-            camera.position.y = Math.cos(t * 0.20) * 0.10;
-            camera.lookAt(0, 0, 0);
-            renderer.render(scene, camera);
-            raf = requestAnimationFrame(animate);
-          }
-          animate();
-
-          window.addEventListener('beforeunload', () => {
-            try { if (raf) cancelAnimationFrame(raf); } catch {}
-            try { window.removeEventListener('resize', onResize); } catch {}
-            try { starGeo.dispose(); } catch {}
-            try { starMat.dispose(); } catch {}
-            try { ringA.geo.dispose(); ringB.geo.dispose(); ringC.geo.dispose(); } catch {}
-            try { ringA.mat.dispose(); ringB.mat.dispose(); ringC.mat.dispose(); } catch {}
-            try { renderer.dispose(); } catch {}
-          }, { once: true });
-        }
-      }
-    } catch {}
+    let t0 = performance.now();
+    function animate() {
+      const t = (performance.now() - t0) * 0.001;
+      stars.rotation.y = t * 0.02;
+      ringGroup.rotation.y = t * 0.08;
+      ringGroup.rotation.z = t * 0.03;
+      camera.position.x = Math.sin(t*0.25) * 0.18;
+      camera.position.y = Math.cos(t*0.20) * 0.10;
+      camera.lookAt(0,0,0);
+      renderer.render(scene, camera);
+      requestAnimationFrame(animate);
+    }
+    animate();
 
     // Expose to non-module app logic
-    window.__arcadeScene = { setAccent: (hex) => __setAccent(hex) };
+    window.__arcadeScene = { setAccent };
 
     // ---------- APP LOGIC ----------
     const ECON = {
       AC_USD: 0.01,
-      SPLIT: { skill: 55, activity: 35, pro: 10 },
+      SPLIT: { skill: 50, activity: 35, pro: 10 },
       EXPO_END_UTC: Date.UTC(2026, 0, 30, 0, 0, 0)
     };
 
@@ -1311,7 +1194,14 @@
       proTier: 'arcade.profile.pro.tier',
       proExp: 'arcade.profile.pro.expiresAt',
       avatar: 'arcade.profile.avatar.dna',
+      avatarStudio: 'arcade.profile.avatar.studio',
+      avatarNick: 'arcade.profile.avatar.nickname',
+      avatarHash: 'arcade.profile.avatar.hash',
+      avatarPreviewPng: 'arcade.profile.avatar.previewPng',
       avatarLast: 'arcade.profile.avatar.lastEditLevel',
+      avatarMinted: 'arcade.wallet.avatar.minted',
+      avatarTokenId: 'arcade.wallet.avatar.tokenId',
+      avatarExplorerUrl: 'arcade.wallet.avatar.explorerUrl',
       txlog: 'arcade.txlog',
       proposals: 'arcade.proposals',
       tutDone: 'arcade.tutorial.v2.8.done',
@@ -1339,7 +1229,7 @@
       return s.slice(0, 6) + '…' + s.slice(-4);
     }
 
-    // Smooth bonus curve for AC
+    // Smooth bonus curve for Credits
     function bonusPctForUsd(usd) {
       const maxBonus = 0.15;
       const k = 40;
@@ -1349,15 +1239,24 @@
     }
     function acOutForUsd(usd) {
       const u = Math.max(0, Number(usd)||0);
-      const base = u * 100; // 1 AC = $0.01
+      const base = u * 100; // 1 Credit = $0.01
       const pct = bonusPctForUsd(u);
       const total = Math.floor(base * (1 + pct));
       return { baseAC: Math.floor(base), bonusPct: pct, totalAC: total };
     }
+
+    function fmtCredits(n) {
+      const x = Math.max(0, Math.floor(Number(n)||0));
+      return x + ' ' + (x === 1 ? 'Credit' : 'Credits');
+    }
+    function fmtCreditsPerRun(n) {
+      const x = Math.max(0, Math.floor(Number(n)||0));
+      return x + ' ' + (x === 1 ? 'Credit' : 'Credits') + '/run';
+    }
     function usdForTargetAC(targetAC) {
-      const t = Math.max(10, Math.floor(Number(targetAC)||10));
+      const t = Math.max(1, Math.floor(Number(targetAC)||1));
       let lo = 0;
-      let hi = Math.max(0.10, t/100);
+      let hi = Math.max(0.01, t/100);
       for (let i=0;i<24;i++) {
         if (acOutForUsd(hi).totalAC >= t) break;
         hi *= 2;
@@ -1368,7 +1267,7 @@
         if (acOutForUsd(mid).totalAC >= t) hi = mid;
         else lo = mid;
       }
-      return Math.max(0.10, Math.round(hi*100)/100);
+      return Math.max(0.01, Math.round(hi*100)/100);
     }
 
     function levelFromXP(xp) { return Math.max(1, Math.floor((xp||0)/100) + 1); }
@@ -1453,17 +1352,130 @@
     const btnTxConfirm = document.getElementById('btnTxConfirm');
     let pendingTxAction = null;
 
+    // ----- Overlay manager (sticky, blocking popups) -----
+    const OVERLAYS = {
+      tutorial: document.getElementById('tutorial'),
+      embed: document.getElementById('embedModal'),
+      tx: txModal,
+    };
+
+    function anyOverlayOpen() {
+      try { return !!document.querySelector('.overlay.show'); } catch { return false; }
+    }
+
+    function lockBackgroundForOverlay() {
+      document.body.classList.add('modalOpen');
+    }
+
+    function unlockBackgroundIfNoOverlays() {
+      if (!anyOverlayOpen()) document.body.classList.remove('modalOpen');
+    }
+
+    function getFocusable(root) {
+      if (!root) return [];
+      const nodes = root.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+      return Array.from(nodes).filter((el) => {
+        try {
+          if (el.disabled) return false;
+          const style = window.getComputedStyle(el);
+          if (style.display === 'none' || style.visibility === 'hidden') return false;
+          return true;
+        } catch { return false; }
+      });
+    }
+
+    function focusFirstInOverlay(overlayEl) {
+      try {
+        const focusables = getFocusable(overlayEl);
+        if (focusables.length) focusables[0].focus();
+      } catch {}
+    }
+
+    function showOverlay(overlayEl, { mandatory = false } = {}) {
+      if (!overlayEl) return;
+      overlayEl.dataset.mandatory = mandatory ? '1' : '';
+      overlayEl.classList.add('show');
+      overlayEl.setAttribute('aria-hidden', 'false');
+      lockBackgroundForOverlay();
+      focusFirstInOverlay(overlayEl);
+    }
+
+    function hideOverlay(overlayEl, { force = false } = {}) {
+      if (!overlayEl) return;
+      const mandatory = overlayEl.dataset.mandatory === '1';
+      if (mandatory && !force) return;
+      overlayEl.classList.remove('show');
+      overlayEl.setAttribute('aria-hidden', 'true');
+      overlayEl.dataset.mandatory = '';
+      unlockBackgroundIfNoOverlays();
+    }
+
+    function topOpenOverlay() {
+      // Explicit priority order (most blocking / most likely to be open)
+      const ids = ['avatarStudioModal', 'txModal', 'embedModal', 'tutorial'];
+      for (const id of ids) {
+        const el = document.getElementById(id);
+        if (el && el.classList.contains('show')) return el;
+      }
+      return null;
+    }
+
+    // Prevent “clicking outside” to dismiss — popups must be closed/used.
+    for (const el of document.querySelectorAll('.overlay')) {
+      el.addEventListener('click', (e) => {
+        if (e.target === el) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      });
+    }
+
+    window.addEventListener('keydown', (e) => {
+      const top = topOpenOverlay();
+      if (!top) return;
+
+      if (e.key === 'Escape') {
+        if (top.dataset.mandatory === '1') return;
+        // Route to existing close functions where needed.
+        if (top.id === 'txModal') { e.preventDefault(); closeTxConfirm(); return; }
+        if (top.id === 'embedModal') { e.preventDefault(); closeEmbed(); return; }
+        if (top.id === 'tutorial') { e.preventDefault(); endTutorial(); return; }
+        // Avatar Studio stays on-screen until explicitly closed.
+        if (top.id === 'avatarStudioModal') { e.preventDefault(); return; }
+        return;
+      }
+
+      if (e.key === 'Tab') {
+        const focusables = getFocusable(top);
+        if (!focusables.length) return;
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        const active = document.activeElement;
+        if (e.shiftKey) {
+          if (active === first || !top.contains(active)) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else {
+          if (active === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      }
+    });
+
     function openTxConfirm({ title, desc, gasEth, preview, onConfirm }) {
       pendingTxAction = onConfirm || null;
       txTitle.textContent = title || 'Transaction';
       txDesc.textContent = desc || '';
       txGas.textContent = gasEth ? `~${gasEth} ETH (estimate)` : '~0.0000 ETH (estimate)';
       txPreview.textContent = preview || '';
-      txModal.classList.add('show');
+      showOverlay(txModal);
     }
     function closeTxConfirm() {
       pendingTxAction = null;
-      txModal.classList.remove('show');
+      hideOverlay(txModal);
     }
     btnTxCancel.addEventListener('click', closeTxConfirm);
     btnTxConfirm.addEventListener('click', ()=>{
@@ -1957,16 +1969,17 @@
       Object.entries(views).forEach(([k, el]) => el.classList.toggle('active', k === name));
       topTitle.textContent = name.charAt(0).toUpperCase()+name.slice(1);
       topSub.textContent = (name === 'play') ? ((currentGame && currentGame.name) ? (currentGame.name + ' · ' + (currentGame.tagline||'')) : 'Choose a game to play.')
-        : (name === 'wallet') ? 'Buy credits + manage PRO + avatar.'
+        : (name === 'wallet') ? 'Wallet UI v1.0 (authoritative).'
         : (name === 'leaderboard') ? 'Ranks, payouts, and daily epochs.'
         : (name === 'proposals') ? 'Pay gas to submit ideas. Earn if accepted.'
         : 'Preferences + utilities.';
 
-      
-
-      // Leaderboard v2 loader
-      if (name === 'leaderboard') {
-        try { ensureLeaderboardV2Loaded(); } catch {}
+      // Wallet view loads its UI on demand (keeps other tabs untouched)
+      if (name === 'wallet') {
+        try { ensureWalletV1Loaded(); } catch {}
+        try { startAvatarPromoRotation(); } catch {}
+      } else {
+        try { stopAvatarPromoRotation(); } catch {}
       }
 
       // Update 3D accent
@@ -1974,202 +1987,6 @@
       try { window.__arcadeScene && window.__arcadeScene.setAccent(cssAccent); } catch {}
     }
     navBtns.forEach(btn => btn.addEventListener('click', ()=>setView(btn.dataset.nav)));
-
-    function getRouteIntent() {
-      // Single-dashboard URL rule: only use hash/query to select a view.
-      // Do NOT route based on pathname like /wallet or /avatar_studio.
-      let view = 'play';
-      let scrollId = '';
-
-      try {
-        const u = new URL(window.location.href);
-        const hash = String(u.hash || '').replace('#', '').toLowerCase();
-        const qpView = String(u.searchParams.get('view') || '').toLowerCase();
-
-        if (qpView && ['play','wallet','leaderboard','proposals','settings'].includes(qpView)) view = qpView;
-        if (hash && ['play','wallet','leaderboard','proposals','settings'].includes(hash)) view = hash;
-        if (hash === 'avatar') { view = 'wallet'; scrollId = 'avatarCard'; }
-      } catch {}
-
-      return { view, scrollId };
-    }
-
-    // ----- Leaderboard v2 (drop-in bundle) -----
-    let GA_LB_V2_LOADED = false;
-
-    function gaFetchText(url) {
-      return fetch(url, { cache: 'no-store' }).then(r => {
-        if (!r.ok) throw new Error('HTTP_' + r.status);
-        return r.text();
-      });
-    }
-
-    function gaLoadCssOnce(href, id) {
-      if (document.getElementById(id)) return;
-      const link = document.createElement('link');
-      link.id = id;
-      link.rel = 'stylesheet';
-      link.href = href;
-      document.head.appendChild(link);
-    }
-
-    function gaLoadScriptOnce(src, id) {
-      return new Promise((resolve, reject) => {
-        if (document.getElementById(id)) return resolve();
-        const s = document.createElement('script');
-        s.id = id;
-        s.src = src;
-        s.async = true;
-        s.onload = () => resolve();
-        s.onerror = () => reject(new Error('script_load_failed'));
-        document.head.appendChild(s);
-      });
-    }
-
-    async function serverWeekClaim(yw) {
-      return apiJson('/api/week/claim', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: { yw }
-      });
-    }
-
-    async function ensureLeaderboardV2Loaded() {
-      if (GA_LB_V2_LOADED) return;
-      GA_LB_V2_LOADED = true;
-
-      // Adapter surface consumed by /public/gruesome-arcade-leaderboard-ui-v2.0/leaderboard.js
-      window.__ARCADE_LB_ADAPTER__ = {
-        version: '2.0',
-        apiJson,
-        toast,
-        shortAddr,
-        openWallet: () => setView('wallet'),
-        getSession: () => ({
-          connected: isConnected(),
-          address: (SESSION && SESSION.address) ? SESSION.address : (lsGet(K.address) || null),
-          pohVerified: (SESSION && typeof SESSION.pohVerified === 'boolean') ? SESSION.pohVerified : getBool(K.poh),
-        }),
-        getEpoch: () => (EPOCH_CACHE && EPOCH_CACHE.data) ? EPOCH_CACHE.data : {},
-        getCatalog: async () => (CATALOG || null),
-
-        claimDaily: async () => {
-          try {
-            if (!isConnected()) return toast('Wallet', 'Connect wallet to claim.');
-            const e = (EPOCH_CACHE && EPOCH_CACHE.data) ? EPOCH_CACHE.data : null;
-            const ymd = e && e.lastSettledYmd ? String(e.lastSettledYmd) : '';
-            if (!ymd) return toast('Claim', 'No settled day available yet.');
-            const cents = (e && e.claimable && e.claimable.record) ? Number(e.claimable.record.totalCents || 0) : 0;
-            const usd = Math.max(0, cents) / 100;
-
-            openTxConfirm({
-              title: 'Claim daily payout',
-              lines: [
-                `Epoch: ${ymd}`,
-                `Estimated: ${usd.toFixed(2)} mUSD`,
-                'You will pay user gas.',
-              ],
-              onConfirm: async () => {
-                await simulateTx({
-                  title: 'Claiming…',
-                  steps: [
-                    { label: 'Prepare claim' },
-                    { label: 'Submit claim' },
-                    { label: 'Finalize' },
-                  ],
-                  run: async (step) => {
-                    step(0);
-                    await sleep(180);
-                    step(1);
-                    const r = await serverEpochClaim(ymd);
-                    await sleep(180);
-                    step(2);
-                    return r;
-                  },
-                  onDone: async (r) => {
-                    toast('Claim', `Daily claimed: ${(r && r.amountUsd != null) ? Number(r.amountUsd).toFixed(2) : '0.00'} mUSD`);
-                    try { await refreshEpochStatus(true); } catch {}
-                    try { await refreshLedger(); } catch {}
-                    try { window.__GA_LB_V2__ && window.__GA_LB_V2__.refresh && window.__GA_LB_V2__.refresh(); } catch {}
-                  }
-                });
-              }
-            });
-          } catch (err) {
-            toast('Claim', 'Failed to claim daily.');
-          }
-        },
-
-        claimWeekly: async () => {
-          try {
-            if (!isConnected()) return toast('Wallet', 'Connect wallet to claim.');
-            const e = (EPOCH_CACHE && EPOCH_CACHE.data) ? EPOCH_CACHE.data : null;
-            const yw = e && e.lastSettledYw ? String(e.lastSettledYw) : '';
-            if (!yw) return toast('Claim', 'No settled week available yet.');
-            const cents = (e && e.weekClaimable && e.weekClaimable.record) ? Number(e.weekClaimable.record.totalCents || 0) : 0;
-            const usd = Math.max(0, cents) / 100;
-
-            openTxConfirm({
-              title: 'Claim weekly payout',
-              lines: [
-                `Week: ${yw}`,
-                `Estimated: ${usd.toFixed(2)} mUSD`,
-                'You will pay user gas.',
-              ],
-              onConfirm: async () => {
-                await simulateTx({
-                  title: 'Claiming…',
-                  steps: [
-                    { label: 'Prepare claim' },
-                    { label: 'Submit claim' },
-                    { label: 'Finalize' },
-                  ],
-                  run: async (step) => {
-                    step(0);
-                    await sleep(180);
-                    step(1);
-                    const r = await serverWeekClaim(yw);
-                    await sleep(180);
-                    step(2);
-                    return r;
-                  },
-                  onDone: async (r) => {
-                    toast('Claim', `Weekly claimed: ${(r && r.amountUsd != null) ? Number(r.amountUsd).toFixed(2) : '0.00'} mUSD`);
-                    try { await refreshEpochStatus(true); } catch {}
-                    try { await refreshLedger(); } catch {}
-                    try { window.__GA_LB_V2__ && window.__GA_LB_V2__.refresh && window.__GA_LB_V2__.refresh(); } catch {}
-                  }
-                });
-              }
-            });
-          } catch (err) {
-            toast('Claim', 'Failed to claim weekly.');
-          }
-        },
-      };
-
-      gaLoadCssOnce('/gruesome-arcade-leaderboard-ui-v2.0/leaderboard.css', 'ga-lb-v2-css');
-
-      const host = document.querySelector('[data-ga-lb-host]');
-      if (!host) return;
-
-      try {
-        host.innerHTML = await gaFetchText('/gruesome-arcade-leaderboard-ui-v2.0/leaderboard-panel.html');
-      } catch (e) {
-        host.innerHTML = '<div class="card"><div class="mini muted">Failed to load Leaderboard UI bundle.</div></div>';
-        return;
-      }
-
-      try {
-        await gaLoadScriptOnce('/gruesome-arcade-leaderboard-ui-v2.0/leaderboard.js', 'ga-lb-v2-js');
-      } catch (e) {
-        host.innerHTML = '<div class="card"><div class="mini muted">Failed to load Leaderboard UI script.</div></div>';
-        return;
-      }
-
-      try { window.__GA_LB_V2__ && window.__GA_LB_V2__.onShow && window.__GA_LB_V2__.onShow(); } catch {}
-    }
-
 
     // ----- Top chips -----
     const chipWallet = document.getElementById('chipWallet');
@@ -2191,7 +2008,7 @@
       const paid = getInt(K.paid, 0);
       const promo = getInt(K.promoBal(currentGameId), 0);
       const g = (currentGame && currentGame.name) ? currentGame.name : currentGameId;
-      chipCreditsT.textContent = `AC: ${paid} paid · ${promo} promo (${g})`;
+      chipCreditsT.textContent = `Credits: ${paid} paid · ${promo} promo (${g})`;
     }
 
     function renderEpoch() {
@@ -2213,7 +2030,7 @@
       if (el) el.textContent = countdown;
     }
 
-    // ----- Bars (55/35/10) -----
+    // ----- Bars (50/35/10) -----
     const barSkill = document.getElementById('barSkill');
     const barActivity = document.getElementById('barActivity');
     const barPro = document.getElementById('barPro');
@@ -2243,6 +2060,18 @@
     const btnOpenSuggestions = document.getElementById('btnOpenSuggestions');
     const gameFrame = document.getElementById('gameFrame');
     const gameTiles = document.getElementById('gameTiles');
+
+    function suppressGameFrameScrollbars() {
+      if (!gameFrame) return;
+      try {
+        const doc = gameFrame.contentDocument;
+        if (!doc) return;
+        doc.documentElement.style.overflow = 'hidden';
+        if (doc.body) doc.body.style.overflow = 'hidden';
+      } catch {}
+    }
+
+    try { gameFrame?.addEventListener('load', suppressGameFrameScrollbars); } catch {}
 
     const playTitle = document.getElementById('playTitle');
     const playDesc = document.getElementById('playDesc');
@@ -2292,7 +2121,7 @@
           <div class="d">${g.tagline || ''}</div>
           <div class="meta">
             <span class="badge ${disabled ? 'soon':'live'}">${disabled ? 'coming soon' : 'live'}</span>
-            <span class="badge">${disabled ? '—' : (g.runCostAC + ' AC/run')}</span>
+            <span class="badge">${disabled ? '—' : fmtCreditsPerRun(g.runCostAC)}</span>
           </div>
         `;
         el.addEventListener('click', ()=>{
@@ -2311,14 +2140,14 @@
       if (!g) {
         playTitle.textContent = 'Choose a game';
         playDesc.textContent = 'Select a live game from the library.';
-        pillRunCost.textContent = 'Loading · -- AC/run';
+        pillRunCost.textContent = 'Loading · -- Credits/run';
         btnClaimPromo.textContent = 'Claim promo (Tx)';
         return;
       }
       playTitle.textContent = g.name;
       const promoLine = (g.promoRuns && g.promoRuns > 0) ? (`Promo: first ${g.promoRuns} runs free (claim is gas-paid later).`) : 'No promo currently.';
-      playDesc.textContent = `Run cost: ${g.runCostAC} AC ($${(g.runCostAC*ECON.AC_USD).toFixed(2)}). ${promoLine}`;
-      pillRunCost.textContent = `${g.name} · ${g.runCostAC} AC/run`;
+      playDesc.textContent = `Run cost: ${fmtCredits(g.runCostAC)} ($${(g.runCostAC*ECON.AC_USD).toFixed(2)}). ${promoLine}`;
+      pillRunCost.textContent = `${g.name} · ${fmtCreditsPerRun(g.runCostAC)}`;
       const claimed = getBool(K.promoClaimed(currentGameId));
       btnClaimPromo.textContent = claimed ? 'Promo claimed' : 'Claim promo (Tx)';
       btnClaimPromo.disabled = claimed || !(g.promoRuns > 0);
@@ -2331,6 +2160,7 @@
 
       frameReady = false;
       try { if (gameFrame) gameFrame.src = currentGame.embedUrl; } catch {}
+      suppressGameFrameScrollbars();
 
       renderGameTiles();
       setPlayCopy();
@@ -2353,7 +2183,7 @@
       }
       openTxConfirm({
         title: `Claim Promo · ${g.name}`,
-        desc: `Claim ${g.promoRuns} free runs (adds ${g.promoGrantAC} promo AC for ${g.name}).`,
+        desc: `Claim ${g.promoRuns} free runs (adds ${Math.max(0, Math.floor(Number(g.promoGrantAC)||0))} promo Credits for ${g.name}).`,
         gasEth: '0.00004',
         preview: `Writes: ${K.promoClaimed(gameId)}=1, +${g.promoGrantAC} to ${K.promoBal(gameId)}`,
         onConfirm: ()=>{
@@ -2411,190 +2241,544 @@
       renderAll();
     });
 
-    // ----- Wallet: buy AC -----
-    const tabUsd = document.getElementById('tabUsd');
-    const tabAc = document.getElementById('tabAc');
-    const panelUsd = document.getElementById('panelUsd');
-    const panelAc = document.getElementById('panelAc');
-    const usdIn = document.getElementById('usdIn');
-    const usdRange = document.getElementById('usdRange');
-    const usdBig = document.getElementById('usdBig');
-    const acIn = document.getElementById('acIn');
-    const acBig = document.getElementById('acBig');
+    // ----- Wallet UI v1.0 (authoritative) -----
+    const WALLET_V1 = { loaded:false, loading:false };
 
-    const outBase = document.getElementById('outBase');
-    const outBonus = document.getElementById('outBonus');
-    const outTotal = document.getElementById('outTotal');
-    const outEff = document.getElementById('outEff');
-    const btnBuyAc = document.getElementById('btnBuyAc');
-    const btnCustomExact = document.getElementById('btnCustomExact');
-
-    let buyMode = 'usd'; // 'usd' | 'ac'
-
-    function setBuyMode(mode) {
-      buyMode = mode;
-      tabUsd.classList.toggle('active', mode==='usd');
-      tabAc.classList.toggle('active', mode==='ac');
-      panelUsd.style.display = (mode==='usd') ? '' : 'none';
-      panelAc.style.display = (mode==='ac') ? '' : 'none';
-      recalcBuyOutputs();
-    }
-    tabUsd.addEventListener('click', ()=>setBuyMode('usd'));
-    tabAc.addEventListener('click', ()=>setBuyMode('ac'));
-
-    function recalcBuyOutputs() {
-      let usd = Number(usdIn.value || 0);
-      let targetAC = Number(acIn.value || 0);
-
-      if (buyMode === 'ac') {
-        usd = usdForTargetAC(targetAC);
-        usdIn.value = usd.toFixed(2);
-        usdRange.value = String(clamp(usd, Number(usdRange.min), Number(usdRange.max)));
-        acBig.textContent = `${Math.floor(targetAC||0)} AC`;
-      } else {
-        usdRange.value = String(clamp(usd, Number(usdRange.min), Number(usdRange.max)));
-        usdBig.textContent = '$' + usd.toFixed(2);
-      }
-
-      const out = acOutForUsd(usd);
-      outBase.textContent = String(out.baseAC);
-      outBonus.textContent = '+' + (out.bonusPct*100).toFixed(1) + '%';
-      outTotal.textContent = String(out.totalAC);
-      const eff = usd / Math.max(1, out.totalAC);
-      outEff.textContent = '$' + eff.toFixed(4);
-
-      usdBig.textContent = '$' + usd.toFixed(2);
+    function ensureStylesheetOnce(id, href) {
+      if (document.getElementById(id)) return;
+      const link = document.createElement('link');
+      link.id = id;
+      link.rel = 'stylesheet';
+      link.href = href;
+      document.head.appendChild(link);
     }
 
-    usdIn.addEventListener('input', ()=>{
-      const usd = clamp(Number(usdIn.value||0.10), 0.10, 10000);
-      usdIn.value = usd.toFixed(2);
-      usdBig.textContent = '$' + usd.toFixed(2);
-      usdRange.value = String(clamp(usd, Number(usdRange.min), Number(usdRange.max)));
-      if (buyMode === 'ac') {
-        const out = acOutForUsd(usd);
-        acIn.value = String(out.totalAC);
-        acBig.textContent = `${out.totalAC} AC`;
+    function loadScriptOnce(id, src) {
+      return new Promise((resolve, reject) => {
+        if (document.getElementById(id)) return resolve(true);
+        const s = document.createElement('script');
+        s.id = id;
+        s.src = src;
+        s.async = true;
+        s.onload = () => resolve(true);
+        s.onerror = () => reject(new Error('Failed to load ' + src));
+        document.body.appendChild(s);
+      });
+    }
+
+    function mkTxHash() {
+      const hex = '0123456789abcdef';
+      let out = '0x';
+      for (let i=0;i<64;i++) out += hex[(Math.random()*16)|0];
+      return out;
+    }
+
+    function sumPromoCreditsAllGames() {
+      try {
+        const list = Array.isArray(GAMES) && GAMES.length ? GAMES : [];
+        if (list.length) return list.reduce((sum, g) => sum + getInt(K.promoBal(g.id), 0), 0);
+      } catch {}
+      try {
+        let sum = 0;
+        for (let i=0;i<localStorage.length;i++) {
+          const k = localStorage.key(i);
+          if (k && k.startsWith('arcade.credits.promo.')) sum += parseInt(localStorage.getItem(k) || '0', 10) || 0;
+        }
+        return sum;
+      } catch {
+        return getInt(K.promoBal(currentGameId), 0);
       }
-      recalcBuyOutputs();
-    });
+    }
 
-    usdRange.addEventListener('input', ()=>{
-      const usd = Number(usdRange.value||0.10);
-      usdIn.value = usd.toFixed(2);
-      usdBig.textContent = '$' + usd.toFixed(2);
-      if (buyMode === 'ac') {
-        const out = acOutForUsd(usd);
-        acIn.value = String(out.totalAC);
-        acBig.textContent = `${out.totalAC} AC`;
+    const STUDIO = {
+      channel: 'GRUESOME_ARCADE_V1',
+      frameUrl: '/avatar_studio/',
+      requestSeq: 0,
+      ready: false,
+      pendingMint: null,
+    };
+
+    let AVATAR_PROMO_PREVIEW_PNG = null;
+    let T_AVATAR_PROMO = 0;
+
+    const avatarStudioModal = document.getElementById('avatarStudioModal');
+    const btnAvatarStudioClose = document.getElementById('btnAvatarStudioClose');
+    const avatarStudioFrame = document.getElementById('avatarStudioFrame');
+
+    function isAvatarStudioOpen(){
+      try { return !!(avatarStudioModal && avatarStudioModal.classList.contains('show')); } catch { return false; }
+    }
+
+    function ensureAvatarStudioFrameLoaded(){
+      if (!avatarStudioFrame) return false;
+      if (avatarStudioFrame.getAttribute('src')) return true;
+      try {
+        avatarStudioFrame.setAttribute('src', STUDIO.frameUrl);
+        avatarStudioFrame.addEventListener('load', () => {
+          STUDIO.ready = true;
+          try { studioInit(); } catch {}
+        }, { once: true });
+        return true;
+      } catch {
+        return false;
       }
-      recalcBuyOutputs();
-    });
+    }
 
-    acIn.addEventListener('input', ()=>{
-      const ac = Math.max(10, Math.floor(Number(acIn.value)||10));
-      acIn.value = String(ac);
-      acBig.textContent = `${ac} AC`;
-      recalcBuyOutputs();
-    });
+    function shouldRotateAvatarPromoPreview(){
+      try{
+        if (document.body.dataset.view !== 'wallet') return false;
+        if (isAvatarStudioOpen()) return false;
+        if (getBool(K.avatarMinted)) return false;
 
-    document.querySelectorAll('.chipBtn[data-usd]').forEach(el => el.addEventListener('click', ()=>{
-      const usd = Number(el.getAttribute('data-usd'));
-      usdIn.value = usd.toFixed(2);
-      usdRange.value = String(clamp(usd, Number(usdRange.min), Number(usdRange.max)));
-      usdBig.textContent = '$' + usd.toFixed(2);
-      setBuyMode('usd');
-      recalcBuyOutputs();
-    }));
-    document.querySelectorAll('.chipBtn[data-ac]').forEach(el => el.addEventListener('click', ()=>{
-      const ac = Number(el.getAttribute('data-ac'));
-      acIn.value = String(ac);
-      acBig.textContent = `${ac} AC`;
-      setBuyMode('ac');
-      recalcBuyOutputs();
-    }));
+        const hasUserPreview = !!(String(lsGet(K.avatarPreviewPng) || '').trim());
+        if (hasUserPreview) return false;
 
-    function buyACtx(customUsdOverride=null) {
-      const usd = (customUsdOverride!=null) ? Number(customUsdOverride) : Number(usdIn.value||0);
-      const safeUsd = clamp(usd, 0.10, 100000);
-      const out = acOutForUsd(safeUsd);
-      const label = `Buy ${out.totalAC} AC`;
+        // If they already have a draft, don't override it with marketing previews.
+        const hasDraft = (() => {
+          try {
+            const raw = lsGet(K.avatarStudio);
+            return !!(raw && String(raw).length > 2);
+          } catch {
+            return false;
+          }
+        })();
+        if (hasDraft) return false;
 
-      openTxConfirm({
-        title: 'Buy Arcade Credits',
-        desc: `Pay $${safeUsd.toFixed(2)} equivalent in Linea (native) to receive ${out.totalAC} AC (onchain later).`,
-        gasEth: '0.00006',
-        preview: `Adds +${out.totalAC} to ${K.paid} (bonus included).`,
-        onConfirm: ()=>{
-          simulateTx({
-            kind:'buy-ac',
-            label,
-            gasEth:'0.00006',
-            apply: async ()=>{
-              // Server-authoritative AC (Redis). Local fallback if offline.
-              try{
-                const r = await serverBuyAC(safeUsd);
-                if (r && r.paidAC!=null) setInt(K.paid, r.paidAC);
-              } catch {
-                setInt(K.paid, getInt(K.paid,0) + out.totalAC);
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
+    function requestAvatarPromoPreview(){
+      if (!shouldRotateAvatarPromoPreview()) return;
+      ensureAvatarStudioFrameLoaded();
+      studioSend('GA_STUDIO_REQUEST_RANDOM_PREVIEW', {});
+    }
+
+    function stopAvatarPromoRotation(){
+      if (T_AVATAR_PROMO) clearInterval(T_AVATAR_PROMO);
+      T_AVATAR_PROMO = 0;
+    }
+
+    function startAvatarPromoRotation(){
+      stopAvatarPromoRotation();
+      if (!shouldRotateAvatarPromoPreview()) return;
+      ensureAvatarStudioFrameLoaded();
+      requestAvatarPromoPreview();
+      T_AVATAR_PROMO = setInterval(() => {
+        if (!shouldRotateAvatarPromoPreview()) return stopAvatarPromoRotation();
+        requestAvatarPromoPreview();
+      }, 5000);
+    }
+
+    function studioSend(type, payload) {
+      const f = avatarStudioFrame;
+      if (!f || !f.contentWindow) return false;
+      const msg = { channel: STUDIO.channel, type, requestId: String(++STUDIO.requestSeq), payload: payload || {} };
+      try { f.contentWindow.postMessage(msg, window.location.origin); } catch { return false; }
+      return true;
+    }
+
+    function studioInit() {
+      const address = String(lsGet(K.address) || '');
+      const minted = getBool(K.avatarMinted);
+      const tokenId = minted ? String(lsGet(K.avatarTokenId) || '') : '';
+      const nickname = String(lsGet(K.avatarNick) || '');
+      const linea = {
+        chainId: 59144,
+        chainIdHex: '0xe708',
+        chainName: 'Linea',
+        rpcUrl: 'https://rpc.linea.build',
+        explorer: 'https://lineascan.build',
+      };
+      const studioState = (()=>{ try { return JSON.parse(lsGet(K.avatarStudio) || 'null'); } catch { return null; } })();
+      studioSend('GA_STUDIO_INIT', { address, proActive: proActive(), minted, tokenId, nickname, studioState, linea });
+      studioSend('GA_STUDIO_REQUEST_SNAPSHOT', {});
+    }
+
+    function openAvatarStudioModal() {
+      if (!avatarStudioModal) return;
+      stopAvatarPromoRotation();
+      showOverlay(avatarStudioModal);
+
+      ensureAvatarStudioFrameLoaded();
+
+      try { studioInit(); } catch {}
+    }
+
+    function closeAvatarStudioModal() {
+      if (!avatarStudioModal) return;
+      hideOverlay(avatarStudioModal);
+      // Resume rotating promo preview only if we're still on wallet and still eligible.
+      startAvatarPromoRotation();
+    }
+
+    function handleStudioMessage(m, ev) {
+      if (!m || m.channel !== STUDIO.channel) return;
+      if (ev && ev.origin && ev.origin !== window.location.origin) return;
+
+      if (m.type === 'GA_STUDIO_READY') {
+        STUDIO.ready = true;
+        try { studioInit(); } catch {}
+        return;
+      }
+
+      if (m.type === 'GA_STUDIO_SNAPSHOT') {
+        const p = m.payload || {};
+        try {
+          if (p.nickname != null) lsSet(K.avatarNick, String(p.nickname || ''));
+          if (p.hash != null) lsSet(K.avatarHash, String(p.hash || ''));
+          if (p.previewPng != null) lsSet(K.avatarPreviewPng, String(p.previewPng || ''));
+          if (p.studioState != null) lsSet(K.avatarStudio, JSON.stringify(p.studioState));
+          if (typeof p.minted === 'boolean') setBool(K.avatarMinted, p.minted);
+          if (p.minted && p.tokenId != null) lsSet(K.avatarTokenId, String(p.tokenId || ''));
+          if (p.minted && p.explorerUrl != null) lsSet(K.avatarExplorerUrl, String(p.explorerUrl || '#'));
+        } catch {}
+        return;
+      }
+
+      if (m.type === 'GA_STUDIO_RANDOM_PREVIEW') {
+        const p = m.payload || {};
+        try {
+          const png = p.previewPng != null ? String(p.previewPng || '') : '';
+          AVATAR_PROMO_PREVIEW_PNG = png ? png : null;
+        } catch {
+          AVATAR_PROMO_PREVIEW_PNG = null;
+        }
+        return;
+      }
+
+      if (m.type === 'GA_STUDIO_REQUEST_MINT') {
+        const payload = m.payload || {};
+        mintAvatarLineaFacade(payload).then((r)=>{
+          studioSend('GA_STUDIO_MINT_RESULT', r);
+        }).catch((e)=>{
+          studioSend('GA_STUDIO_MINT_RESULT', { ok:false, error: String(e && e.message ? e.message : e) });
+        });
+        return;
+      }
+
+      if (m.type === 'GA_STUDIO_MINT_RESULT') {
+        const r = m.payload || {};
+        const pending = STUDIO.pendingMint;
+        STUDIO.pendingMint = null;
+        if (pending && typeof pending.resolve === 'function') pending.resolve(r);
+        return;
+      }
+    }
+
+    btnAvatarStudioClose?.addEventListener('click', closeAvatarStudioModal);
+    // Dismissal (ESC / click-outside) is handled by the overlay manager.
+
+    async function ensureLineaWallet() {
+      const eth = window.ethereum;
+      if (!eth || !eth.request) return false;
+      const want = '0xe708';
+      let current = null;
+      try { current = await eth.request({ method: 'eth_chainId' }); } catch {}
+      if (String(current || '').toLowerCase() === want) return true;
+
+      try {
+        await eth.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: want }] });
+        return true;
+      } catch {
+        try {
+          await eth.request({
+            method: 'wallet_addEthereumChain',
+            params: [{
+              chainId: want,
+              chainName: 'Linea',
+              nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+              rpcUrls: ['https://rpc.linea.build'],
+              blockExplorerUrls: ['https://lineascan.build'],
+            }],
+          });
+          await eth.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: want }] });
+          return true;
+        } catch {
+          return false;
+        }
+      }
+    }
+
+    async function mintAvatarLineaFacade(payload) {
+      if (!proActive()) {
+        return { ok:false, error:'PRO (Studio $2+) is required to mint an avatar.' };
+      }
+
+      try { await ensureLineaWallet(); } catch {}
+
+      return await new Promise((resolve) => {
+        openTxConfirm({
+          title: 'Mint Avatar (Linea)',
+          desc: 'Mint your avatar on Linea. (Staged — simulated tx until contracts are finalized.)',
+          gasEth: '0.00006',
+          preview: 'Writes: avatar minted flags + tokenId (mock).',
+          onConfirm: ()=>{
+            const txHash = mkTxHash();
+            const tokenId = String(Math.floor(100000 + Math.random()*900000));
+            const explorerUrl = '#';
+            simulateTx({
+              kind:'avatar-mint',
+              label:'Mint avatar',
+              gasEth:'0.00006',
+              apply: async ()=>{
+                setBool(K.avatarMinted, true);
+                lsSet(K.avatarTokenId, tokenId);
+                lsSet(K.avatarExplorerUrl, explorerUrl);
+                resolve({ ok:true, txHash, tokenId, explorerUrl, payload: payload || {} });
               }
-              renderTopChips(); syncToGame();
+            });
+          }
+        });
+      });
+    }
+
+    function buyCreditsTx({ usd, minTotalCredits }, modeLabel='usd') {
+      const safeUsd = clamp(Number(usd||0), 0.01, 100000);
+      const minCredits = Math.max(1, Math.floor(Number(minTotalCredits || 0)));
+      const label = `Buy ${fmtCredits(minCredits)}`;
+      return new Promise((resolve) => {
+        openTxConfirm({
+          title: 'Buy Credits',
+          desc: `Pay $${safeUsd.toFixed(2)} equivalent to receive ${fmtCredits(minCredits)}. (Simulated tx in this build.)`,
+          gasEth: '0.00006',
+          preview: `Mode: ${modeLabel} · Adds +${minCredits} to ${K.paid}.`,
+          onConfirm: ()=>{
+            const txHash = mkTxHash();
+            simulateTx({
+              kind:'buy-ac',
+              label,
+              gasEth:'0.00006',
+              apply: async ()=>{
+                try{
+                  const r = await serverBuyAC(safeUsd);
+                  if (r && r.paidAC!=null) setInt(K.paid, r.paidAC);
+                  else setInt(K.paid, getInt(K.paid,0) + minCredits);
+                } catch {
+                  setInt(K.paid, getInt(K.paid,0) + minCredits);
+                }
+                try { await refreshLedger(); } catch {}
+                renderTopChips();
+                syncToGame();
+                resolve({ txHash });
+              }
+            });
+          }
+        });
+      });
+    }
+
+    function activateProTx(tier) {
+      const price = (tier===1) ? 2 : (tier===2) ? 25 : 100;
+      const mapped = (tier===1) ? 'mini' : (tier===2) ? 'prime' : 'lifetime';
+      const label = (mapped==='lifetime') ? 'Activate PRO Lifetime' : `Activate PRO ${mapped}`;
+      return new Promise((resolve) => {
+        openTxConfirm({
+          title: 'Activate PRO',
+          desc: `Activate tier ${tier} for $${price}. (Simulated tx in this build.)`,
+          gasEth: '0.00007',
+          preview: `Writes: ${K.proTier}=${mapped}, updates expiry (monthly) or lifetime.`,
+          onConfirm: ()=>{
+            const txHash = mkTxHash();
+            simulateTx({
+              kind:'pro',
+              label,
+              gasEth:'0.00007',
+              apply: async ()=>{
+                lsSet(K.proTier, mapped);
+                if (mapped === 'lifetime') setInt(K.proExp, 0);
+                else setInt(K.proExp, now() + 30*24*3600*1000);
+                try{ await serverProfilePatch({ proTier: mapped, proExp: String(getInt(K.proExp,0)) }); } catch {}
+                renderTopChips();
+                resolve({ txHash });
+              }
+            });
+          }
+        });
+      });
+    }
+
+    function mintAvatarTx(payload) {
+      return mintAvatarLineaFacade(payload || {});
+    }
+
+    function buildWalletAdapter() {
+      return {
+        connect: async () => {
+          if (getBool(K.connected) && (lsGet(K.address) || '')) {
+            return { address: String(lsGet(K.address) || ''), chainId: null, chainName: 'Connected' };
+          }
+          try { bootAccessGateEveryRefresh(); } catch {}
+
+          // Poll local session state (gate posts a message which sets localStorage)
+          const start = now();
+          while (now() - start < 60000) {
+            if (getBool(K.connected) && (lsGet(K.address) || '')) break;
+            await new Promise(r => setTimeout(r, 250));
+          }
+          try { await refreshSession(true); } catch {}
+          const address = String(lsGet(K.address) || '');
+          if (!address) throw new Error('Wallet connection was rejected or timed out.');
+          return { address, chainId: null, chainName: 'Connected' };
+        },
+
+        getSnapshot: async (_address) => {
+          try { await refreshSession(true); } catch {}
+
+          const address = String(lsGet(K.address) || '');
+          const paidCredits = getInt(K.paid, 0);
+          const promoCredits = sumPromoCreditsAllGames();
+          const pohVerified = getBool(K.poh) || !!(SESSION && SESSION.pohVerified);
+
+          let expiresAt = null;
+          const tierStr = String(lsGet(K.proTier) || 'none');
+          const tier = (tierStr === 'mini') ? 1 : (tierStr === 'prime') ? 2 : (tierStr === 'lifetime') ? 3 : 0;
+          if (tierStr !== 'none' && tierStr !== 'lifetime') {
+            const ms = getInt(K.proExp, 0);
+            expiresAt = ms > 0 ? ms : null;
+          }
+          const membership = { tier, expiresAt, active: proActive() };
+
+          const minted = getBool(K.avatarMinted);
+          const tokenId = minted ? String(lsGet(K.avatarTokenId) || '') : null;
+          const explorerUrl = minted ? String(lsGet(K.avatarExplorerUrl) || '#') : null;
+          const nickname = String(lsGet(K.avatarNick) || '') || null;
+          const hash = String(lsGet(K.avatarHash) || '') || null;
+          const previewPng = String(lsGet(K.avatarPreviewPng) || '') || null;
+          const hasDraft = (() => {
+            try {
+              const raw = lsGet(K.avatarStudio);
+              return !!(raw && String(raw).length > 2);
+            } catch {
+              return false;
+            }
+          })();
+
+          const promoPreviewPng = (!minted && !previewPng && !hasDraft) ? (AVATAR_PROMO_PREVIEW_PNG || null) : null;
+
+          const nextPayoutAt = (()=>{
+            try {
+              const d = EPOCH_CACHE && EPOCH_CACHE.data ? EPOCH_CACHE.data : null;
+              if (d && d.nextPayoutAt != null) {
+                const x = Number(d.nextPayoutAt);
+                if (Number.isFinite(x) && x > 0) return x;
+              }
+            } catch {}
+            return nextUtcMidnightMs();
+          })();
+
+          const epochData = (()=>{
+            try { return (EPOCH_CACHE && EPOCH_CACHE.data) ? EPOCH_CACHE.data : null; } catch { return null; }
+          })();
+          const todayTickets = (()=>{
+            const x = epochData ? Number(epochData.todayTickets) : NaN;
+            return Number.isFinite(x) ? Math.max(0, Math.floor(x)) : 0;
+          })();
+          const lotteryTicketsEligible = (epochData && typeof epochData.lotteryTicketsEligible === 'boolean')
+            ? epochData.lotteryTicketsEligible
+            : null;
+
+          return {
+            pohVerified,
+            paidCredits,
+            promoCredits,
+            nextPayoutAt,
+            gpToday: 0,
+            todayTickets,
+            lotteryTicketsEligible,
+            membership,
+            avatar: { minted, tokenId, explorerUrl, nickname, hash, previewPng, promoPreviewPng, hasDraft },
+            ethUsd: 2300,
+          };
+        },
+
+        quoteEthForUsd: async (usd) => {
+          const ethUsd = 2300;
+          const u = Math.max(0, Number(usd) || 0);
+          const ethAmount = ethUsd > 0 ? (u / ethUsd) : 0;
+          return { ethUsd, ethAmount };
+        },
+
+        buyCredits: async (payload) => {
+          const p = payload || {};
+          return buyCreditsTx({ usd: p.usd, minTotalCredits: p.minTotalCredits }, p.mode || 'usd');
+        },
+
+        activateMembership: async (tier) => {
+          return activateProTx(Number(tier) || 0);
+        },
+
+        openAvatarStudio: async () => {
+          setView('wallet');
+          openAvatarStudioModal();
+          return {};
+        },
+
+        openEmbed: async (title, url) => {
+          try { openEmbed(String(title || 'Embed'), String(url || 'about:blank')); } catch {}
+          return {};
+        },
+
+        mintAvatar: async () => {
+          setView('wallet');
+          openAvatarStudioModal();
+
+          if (!STUDIO.ready) {
+            return mintAvatarTx({ source: 'wallet_fallback' });
+          }
+
+          return await new Promise((resolve) => {
+            STUDIO.pendingMint = { resolve };
+            const sent = studioSend('GA_STUDIO_REQUEST_MINT', { source: 'wallet' });
+            if (!sent) {
+              STUDIO.pendingMint = null;
+              resolve(mintAvatarTx({ source: 'wallet_fallback' }));
             }
           });
-        }
-      });
+        },
+      };
     }
 
-    btnBuyAc.addEventListener('click', ()=>buyACtx(null));
-    btnCustomExact.addEventListener('click', ()=>{
-      openTxConfirm({
-        title: 'Custom AC Purchase',
-        desc: 'Enter any USD amount you want. Even $0.10 works. Bonus scales smoothly with size.',
-        gasEth: '0.00006',
-        preview: 'This is the same buy flow, just emphasizing exact micro-buys.',
-        onConfirm: ()=>{
-          buyACtx(Number(usdIn.value||0.10));
-        }
-      });
-    });
+    async function ensureWalletV1Loaded() {
+      if (WALLET_V1.loaded || WALLET_V1.loading) return;
+      WALLET_V1.loading = true;
+      const host = document.getElementById('walletV1Host');
+      if (!host) { WALLET_V1.loading = false; return; }
 
-    // ----- PRO purchases -----
-    const btnProMini = document.getElementById('btnProMini');
-    const btnProPrime = document.getElementById('btnProPrime');
-    const btnProLife = document.getElementById('btnProLife');
-    const expoLeft = document.getElementById('expoLeft');
+      // Adapter must exist before wallet.js initializes.
+      try {
+        const adapter = buildWalletAdapter();
+        window.__ARCADE_WALLET_ADAPTER__ = adapter;
+        window.ARCADE_WALLET_ADAPTER = adapter;
+      } catch {}
 
-    function proTx(tier) {
-      const price = (tier==='mini') ? 2 : (tier==='prime') ? 25 : 100;
-      const label = (tier==='lifetime') ? 'Activate PRO Lifetime' : `Activate PRO ${tier}`;
-      openTxConfirm({
-        title: 'Activate PRO',
-        desc: `Activate ${tier.toUpperCase()} for $${price}. (Tx is user-gas-paid)`,
-        gasEth: '0.00007',
-        preview: `Writes: ${K.proTier}=${tier}, updates expiry (monthly) or lifetime.`,
-        onConfirm: ()=>{
-          simulateTx({
-            kind:'pro',
-            label,
-            gasEth:'0.00007',
-            apply: async ()=>{
-              lsSet(K.proTier, tier);
-              if (tier === 'lifetime') {
-                setInt(K.proExp, 0);
-              } else {
-                setInt(K.proExp, now() + 30*24*3600*1000);
-              }
-              try{
-                await serverProfilePatch({ proTier: tier, proExp: String(getInt(K.proExp,0)) });
-              } catch {}
-            }
-          });
-        }
-      });
+      // Styles (scoped under .ga-wallet)
+      try { ensureStylesheetOnce('gaWalletFonts', 'https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700&family=Inter:wght@300;400;600;700&display=swap'); } catch {}
+      try { ensureStylesheetOnce('gaWalletCss', '/gruesome-arcade-wallet-ui-v1.0/wallet.css'); } catch {}
+
+      // Markup
+      try {
+        const r = await fetch('/gruesome-arcade-wallet-ui-v1.0/wallet-panel.html', { cache: 'no-store' });
+        if (!r.ok) throw new Error('wallet panel not ok');
+        host.innerHTML = await r.text();
+      } catch (e) {
+        host.innerHTML = '<div class="card"><div class="inner"><h3>Wallet failed to load</h3><div class="muted">Could not load wallet-panel.html. Check that /public/gruesome-arcade-wallet-ui-v1.0/ is being served.</div></div></div>';
+        WALLET_V1.loading = false;
+        return;
+      }
+
+      // Behavior
+      try {
+        await loadScriptOnce('gaWalletJs', '/gruesome-arcade-wallet-ui-v1.0/wallet.js');
+      } catch (e) {
+        toast('Wallet error', 'Failed to load wallet.js');
+      }
+
+      WALLET_V1.loaded = true;
+      WALLET_V1.loading = false;
     }
-    btnProMini.addEventListener('click', ()=>proTx('mini'));
-    btnProPrime.addEventListener('click', ()=>proTx('prime'));
-    btnProLife.addEventListener('click', ()=>proTx('lifetime'));
 
 
     // ----- Rewards actions -----
@@ -2637,9 +2821,9 @@
       if (!SESSION.authenticated) return toast('Connect wallet', 'Required to mint.');
       openTxConfirm({
         title: 'Mint daily badge',
-        desc: 'Mint a daily badge. Grants small XP + promo AC. (User pays gas)',
+        desc: 'Mint a daily badge. Grants small XP + promo Credits. (User pays gas)',
         gasEth: '0.00005',
-        preview: `Writes: daily badge minted · Grants: +3 XP, +2 promo AC (${currentGameId}).`,
+        preview: `Writes: daily badge minted · Grants: +3 XP, +2 promo Credits (${currentGameId}).`,
         onConfirm: ()=>{
           simulateTx({
             kind:'badge',
@@ -2661,12 +2845,14 @@
 
 
 
+    const expoLeft = document.getElementById('expoLeft');
     function renderExpoCountdown() {
+      if (!expoLeft) return;
       const ms = ECON.EXPO_END_UTC - now();
       expoLeft.textContent = fmtCountdown(ms);
     }
 
-    // ----- Avatar -----
+    // ----- Avatar (legacy studio modal, invoked via adapter) -----
     const avBg = document.getElementById('avBg');
     const avAcc = document.getElementById('avAcc');
     const avEyes = document.getElementById('avEyes');
@@ -2772,6 +2958,7 @@
     }
 
     function renderAvatar() {
+      if (!avatarSvgHost || !avBg || !avAcc || !avEyes || !avMouth) return;
       const dna = getAvatarDNA();
       avatarSvgHost.innerHTML = renderAvatarSvg(dna);
 
@@ -2792,7 +2979,7 @@
     }
 
     function randomChoice(arr) { return arr[Math.floor(Math.random()*arr.length)]; }
-    btnAvRandom.addEventListener('click', ()=>{
+    btnAvRandom?.addEventListener('click', ()=>{
       const dna = getAvatarDNA();
       dna.bg = randomChoice(Object.keys(BG));
       dna.acc = randomChoice(['none','antenna','visor','cap']);
@@ -2839,13 +3026,12 @@
         }
       });
     }
-    btnAvSave.addEventListener('click', saveAvatarTx);
-    [avBg,avAcc,avEyes,avMouth].forEach(el => el.addEventListener('change', renderAvatar));
+    btnAvSave?.addEventListener('click', saveAvatarTx);
+    [avBg,avAcc,avEyes,avMouth].forEach(el => el && el.addEventListener('change', renderAvatar));
 
     // ----- Leaderboard (local, multi-game) -----
     const lbLocal = document.getElementById('lbLocal');
     const lbTitle = document.getElementById('lbTitle');
-    const lbMe = document.getElementById('lbMe');
 
     function cutoffForPeriod(period) {
       const t = now();
@@ -2875,7 +3061,6 @@
     }
 
     function renderLocalLB() {
-      if (!lbLocal || !lbTitle) return;
       const gameId = getLbGameId();
       const period = getLbPeriod();
       const g = gameById(gameId);
@@ -2953,13 +3138,13 @@
         </tr>
       `).join('');
 
-      if (lbMe) lbMe.textContent = entries.find(e=>e.me)?.rank ? `Your rank: ${entries.find(e=>e.me).rank}` : 'Your rank: —';
+      lbMe.textContent = entries.find(e=>e.me)?.rank ? `Your rank: ${entries.find(e=>e.me).rank}` : 'Your rank: —';
     }
 
 
 
     function computeActivityPoints(gameId, period) {
-      // Local preview only. Server is authoritative (paid-only activity = AC spent on paid runs).
+      // Local preview only. Server is authoritative (paid-only activity = Credits spent on paid runs).
       const paidSpent = getInt(K.paidSpent, 0);
       const paidRuns = runsFor(gameId, period).filter(x => x.runType === 'paid').length;
       return Math.max(0, Math.floor((paidSpent * 1.0) + (paidRuns * 2)));
@@ -2985,7 +3170,11 @@
       // Lottery tickets (today): prefer server-derived tickets (paid-only activity), fallback to local estimate.
       const serverTickets = (EPOCH_CACHE && EPOCH_CACHE.data && Number.isFinite(EPOCH_CACHE.data.todayTickets)) ? Number(EPOCH_CACHE.data.todayTickets) : null;
       const tickets = (serverTickets != null) ? Math.max(0, Math.floor(serverTickets)) : Math.max(0, Math.floor(Math.sqrt(Math.max(0, ap))));
-      if (lbTickets) lbTickets.textContent = String(tickets);
+      if (lbTickets) {
+        const eligible = !!(EPOCH_CACHE && EPOCH_CACHE.data && EPOCH_CACHE.data.lotteryTicketsEligible);
+        if (!eligible) lbTickets.innerHTML = String(tickets) + ' <small>(PRO required)</small>';
+        else lbTickets.textContent = String(tickets);
+      }
 
 
       const estNext = (sp*0.002) + (ap*0.0012) + (pb*0.0008);
@@ -3091,7 +3280,7 @@
           </div>
           <div class="mini" style="margin-top:8px">${escapeHtml(p.desc||'')}</div>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">
-            <div class="mini muted">Supporters: ${fmtInt(p.supporters)} · Reward: ${fmtInt(p.rewardAC)} AC</div>
+            <div class="mini muted">Supporters: ${fmtInt(p.supporters)} · Reward: ${fmtCredits(p.rewardAC)}</div>
             <div style="display:flex;gap:8px">
               <button class="btn primary" data-act="support" data-id="${escapeHtml(p.id)}" ${(!canSupport || p.supportedByYou) ? "disabled" : ""}>${p.supportedByYou ? "Supported ✓" : "Support (Tx)"}</button>
               <button class="btn" data-act="claim" data-id="${escapeHtml(p.id)}" disabled>Claim (soon)</button>
@@ -3123,7 +3312,7 @@
       }
       openTxConfirm({
         title:'Submit proposal',
-        desc:'Submit an idea. If accepted, you earn AC. This is gas-paid to prevent spam.',
+        desc:'Submit an idea. If accepted, you earn Credits. This is gas-paid to prevent spam.',
         gasEth:'0.00005',
         preview:'Writes a proposal hash on-chain (final build). For now: server ledger + Redis.',
         onConfirm: ()=>{
@@ -3184,7 +3373,7 @@
       }
       openTxConfirm({
         title:'Support proposal',
-        desc:'Signal demand for this idea. Gas-paid to prevent vote spam. Supporters may earn AC if it ships.',
+        desc:'Signal demand for this idea. Gas-paid to prevent vote spam. Supporters may earn Credits if it ships.',
         gasEth:'0.00003',
         preview:'Adds your address to the support set (final build = onchain vote).',
         onConfirm: ()=>{
@@ -3235,9 +3424,9 @@
     function bountyTx(kind, rewardAC) {
       openTxConfirm({
         title:'Submit bounty',
-        desc:'Submit this bounty. If accepted, you earn AC.',
+        desc:'Submit this bounty. If accepted, you earn Credits.',
         gasEth:'0.00005',
-        preview:`If accepted: +${rewardAC} AC`,
+        preview:`If accepted: +${fmtCredits(rewardAC)}`,
         onConfirm: ()=>{
           simulateTx({
             kind,
@@ -3256,7 +3445,7 @@
     function renderTxFeed() {
       const arr = getTxLog().slice(0,6);
       if (!arr.length) {
-        txFeed.innerHTML = '<div class="muted">No transactions yet. Claim promo, buy AC, or submit a proposal.</div>';
+        txFeed.innerHTML = '<div class="muted">No transactions yet. Claim promo, buy Credits, or submit a proposal.</div>';
         return;
       }
       txFeed.innerHTML = '';
@@ -3327,7 +3516,7 @@
 
       statPaid.textContent = String(paid);
       statPromo.textContent = String(promo);
-      statPromoLabel.textContent = `Promo AC (${(currentGame && currentGame.name) ? currentGame.name : currentGameId})`;
+      statPromoLabel.textContent = `Promo Credits (${(currentGame && currentGame.name) ? currentGame.name : currentGameId})`;
       statXP.textContent = `${xp} XP · L${lvl}`;
       statPRO.textContent = proLabel();
       statBest.textContent = String(best);
@@ -3381,7 +3570,7 @@
 
       if (activeRun.runId) { toast('Finish the current run first.'); return; }
 
-      // Prefer server-authoritative run start (deducts promo/paid AC in Redis).
+      // Prefer server-authoritative run start (deducts promo/paid Credits in Redis).
       try {
         const r = await serverRunStart(gameId);
         if (r && r.runId) {
@@ -3394,7 +3583,7 @@
           if (r.paidAC != null) setInt(K.paid, r.paidAC);
           if (r.promoAC != null) setInt(K.promoBal(gameId), r.promoAC);
 
-          addFeed(`Run started: ${g.name} (${activeRun.runType}) · -${activeRun.costAC} AC`);
+          addFeed(`Run started: ${g.name} (${activeRun.runType}) · -${fmtCredits(activeRun.costAC)}`);
           renderTopChips(); syncToGame();
 
           sendToGame('ARCADE:RUN_GRANTED', {
@@ -3423,7 +3612,7 @@
         } else {
           const paid = getInt(K.paid, 0);
           if (paid < cost) {
-            toast('Not enough AC', 'Buy more AC or claim promo if available.');
+            toast('Not enough Credits', 'Buy more Credits or claim promo if available.');
             return;
           }
           runType = 'paid';
@@ -3439,7 +3628,7 @@
       activeRun.startedAt = new Date().toISOString();
       activeRun.costAC = cost;
 
-      addFeed(`Run started (offline): ${g.name} (${runType}) · -${cost} AC`);
+      addFeed(`Run started (offline): ${g.name} (${runType}) · -${fmtCredits(cost)}`);
       renderTopChips(); syncToGame();
 
       sendToGame('ARCADE:RUN_GRANTED', {
@@ -3521,6 +3710,11 @@ async function recordRunResult(gameId, runId, score, durationMs) {
     window.addEventListener('message', (ev) => {
       const data = ev && ev.data;
       if (!data || typeof data !== 'object') return;
+
+      if (m.channel === 'GRUESOME_ARCADE_V1' && typeof m.type === 'string' && m.type.startsWith('GA_STUDIO_')) {
+        try { handleStudioMessage(m, ev); } catch {}
+        return;
+      }
       const type = String(data.type || '');
       const isArcade = type.startsWith('ARCADE:');
       const isLegacyScore = (type === 'SCORE_SUBMIT');
@@ -3599,12 +3793,12 @@ async function recordRunResult(gameId, runId, score, durationMs) {
     }
 
     function startTutorial() {
-      tutorial.classList.add('show');
+      showOverlay(tutorial);
       tutIdx = 0;
       renderTutorial();
     }
     function endTutorial() {
-      tutorial.classList.remove('show');
+      hideOverlay(tutorial);
       clearPulse();
       setBool(K.tutDone, true);
     }
@@ -3665,23 +3859,41 @@ async function recordRunResult(gameId, runId, score, durationMs) {
     function openEmbed(title, url) {
       if (!embedModal) return;
       embedTitle.textContent = title || 'Embed';
+      try { embedFrame.srcdoc = ''; } catch {}
       embedFrame.src = url || 'about:blank';
-      embedModal.classList.add('show');
+      showOverlay(embedModal);
+    }
+
+    function openEmbedHtml(title, html) {
+      if (!embedModal) return;
+      embedTitle.textContent = title || 'Embed';
+      embedFrame.src = 'about:blank';
+      try { embedFrame.srcdoc = String(html || ''); } catch {}
+      showOverlay(embedModal);
     }
     function closeEmbed() {
       if (!embedModal) return;
-      embedModal.classList.remove('show');
+      hideOverlay(embedModal);
+      try { embedFrame.srcdoc = ''; } catch {}
       embedFrame.src = 'about:blank';
     }
     btnEmbedClose?.addEventListener('click', closeEmbed);
-    window.addEventListener('keydown', (e)=>{ if (e.key === 'Escape') closeEmbed(); });
+    // ESC handling is centralized in the overlay manager.
 
     btnOpenDeck?.addEventListener('click', ()=>{
       const isLocal = /^(localhost|127\.0\.0\.1)$/i.test(location.hostname);
       const deckAbs = location.origin + '/deck/deck.pptx';
       if (isLocal) {
-        openEmbed('Pitch deck', '/deck/deck.pptx');
-        toast('Deck (local)', 'Browser may download instead of previewing.');
+        openEmbedHtml('Pitch deck', `<!doctype html>
+<meta charset="utf-8" />
+<div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif; padding:16px; line-height:1.45; color:#e9e9e9;">
+  <div style="font-size:14px; font-weight:700; margin-bottom:10px;">Pitch deck</div>
+  <div style="font-size:13px; opacity:.9;">Local preview of <code>.pptx</code> in an iframe usually downloads instead of rendering.</div>
+  <div style="height:12px"></div>
+  <a href="/deck/deck.pptx" download style="display:inline-block; padding:10px 12px; border-radius:10px; border:1px solid rgba(255,255,255,.18); background:rgba(255,255,255,.06); color:#fff; text-decoration:none;">Download deck.pptx</a>
+  <div style="height:10px"></div>
+  <div style="font-size:12px; opacity:.75;">On the deployed site, this button opens an embedded Office preview.</div>
+</div>`);
         return;
       }
       const viewer = 'https://view.officeapps.live.com/op/embed.aspx?src=' + encodeURIComponent(deckAbs);
@@ -3714,7 +3926,6 @@ async function recordRunResult(gameId, runId, score, durationMs) {
 
     // Init
     (async function init() {
-      const route = getRouteIntent();
       await loadCatalog();
       renderGameTiles();
       populateLbSelect();
@@ -3727,16 +3938,8 @@ async function recordRunResult(gameId, runId, score, durationMs) {
       if (!lsGet(K.lbPeriod)) lsSet(K.lbPeriod, 'daily');
       if (!lsGet(K.lbGame)) lsSet(K.lbGame, currentGameId);
 
-      setView(route.view || 'play');
-      recalcBuyOutputs();
+      setView('play');
       renderAll();
-
-      if (route && route.scrollId) {
-        try {
-          const el = document.getElementById(route.scrollId);
-          if (el) setTimeout(() => { try { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch {} }, 50);
-        } catch {}
-      }
       // Primary gate is the starfield iframe overlay (runs every refresh).
       // Keep the in-dashboard gate as a fallback only.
 

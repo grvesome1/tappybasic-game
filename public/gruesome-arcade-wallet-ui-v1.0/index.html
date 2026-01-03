@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <!-- built by gruesøme -->
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="x-ga-sig" content="built by gruesøme" />
+  <title>Gruesøme’s Arcade · Wallet (v1.0)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./wallet.css" />
+  <style>
+    body{
+      margin:0;
+      min-height:100vh;
+      background:
+        radial-gradient(1200px 600px at 20% 0%, rgba(103,232,249,0.10), transparent 55%),
+        radial-gradient(1200px 700px at 80% 0%, rgba(167,139,250,0.12), transparent 58%),
+        radial-gradient(900px 600px at 50% 110%, rgba(99,102,241,0.10), transparent 60%),
+        linear-gradient(180deg, #050614, #070817);
+      color: rgba(255,255,255,0.92);
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+    .wrap{
+      width:min(1200px, calc(100vw - 36px));
+      margin: 26px auto 40px auto;
+    }
+    .top{
+      display:flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+    .brand{
+      display:flex;
+      gap: 14px;
+      align-items: center;
+    }
+    .logo{
+      width: 44px; height: 44px;
+      border-radius: 14px;
+      background:
+        radial-gradient(18px 18px at 30% 35%, rgba(103,232,249,0.50), transparent 55%),
+        radial-gradient(18px 18px at 70% 35%, rgba(167,139,250,0.50), transparent 55%),
+        linear-gradient(180deg, rgba(255,255,255,0.06), rgba(0,0,0,0.10));
+      border: 1px solid rgba(255,255,255,0.14);
+      box-shadow: 0 18px 50px rgba(0,0,0,0.45);
+    }
+    .title{
+      font-family: Orbitron, ui-sans-serif, system-ui, sans-serif;
+      letter-spacing: 0.5px;
+      font-size: 18px;
+      margin: 0 0 4px 0;
+    }
+    .sub{
+      color: rgba(255,255,255,0.62);
+      font-size: 12px;
+      margin:0;
+    }
+    .tag{
+      font-size: 12px;
+      color: rgba(255,255,255,0.62);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 999px;
+      padding: 8px 10px;
+      background: rgba(0,0,0,0.18);
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <h1 class="title">Wallet UI (Drop‑In)</h1>
+          <p class="sub">Credits · PRO · Avatar · GP Points · v1.0</p>
+        </div>
+      </div>
+      <div class="tag">Adapter‑based wiring (no framework required)</div>
+    </div>
+
+    <!-- Inline icons sprite -->
+    <div aria-hidden="true">
+      <!--#include file="./assets/icons.svg" -->
+    </div>
+
+    <!-- Wallet panel -->
+    <div id="walletHost"></div>
+  </div>
+
+  <script>
+    // Inject icons.svg into DOM (static hosting friendly)
+    (async () => {
+      try {
+        const res = await fetch('./assets/icons.svg');
+        const svg = await res.text();
+        document.querySelector('[aria-hidden="true"]').innerHTML = svg;
+      } catch {}
+      // Load panel HTML
+      try {
+        const r = await fetch('./wallet-panel.html');
+        document.getElementById('walletHost').innerHTML = await r.text();
+      } catch (e) {
+        document.getElementById('walletHost').innerHTML = '<div style="padding:16px;border:1px solid rgba(255,255,255,.12);border-radius:16px;background:rgba(0,0,0,.2)">Failed to load wallet panel files. Serve over HTTP (not file://) to use fetch().</div>';
+      }
+      // Now load JS
+      const s = document.createElement('script');
+      s.src = './wallet.js';
+      document.body.appendChild(s);
+    })();
+  </script>
+</body>
+</html>

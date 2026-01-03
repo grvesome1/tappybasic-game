@@ -1,0 +1,499 @@
+<!doctype html>
+<html lang="en" data-app="avatar-studio-placement-lab" data-version="2.7">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>gruesøme's avatar studio · Placement Lab v2.7</title>
+
+  <!-- built by gruesøme -->
+  <!-- SIG_ENC_XOR5A_HEX=382f33362e7a38237a3d282f3f2999e2373f -->
+
+  <style>
+    :root{
+      --bg0:#050815; --bg1:#0a1530;
+      --line: rgba(255,255,255,.12);
+      --text: rgba(240,244,255,.92);
+      --muted: rgba(240,244,255,.65);
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; color:var(--text); font-family:var(--sans);
+      background:
+        radial-gradient(1200px 800px at 20% 10%, rgba(111,231,255,.12), transparent 60%),
+        radial-gradient(1000px 700px at 80% 20%, rgba(255,120,215,.10), transparent 62%),
+        linear-gradient(180deg, var(--bg0), var(--bg1));
+      min-height:100vh;
+    }
+    header{
+      position:sticky; top:0; z-index:3;
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+      padding:14px 16px;
+      background:rgba(2,6,23,.72);
+      border-bottom:1px solid rgba(255,255,255,.10);
+      backdrop-filter: blur(12px);
+    }
+    .title{
+      font-weight:900; letter-spacing:.10em; text-transform:uppercase; font-size:12px;
+    }
+    .sub{font-size:12px; color:var(--muted); margin-top:4px}
+    .controls{
+      display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end;
+    }
+    select, input{
+      padding:10px 10px; border-radius:12px; border:1px solid rgba(255,255,255,.14);
+      background:rgba(2,6,23,.45); color:var(--text); outline:none; font-family:var(--mono); font-size:12px;
+    }
+    main{padding:14px 16px}
+    .grid{
+      display:grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap:12px;
+    }
+    .card{
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:16px;
+      background:linear-gradient(180deg, rgba(15,23,42,.60), rgba(2,6,23,.42));
+      overflow:hidden;
+      box-shadow:0 14px 50px rgba(0,0,0,.35);
+    }
+    .thumb{
+      display:flex; align-items:center; justify-content:center;
+      background:rgba(0,0,0,.25);
+      padding:10px;
+    }
+    canvas{width:128px; height:128px; image-rendering: pixelated; border-radius:12px; border:1px solid rgba(255,255,255,.08)}
+    .meta{padding:10px 10px 12px}
+    .name{font-weight:800; font-size:12px}
+    .id{font-family:var(--mono); font-size:11px; color:var(--muted); margin-top:4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+    .tagrow{display:flex; gap:8px; flex-wrap:wrap; margin-top:8px}
+    .tag{
+      font-family:var(--mono); font-size:10px; color:rgba(240,244,255,.70);
+      border:1px solid rgba(255,255,255,.10);
+      padding:5px 7px; border-radius:999px;
+      background:rgba(2,6,23,.25);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <div class="title">Placement Lab</div>
+      <div class="sub">Quick visual QA for trait placement. Reference avatar is fixed (head=porcelain, outfit=hoodie_black_ops, hair=messy_black).</div>
+    </div>
+    <div class="controls">
+      <select id="cat"></select>
+      <input id="q" placeholder="filter (id/name)" />
+      <select id="bg">
+        <option value="deep_space">bg: deep space</option>
+        <option value="nebula">bg: nebula</option>
+        <option value="void">bg: void</option>
+        <option value="grid">bg: grid</option>
+      </select>
+    </div>
+  </header>
+
+  <main>
+    <div class="grid" id="grid"></div>
+  </main>
+
+<script>
+/* built by gruesøme */
+/* SIG_ENC_XOR5A_HEX=382f33362e7a38237a3d282f3f2999e2373f */
+(async () => {
+  'use strict';
+  const $ = (q, el=document)=> el.querySelector(q);
+
+  // Best-effort deterrent: cannot fully prevent saving (screenshots/DevTools still work).
+  document.addEventListener('contextmenu', (e) => {
+    const t = e.target;
+    if(!t) return;
+    const tag = t.tagName;
+    if(tag === 'IMG' || tag === 'CANVAS') e.preventDefault();
+  }, { capture: true });
+
+  document.addEventListener('dragstart', (e) => {
+    const t = e.target;
+    if(!t) return;
+    const tag = t.tagName;
+    if(tag === 'IMG' || tag === 'CANVAS') e.preventDefault();
+  }, { capture: true });
+
+  const DRAW_ORDER = ['background','outfit','head','eyes','mouth','hair','eyewear','helmet','accessory','effect'];
+
+  const PONYTAIL_BEHIND_HEAD_MASKS = [
+    // Main vertical ponytail block.
+    { x: 0, y: 20, w: 47, h: 108 },
+    // Tiny ear-adjacent chip that tends to peek through.
+    { x: 47, y: 54, w: 4, h: 22 },
+  ];
+    const CATS = [
+    ['background','Background'],
+    ['head','Head'],
+    ['outfit','Outfit'],
+    ['hair','Hair'],
+    ['helmet','Helmet'],
+    ['eyes','Eyes'],
+    ['mouth','Mouth'],
+    ['eyewear','Eyewear'],
+    ['accessory','Accessory'],    ['effect','Effect'],
+  ];
+
+  const traits = await fetch('./traits.json').then(r=>r.json());
+
+  const catSel = $('#cat');
+  for(const [id,label] of CATS){
+    const o = document.createElement('option');
+    o.value = id; o.textContent = label;
+    catSel.appendChild(o);
+  }
+  catSel.value = 'accessory';
+
+  const cache = new Map();
+  async function loadImage(src){
+    if(cache.has(src)) return cache.get(src);
+    const img = new Image();
+    const p = new Promise((res, rej) => {
+      img.onload = () => res(img);
+      img.onerror = rej;
+    });
+    img.src = src;
+    cache.set(src, p);
+    return p;
+  }
+
+  async function renderThumb(canvas, selection){
+    const ctx = canvas.getContext('2d', { alpha:true });
+    ctx.imageSmoothingEnabled = false;
+    ctx.clearRect(0,0,128,128);
+
+    const SKIN = {
+  porcelain: '#FFE0BD',
+  light:     '#F1C27D',
+  tan:       '#E0AC69',
+  brown:     '#C68642',
+  deep:      '#8D5524',
+  olive:     '#BAA487',
+};
+const SLEEVE = {
+  navy:   '#283C78',
+  crimson:'#781E32',
+  steel:  '#46505F',
+  neon:   '#1EA0B4',
+  blue:   '#325096',
+  black:  '#1f2937',
+};
+
+const skinHex = SKIN[selection.head] || '#F1C27D';
+function getOutfitVariant(outfitId){
+  const id = String(outfitId || '').toLowerCase();
+  const keys = Object.keys(SLEEVE);
+  for(const k of keys){
+    if(id === k) return k;
+    if(id.endsWith('_' + k)) return k;
+    if(id.includes('_' + k + '_')) return k;
+    if(id.includes('_' + k)) return k;
+  }
+  if(id.includes('_red') || id.endsWith('red')) return 'crimson';
+  if(id.includes('_white') || id.endsWith('white')) return 'steel';
+  if(id.includes('_olive') || id.endsWith('olive')) return 'steel';
+  return 'navy';
+}
+
+const outfitVariant = getOutfitVariant(selection.outfit);
+const sleeveHex = SLEEVE[outfitVariant] || '#283C78';
+
+function hexToRgb(h){
+  const m = String(h||'').trim().replace('#','');
+  const v = m.length===3 ? m.split('').map(c=>c+c).join('') : m.padEnd(6,'0').slice(0,6);
+  const n = parseInt(v, 16);
+  return { r:(n>>16)&255, g:(n>>8)&255, b:n&255 };
+}
+function rgbToHex(r,g,b){
+  const c = (x)=>Math.max(0,Math.min(255,Math.round(x)));
+  return '#'+[c(r),c(g),c(b)].map(v=>v.toString(16).padStart(2,'0')).join('');
+}
+function mix(a,b,t){
+  const A=hexToRgb(a), B=hexToRgb(b);
+  return rgbToHex(A.r+(B.r-A.r)*t, A.g+(B.g-A.g)*t, A.b+(B.b-A.b)*t);
+}
+const OUTLINE = '#0A0F1F';
+const sleeveShade = mix(sleeveHex, '#000000', 0.25);
+const sleeveHi    = mix(sleeveHex, '#FFFFFF', 0.18);
+const skinShade   = mix(skinHex, '#000000', 0.18);
+
+function px(x,y,color){
+  if(x<0||y<0||x>=128||y>=128) return;
+  ctx.fillStyle = color;
+  ctx.fillRect(x|0,y|0,1,1);
+}
+function thickLine(x0,y0,x1,y1,th, color){
+  x0|=0; y0|=0; x1|=0; y1|=0;
+  const dx = Math.abs(x1-x0), sx = x0<x1 ? 1 : -1;
+  const dy = -Math.abs(y1-y0), sy = y0<y1 ? 1 : -1;
+  let err = dx + dy, x=x0, y=y0;
+  while(true){
+    const r = (th/2)|0;
+    for(let oy=-r; oy<=r; oy++){
+      for(let ox=-r; ox<=r; ox++){
+        px(x+ox, y+oy, color);
+      }
+    }
+    if(x===x1 && y===y1) break;
+    const e2 = 2*err;
+    if(e2 >= dy){ err += dy; x += sx; }
+    if(e2 <= dx){ err += dx; y += sy; }
+  }
+}
+function drawAutoArmsSleeves(){
+  thickLine(44, 86, 34, 104, 5, OUTLINE);
+  thickLine(44, 86, 34, 104, 3, sleeveShade);
+  thickLine(43, 85, 33, 103, 1, sleeveHi);
+
+  thickLine(84, 86, 106, 104, 5, OUTLINE);
+  thickLine(84, 86, 106, 104, 3, sleeveShade);
+  thickLine(83, 85, 105, 103, 1, sleeveHi);
+
+  for(let i=0;i<6;i++){
+    px(32+i, 103, OUTLINE);
+    px(100+i,103, OUTLINE);
+  }
+  px(33,104, sleeveHi); px(101,104, sleeveHi);
+}
+}
+function drawAutoHands(){
+  const acc = String(selection.accessory || '');
+  let lx = 28, ly = 103, lSize = 7;
+  let rx = 102, ry = 103, rSize = 8;
+
+  // Match the main app's shotgun hand placement.
+  if(acc === 'shotgun'){
+    lx = 51; ly = 98;
+    rx = 95; ry = 95;
+  }
+
+  if(['sword','katana','greatsword','axe'].some(k => acc.includes(k))){
+    rx = 88; ry = 103; rSize = 8;
+  }
+
+  for(let y=0;y<lSize;y++){
+    for(let x=0;x<lSize;x++){
+      const gx = lx + x, gy = ly + y;
+      const edge = (x===0||y===0||x===lSize-1||y===lSize-1);
+      px(gx, gy, edge ? OUTLINE : skinHex);
+    }
+  }
+
+  for(let y=0;y<rSize;y++){
+    for(let x=0;x<rSize;x++){
+      const gx = rx + x, gy = ry + y;
+      const edge = (x===0||y===0||x===rSize-1||y===rSize-1);
+      px(gx, gy, edge ? OUTLINE : skinHex);
+    }
+  }
+
+  px(lx+4, ly+4, skinShade);
+  px(rx+5, ry+5, skinShade);
+  px(rx+6, ry+5, skinShade);
+}
+  }
+  px(32,108, skinShade); px(33,108, skinShade);
+
+  for(let y=0;y<9;y++){
+    for(let x=0;x<9;x++){
+      const gx = 102 + x, gy = 103 + y;
+      const edge = (x===0||y===0||x===8||y===8);
+      px(gx, gy, edge ? OUTLINE : skinHex);
+    }
+  }
+  px(106,109, skinShade); px(107,109, skinShade);
+  px(106,110, skinShade);
+}
+
+function offsetFor(cat, item){
+  if(cat==='hair'){
+    let dx = -6, dy = -2;
+    const id = item?.id || '';
+    if(String(id).startsWith('ponytail_')){ dx += 6; dy += 13; }
+    return { dx, dy };
+  }
+  if(['head','eyes','mouth','eyewear','helmet'].includes(cat)) return { dx:-6, dy:6 };
+  if(cat==='effect'){
+    const id = item?.id || '';
+    if(['scanlines','matrix','glitch'].some(k=>id.includes(k))) return { dx:0, dy:0 };
+    return { dx:-6, dy:6 };
+  }
+  return { dx:0, dy:0 };
+}
+
+
+let handsDrawn = false;
+const ponytailItem = String(selection.hair || '').startsWith('ponytail_')
+  ? (traits.hair||[]).find(t => t.id === selection.hair)
+  : null;
+const ponytailOffset = ponytailItem ? offsetFor('hair', ponytailItem) : null;
+let ponytailBackDrawn = false;
+for(const cat of DRAW_ORDER){
+  if(cat === 'effect' && !handsDrawn){
+    drawAutoHands();
+    handsDrawn = true;
+  }
+
+  if(cat === 'head' && ponytailItem && ponytailOffset && !ponytailBackDrawn){
+    ponytailBackDrawn = true;
+    try{
+      const pimg = await loadImage(ponytailItem.file);
+      ctx.save();
+      ctx.beginPath();
+      for(const m of PONYTAIL_BEHIND_HEAD_MASKS){
+        ctx.rect(
+          ponytailOffset.dx + m.x,
+          ponytailOffset.dy + m.y,
+          m.w,
+          m.h,
+        );
+      }
+      ctx.clip();
+      ctx.drawImage(pimg, ponytailOffset.dx, ponytailOffset.dy, 128, 128);
+      ctx.restore();
+    }catch(e){
+      console.error(e);
+    }
+  }
+
+  const id = selection[cat];
+  if(!id) continue;
+  const item = (traits[cat]||[]).find(t=>t.id === id);
+  if(!item) continue;
+  const img = await loadImage(item.file);
+  const { dx, dy } = offsetFor(cat, item);
+
+  if(cat === 'hair' && ponytailItem && item.id === ponytailItem.id){
+    const overlayCanvas = document.createElement('canvas');
+    overlayCanvas.width = 128;
+    overlayCanvas.height = 128;
+    const octx = overlayCanvas.getContext('2d');
+    octx.imageSmoothingEnabled = false;
+    octx.clearRect(0, 0, 128, 128);
+    octx.drawImage(img, 0, 0, 128, 128);
+    octx.globalCompositeOperation = 'destination-out';
+    for(const m of PONYTAIL_BEHIND_HEAD_MASKS){
+      octx.fillRect(m.x, m.y, m.w, m.h);
+    }
+    octx.globalCompositeOperation = 'source-over';
+    ctx.drawImage(overlayCanvas, dx, dy, 128, 128);
+    continue;
+  }
+
+  // Match main app sizing/placement for shotgun.
+  if(cat === 'accessory' && item.id === 'shotgun'){
+    const scale = 1.551312; // 5% smaller
+    const drawW = Math.round(128 * scale);
+    const drawH = Math.round(128 * scale);
+    const drawX = dx - Math.round((drawW - 128) / 2) + 12;
+    const drawY = dy - Math.round((drawH - 128) / 2) - 25;
+    ctx.drawImage(img, drawX, drawY, drawW, drawH);
+    continue;
+  }
+
+  if(cat === 'outfit'){
+    ctx.drawImage(img, dx, dy, 128, 128);
+    drawAutoArmsSleeves();
+    continue;
+  }
+  ctx.drawImage(img, dx, dy, 128, 128);
+}
+if(!handsDrawn) drawAutoHands();
+
+  }
+
+  const grid = $('#grid');
+  const q = $('#q');
+  const bgSel = $('#bg');
+
+  function baseSelection(bgId){
+    return {
+      background: bgId || 'deep_space',
+      outfit: 'hoodie_black_ops',
+      head: 'porcelain',
+      hair: 'messy_black',
+      helmet: 'none',
+      eyes: 'normal',
+      mouth: 'neutral',
+      eyewear: 'none',
+      accessory: 'none',
+effect: 'none',
+    };
+  }
+
+  async function build(){
+    grid.textContent = '';
+    const cat = catSel.value;
+    const term = (q.value||'').trim().toLowerCase();
+    const bgId = bgSel.value;
+
+    const list = (traits[cat]||[]).filter(t => t.id !== 'none');
+    const filtered = term
+      ? list.filter(t => (t.id||'').toLowerCase().includes(term) || (t.name||'').toLowerCase().includes(term))
+      : list;
+
+    for(const t of filtered){
+      const card = document.createElement('div');
+      card.className = 'card';
+
+      const thumb = document.createElement('div');
+      thumb.className = 'thumb';
+      const canv = document.createElement('canvas');
+      canv.width = canv.height = 128;
+      thumb.appendChild(canv);
+
+      const meta = document.createElement('div');
+      meta.className = 'meta';
+      const name = document.createElement('div');
+      name.className = 'name';
+      name.textContent = (t.name || t.id);
+
+      const id = document.createElement('div');
+      id.className = 'id';
+      id.textContent = t.id;
+
+      const tagrow = document.createElement('div');
+      tagrow.className = 'tagrow';
+      const tag1 = document.createElement('div');
+      tag1.className = 'tag';
+      tag1.textContent = `minLvl:${t.minLevel ?? 1}`;
+      const tag2 = document.createElement('div');
+      tag2.className = 'tag';
+      tag2.textContent = (t.proOnly ? 'PRO' : 'public');
+      const tag3 = document.createElement('div');
+      tag3.className = 'tag';
+      tag3.textContent = (t.rarity || 'common');
+      tagrow.appendChild(tag1);
+      tagrow.appendChild(tag2);
+      tagrow.appendChild(tag3);
+
+      meta.appendChild(name);
+      meta.appendChild(id);
+      meta.appendChild(tagrow);
+
+      card.appendChild(thumb);
+      card.appendChild(meta);
+      grid.appendChild(card);
+
+      const sel = baseSelection(bgId);
+      sel[cat] = t.id;
+      // Special cases: eyes/mouth are often hidden by eyewear etc, but this is expected.
+      await renderThumb(canv, sel);
+    }
+  }
+
+  catSel.addEventListener('change', build);
+  q.addEventListener('input', () => { clearTimeout(window.__t); window.__t=setTimeout(build, 120); });
+  bgSel.addEventListener('change', build);
+
+  await build();
+})();
+</script>
+</body>
+</html>

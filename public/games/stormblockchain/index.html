@@ -1,40 +1,202 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="en" data-ui-version="2.8" data-game-id="storm-the-blockchain">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Storm the Blockchain</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script>
+    (function () {
+      try {
+        if (window.top === window.self) window.location.replace('/');
+      } catch (_) {
+        // If framing info is restricted, do nothing.
+      }
+    })();
+  </script>
+  <title>Storm the Blockchain · Coming Soon · v2.8</title>
+  <!-- built by gruesøme -->
+  <!-- SIG_ENC_XOR5A_HEX=382f33362e7a38237a3d282f3f29a2373f -->
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@200;400;600;700;800&display=swap" rel="stylesheet" />
   <style>
-    :root{color-scheme:dark;}
-    html,body{height:100%;margin:0;background:#07090d;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;}
-    body{display:grid;place-items:center;padding:18px;box-sizing:border-box;}
-    .card{width:min(760px,100%);border:1px solid rgba(255,255,255,0.10);border-radius:18px;background:rgba(0,0,0,0.45);padding:18px;}
-    h1{margin:0 0 8px;font-size:20px;}
-    p{margin:0;color:rgba(255,255,255,0.72);font-size:13px;line-height:1.45;}
-    .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;align-items:center;}
-    button{appearance:none;border:1px solid rgba(255,255,255,0.14);background:rgba(34,211,238,0.18);color:#eaffff;padding:9px 12px;border-radius:14px;font-weight:650;cursor:pointer;}
-    .muted{color:rgba(255,255,255,0.55);font-size:12px;}
-  </style>
+    :root{color-scheme:dark;--bg:#020617;--panel:rgba(2,6,23,0.75);--b:rgba(255,255,255,0.10);--t:rgba(229,231,235,0.96);--m:rgba(229,231,235,0.70);--a:#22d3ee;--a2:rgba(34,211,238,0.22);}
+    html,body{height:100%;margin:0;background:radial-gradient(circle at top,#041026 0%, var(--bg) 55%, #000 100%);font-family:Barlow,system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;color:var(--t);}
+    .wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:18px;}
+    .card{width:min(860px,100%);border:1px solid var(--b);border-radius:22px;background:var(--panel);backdrop-filter:blur(10px);box-shadow:0 30px 90px rgba(0,0,0,0.85);padding:16px;position:relative;overflow:hidden;}
+    .card::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 18% 0%, rgba(34,211,238,0.18), transparent 62%);pointer-events:none;}
+    .top{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;position:relative;}
+    .title{font-weight:900;letter-spacing:0.12em;text-transform:uppercase;font-size:13px;}
+    .tag{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--b);border-radius:999px;padding:7px 10px;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;background:rgba(15,23,42,0.55);color:rgba(229,231,235,0.86);}
+    .tag .dot{width:8px;height:8px;border-radius:999px;background:rgba(255,221,85,0.95);box-shadow:0 0 0 3px rgba(255,221,85,0.14),0 0 16px rgba(255,221,85,0.20);}
+    .grid{display:grid;grid-template-columns:1.1fr 0.9fr;gap:12px;position:relative;margin-top:12px;}
+    .panel{border:1px solid rgba(255,255,255,0.08);border-radius:18px;background:rgba(15,23,42,0.55);padding:12px;}
+    h2{margin:0;font-size:12px;font-weight:900;letter-spacing:0.12em;text-transform:uppercase;}
+    p{margin:10px 0 0;color:var(--m);font-size:12px;line-height:1.45;}
+    .btn{border-radius:999px;border:1px solid rgba(255,255,255,0.10);background:rgba(15,23,42,0.58);color:rgba(229,231,235,0.92);font-size:12px;letter-spacing:0.08em;text-transform:uppercase;padding:10px 12px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;white-space:nowrap;text-decoration:none;}
+    .btn:hover{border-color:rgba(34,211,238,0.30);}
+    .btn.primary{border-color:rgba(255,255,255,0.14);background:linear-gradient(90deg, rgba(34,211,238,0.16), rgba(15,23,42,0.62));}
+    .muted{color:rgba(229,231,235,0.60);}
+    #standaloneGate{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;background:linear-gradient(180deg, rgba(2,6,23,0.35) 0%, rgba(0,0,0,0.84) 100%);backdrop-filter:blur(10px);}
+    #standaloneGate.show{display:flex;}
+    .sg{width:min(760px, calc(100% - 24px));border:1px solid rgba(255,255,255,0.10);border-radius:22px;background:rgba(2,6,23,0.78);box-shadow:0 30px 90px rgba(0,0,0,0.90);padding:16px;}
+    .sg .t{font-weight:900;letter-spacing:0.12em;text-transform:uppercase;font-size:12px;}
+    .sg .b{margin-top:10px;color:rgba(229,231,235,0.78);font-size:12px;line-height:1.45;}
+    @media (max-width:900px){.grid{grid-template-columns:1fr;}}
+  
+    /* v2.8 visual pass: subtle animated aurora */
+    body::before{
+      content:"";
+      position:fixed; inset:-20%;
+      background: radial-gradient(800px 500px at 20% 30%, rgba(34,197,94,.20), transparent 60%),
+                  radial-gradient(900px 600px at 70% 20%, rgba(59,130,246,.22), transparent 62%),
+                  radial-gradient(700px 480px at 60% 80%, rgba(168,85,247,.18), transparent 60%),
+                  linear-gradient(180deg, rgba(15,23,42,.55), rgba(2,6,23,.85));
+      filter: blur(18px);
+      transform: translate3d(0,0,0);
+      animation: aurora 12s ease-in-out infinite alternate;
+      pointer-events:none;
+      z-index:0;
+    }
+    @keyframes aurora{
+      0%{ transform: translate3d(-2%, -1%, 0) scale(1.02); }
+      50%{ transform: translate3d(1.5%, 1%, 0) scale(1.04); }
+      100%{ transform: translate3d(3%, -1.5%, 0) scale(1.03); }
+    }
+    .wrap{ position:relative; z-index:1; }
+    .card{ transform-style:preserve-3d; }
+    .card::after{
+      content:"";
+      position:absolute; inset:-1px;
+      border-radius:22px;
+      background: linear-gradient(120deg, rgba(34,197,94,.25), rgba(59,130,246,.20), rgba(168,85,247,.18));
+      filter: blur(22px);
+      opacity:.35;
+      z-index:-1;
+    }
+
+
+    .wireframe{width:100%;height:160px;margin-top:12px;border-radius:16px;border:1px solid rgba(255,255,255,0.10);
+      background: radial-gradient(600px 220px at 50% 40%, rgba(34,211,238,0.10), transparent 55%),
+                  radial-gradient(520px 220px at 55% 50%, rgba(167,139,250,0.10), transparent 60%),
+                  rgba(2,6,23,0.35);
+      box-shadow: 0 18px 48px rgba(0,0,0,0.55);
+      position:relative;overflow:hidden;
+    }
+    .wireframe:before{content:"";position:absolute;inset:-40%;background:conic-gradient(from 180deg, rgba(34,211,238,0.00), rgba(34,211,238,0.08), rgba(167,139,250,0.00));
+      filter:blur(18px);animation:spin 10s linear infinite;opacity:0.8;
+    }
+    .wireframe svg{position:relative;z-index:1}
+    .dash{stroke-dasharray:6 6;animation:dash 2.8s linear infinite;}
+    @keyframes dash { from{stroke-dashoffset:0} to{stroke-dashoffset:-24} }
+    @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+
+</style>
 </head>
 <body>
-  <main class="card">
-    <h1>Storm the Blockchain (3D Remaster)</h1>
-    <p>This is a placeholder page so the arcade iframe points to a real game route instead of rewriting back to the dashboard.</p>
-    <div class="row">
-      <button id="btnReady">Send READY</button>
+  <div id="standaloneGate" role="dialog" aria-modal="true" aria-label="Dashboard required">
+    <div class="sg">
+      <div class="t">Dashboard required</div>
+      <div class="b">This game is embed-only. Open the <strong>Arcade Dashboard</strong> and launch it from there.</div>
     </div>
-    <p class="muted" style="margin-top:12px">Replace with the real game build at <code>/public/games/stormblockchain/</code>.</p>
-  </main>
-  <script>
-    // Games are intended to run embedded in the dashboard portal.
-    // If opened directly, bounce to the arcade shell (single-dashboard rule).
-    try { if (window.self === window.top) window.location.replace('/'); } catch {}
+  </div>
 
-    function sendReady(){
-      try { window.parent && window.parent.postMessage({ type: 'ARCADE:READY', payload: { gameId: 'storm-the-blockchain', version: 'placeholder' } }, '*'); } catch {}
+  <div class="wrap">
+    <div class="card">
+      <div class="top">
+        <div class="title">Storm the Blockchain (3D Remaster)</div>
+        <div class="tag"><span class="dot"></span><span>coming soon</span></div>
+      </div>
+
+      <div class="grid">
+        <div class="panel">
+          <h2>What’s coming</h2>
+          <p>
+            A 3D remaster of the classic Flash defense game. This will be the first “big game” where Credits are spent
+            <strong>in-game</strong> for items and upgrades — not just per run.
+          </p>
+          <p class="muted">
+            The economy stays generic: same credits, same PoH gating, same daily epochs. Different game loop.
+          </p>
+        </div>
+        <div class="panel">
+          <h2>Help shape it</h2>
+
+          <div class="wireframe" aria-hidden="true">
+            <svg viewBox="0 0 220 140" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
+              <g fill="none" stroke="rgba(229,231,235,0.65)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+                <!-- ground -->
+                <path d="M20 112 L110 132 L200 112" class="dash"/>
+                <!-- house cube -->
+                <path d="M70 110 L70 70 L110 50 L150 70 L150 110 L110 130 Z" class="dash"/>
+                <path d="M70 70 L110 90 L150 70" class="dash"/>
+                <path d="M110 50 L110 90" class="dash"/>
+                <!-- door -->
+                <path d="M102 128 L102 98 L118 90 L118 120 Z" opacity="0.8" class="dash"/>
+                <!-- turrets -->
+                <path d="M60 78 L60 58 L72 50 L84 58 L84 78" class="dash"/>
+                <path d="M136 78 L136 58 L148 50 L160 58 L160 78" class="dash"/>
+              </g>
+              <g fill="rgba(34,211,238,0.16)">
+                <circle cx="110" cy="50" r="3.2"/>
+                <circle cx="72" cy="50" r="2.8"/>
+                <circle cx="148" cy="50" r="2.8"/>
+              </g>
+            </svg>
+          </div>
+
+          <p>Submit features, enemies, weapons, and upgrade ideas. Submissions are gas-paid in the final build and rewarded if accepted.</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+            <button class="btn primary" id="btnSuggest">Open Suggestions</button>
+            <button class="btn" id="btnBack">Back to Play</button>
+          </div>
+          <p class="muted" style="margin-top:10px">Bridge v0.3</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // built by gruesøme
+    // SIG_ENC_XOR5A_HEX=382f33362e7a38237a3d282f3f29a2373f
+    (function(){
+      const EMBEDDED = (window.parent && window.parent !== window);
+      if (!EMBEDDED) {
+        document.getElementById('standaloneGate')?.classList.add('show');
+        return;
+      }
+
+      function post(type, payload) {
+        try { window.parent.postMessage(Object.assign({type}, payload||{}), '*'); } catch (e) {}
+      }
+
+      post('ARCADE:READY', { gameId: 'storm-the-blockchain', version: '2.3' });
+
+      document.getElementById('btnSuggest')?.addEventListener('click', ()=>post('ARCADE:NAV', { view: 'proposals' }));
+      document.getElementById('btnBack')?.addEventListener('click', ()=>post('ARCADE:NAV', { view: 'play' }));
+    })();
+  
+  // v2.8: gentle parallax tilt on pointer move (visual polish only)
+  (function(){
+    const card = document.querySelector('.card');
+    if(!card) return;
+    let raf = 0;
+    function onMove(e){
+      const r = card.getBoundingClientRect();
+      const x = (e.clientX - r.left) / r.width;
+      const y = (e.clientY - r.top) / r.height;
+      const rx = (0.5 - y) * 6;
+      const ry = (x - 0.5) * 8;
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(()=>{
+        card.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg) translateZ(0)`;
+      });
     }
-    document.getElementById('btnReady').addEventListener('click', sendReady);
-    sendReady();
-  </script>
+    function reset(){
+      card.style.transform = 'rotateX(0deg) rotateY(0deg)';
+    }
+    window.addEventListener('mousemove', onMove, {passive:true});
+    window.addEventListener('mouseleave', reset, {passive:true});
+    window.addEventListener('blur', reset);
+  })();
+
+</script>
 </body>
 </html>

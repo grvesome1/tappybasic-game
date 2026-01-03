@@ -1,0 +1,928 @@
+{
+  "background": [
+    {
+      "id": "deep_space",
+      "name": "Deep Space",
+      "file": "assets/traits/background/bg_deep_space.png",
+      "rarity": "common"
+    },
+    {
+      "id": "nebula",
+      "name": "Nebula",
+      "file": "assets/traits/background/bg_nebula.png",
+      "rarity": "common"
+    },
+    {
+      "id": "terminal_green",
+      "name": "Terminal Green",
+      "file": "assets/traits/background/bg_terminal_green.png",
+      "rarity": "common"
+    },
+    {
+      "id": "sunset",
+      "name": "Sunset",
+      "file": "assets/traits/background/bg_sunset.png",
+      "rarity": "common"
+    },
+    {
+      "id": "grid",
+      "name": "Grid",
+      "file": "assets/traits/background/bg_grid.png",
+      "rarity": "common"
+    },
+    {
+      "id": "holo_noise",
+      "name": "Holo Noise",
+      "file": "assets/traits/background/bg_holo_noise.png",
+      "rarity": "common"
+    },
+    {
+      "id": "blood_moon",
+      "name": "Blood Moon",
+      "file": "assets/traits/background/bg_blood_moon.png",
+      "rarity": "common"
+    },
+    {
+      "id": "ice",
+      "name": "Ice",
+      "file": "assets/traits/background/bg_ice.png",
+      "rarity": "common"
+    },
+    {
+      "id": "void",
+      "name": "Void",
+      "file": "assets/traits/background/bg_void.png",
+      "rarity": "common"
+    },
+    {
+      "id": "golden",
+      "name": "Golden",
+      "file": "assets/traits/background/bg_golden.png",
+      "rarity": "common"
+    }
+  ],
+  "head": [
+    {
+      "id": "porcelain",
+      "name": "Skin \u00b7 Porcelain",
+      "file": "assets/traits/head/head_porcelain.png",
+      "rarity": "common"
+    },
+    {
+      "id": "light",
+      "name": "Skin \u00b7 Light",
+      "file": "assets/traits/head/head_light.png",
+      "rarity": "common"
+    },
+    {
+      "id": "tan",
+      "name": "Skin \u00b7 Tan",
+      "file": "assets/traits/head/head_tan.png",
+      "rarity": "common"
+    },
+    {
+      "id": "brown",
+      "name": "Skin \u00b7 Brown",
+      "file": "assets/traits/head/head_brown.png",
+      "rarity": "common"
+    },
+    {
+      "id": "deep",
+      "name": "Skin \u00b7 Deep",
+      "file": "assets/traits/head/head_deep.png",
+      "rarity": "common"
+    },
+    {
+      "id": "olive",
+      "name": "Skin \u00b7 Olive",
+      "file": "assets/traits/head/head_olive.png",
+      "rarity": "common"
+    }
+  ],
+  "outfit": [
+    {
+      "id": "hoodie_crimson",
+      "name": "Hoodie \u00b7 Crimson",
+      "file": "assets/traits/outfit/outfit_hoodie_crimson.png",
+      "rarity": "common"
+    },
+    {
+      "id": "hoodie_steel",
+      "name": "Hoodie \u00b7 Steel",
+      "file": "assets/traits/outfit/outfit_hoodie_steel.png",
+      "rarity": "common"
+    },
+    {
+      "id": "jacket_navy",
+      "name": "Jacket \u00b7 Navy",
+      "file": "assets/traits/outfit/outfit_jacket_navy.png",
+      "rarity": "common"
+    },
+    {
+      "id": "jacket_steel",
+      "name": "Jacket \u00b7 Steel",
+      "file": "assets/traits/outfit/outfit_jacket_steel.png",
+      "rarity": "common"
+    },
+    {
+      "id": "armor_navy",
+      "name": "Armor \u00b7 Navy",
+      "file": "assets/traits/outfit/outfit_armor_navy.png",
+      "rarity": "rare"
+    },
+    {
+      "id": "armor_crimson",
+      "name": "Armor \u00b7 Crimson",
+      "file": "assets/traits/outfit/outfit_armor_crimson.png",
+      "rarity": "rare"
+    },
+    {
+      "id": "suit_navy",
+      "name": "Suit \u00b7 Navy",
+      "file": "assets/traits/outfit/outfit_suit_navy.png",
+      "rarity": "uncommon"
+    },
+    {
+      "id": "turtleneck_steel",
+      "name": "Turtleneck \u00b7 Steel",
+      "file": "assets/traits/outfit/outfit_turtleneck_steel.png",
+      "rarity": "uncommon"
+    },
+    {
+      "id": "harness_navy",
+      "name": "Harness \u00b7 Navy",
+      "file": "assets/traits/outfit/outfit_harness_navy.png",
+      "rarity": "rare"
+    },
+    {
+      "id": "harness_crimson",
+      "name": "Harness \u00b7 Crimson",
+      "file": "assets/traits/outfit/outfit_harness_crimson.png",
+      "rarity": "rare"
+    },
+    {
+      "id": "harness_steel",
+      "name": "Harness \u00b7 Steel",
+      "file": "assets/traits/outfit/outfit_harness_steel.png",
+      "rarity": "rare"
+    },
+    {
+      "id": "bomber_steel",
+      "name": "Bomber \u00b7 Steel",
+      "file": "assets/traits/outfit/outfit_bomber_steel.png",
+      "rarity": "uncommon"
+    },
+    {
+      "id": "space_steel",
+      "name": "Space \u00b7 Steel",
+      "file": "assets/traits/outfit/outfit_space_steel.png",
+      "rarity": "rare"
+    },
+    {
+      "id": "armor_knight_steel",
+      "name": "Armor \u00b7 Knight (Steel)",
+      "file": "assets/traits/outfit/outfit_armor_knight_steel.png",
+      "rarity": "rare"
+    },
+    {
+      "id": "armor_riot_black",
+      "name": "Armor \u00b7 Riot (Black)",
+      "file": "assets/traits/outfit/outfit_armor_riot_black.png",
+      "rarity": "rare"
+    },
+    {
+      "id": "armor_samurai_red",
+      "name": "Armor \u00b7 Samurai (Red)",
+      "file": "assets/traits/outfit/outfit_armor_samurai_red.png",
+      "rarity": "rare"
+    },
+    {
+      "id": "coat_lab_white",
+      "name": "Coat \u00b7 Lab (White)",
+      "file": "assets/traits/outfit/outfit_coat_lab_white.png",
+      "rarity": "uncommon"
+    },
+    {
+      "id": "coat_neo_trench",
+      "name": "Coat \u00b7 Neo Trench",
+      "file": "assets/traits/outfit/outfit_coat_neo_trench.png",
+      "rarity": "uncommon"
+    },
+    {
+      "id": "hoodie_black_ops",
+      "name": "Hoodie \u00b7 Black Ops",
+      "file": "assets/traits/outfit/outfit_hoodie_black_ops.png",
+      "rarity": "common"
+    },
+    {
+      "id": "hoodie_camo_woodland",
+      "name": "Hoodie \u00b7 Camo (Woodland)",
+      "file": "assets/traits/outfit/outfit_hoodie_camo_woodland.png",
+      "rarity": "common"
+    },
+    {
+      "id": "hoodie_cyber_neon",
+      "name": "Hoodie \u00b7 Cyber (Neon)",
+      "file": "assets/traits/outfit/outfit_hoodie_cyber_neon.png",
+      "rarity": "common"
+    },
+    {
+      "id": "hoodie_retro_wave",
+      "name": "Hoodie \u00b7 Retro Wave",
+      "file": "assets/traits/outfit/outfit_hoodie_retro_wave.png",
+      "rarity": "common"
+    },
+    {
+      "id": "hoodie_sunset_runner",
+      "name": "Hoodie \u00b7 Sunset Runner",
+      "file": "assets/traits/outfit/outfit_hoodie_sunset_runner.png",
+      "rarity": "common"
+    },
+    {
+      "id": "space_eva_white",
+      "name": "Space \u00b7 EVA (White)",
+      "file": "assets/traits/outfit/outfit_space_eva_white.png",
+      "rarity": "rare"
+    },
+    {
+      "id": "space_holo_display",
+      "name": "Space \u00b7 Holo Display",
+      "file": "assets/traits/outfit/outfit_space_holo_display.png",
+      "rarity": "rare"
+    },
+    {
+      "id": "space_stealth_black",
+      "name": "Space \u00b7 Stealth (Black)",
+      "file": "assets/traits/outfit/outfit_space_stealth_black.png",
+      "rarity": "rare"
+    },
+    {
+      "id": "suit_exec_black",
+      "name": "Suit \u00b7 Exec (Black)",
+      "file": "assets/traits/outfit/outfit_suit_exec_black.png",
+      "rarity": "uncommon"
+    },
+    {
+      "id": "vest_engineer",
+      "name": "Vest \u00b7 Engineer",
+      "file": "assets/traits/outfit/outfit_vest_engineer.png",
+      "rarity": "uncommon"
+    },
+    {
+      "id": "vest_tactical_olive",
+      "name": "Vest \u00b7 Tactical (Olive)",
+      "file": "assets/traits/outfit/outfit_vest_tactical_olive.png",
+      "rarity": "uncommon"
+    }
+  ],
+  "hair": [
+    {
+      "id": "buzz_black",
+      "name": "Buzz \u00b7 Black",
+      "file": "assets/traits/hair/hair_buzz_black.png",
+      "rarity": "common"
+    },
+    {
+      "id": "buzz_brown",
+      "name": "Buzz \u00b7 Brown",
+      "file": "assets/traits/hair/hair_buzz_brown.png",
+      "rarity": "common"
+    },
+    {
+      "id": "buzz_blonde",
+      "name": "Buzz \u00b7 Blonde",
+      "file": "assets/traits/hair/hair_buzz_blonde.png",
+      "rarity": "common"
+    },
+    {
+      "id": "buzz_white",
+      "name": "Buzz \u00b7 White",
+      "file": "assets/traits/hair/hair_buzz_white.png",
+      "rarity": "common"
+    },
+    {
+      "id": "buzz_red",
+      "name": "Buzz \u00b7 Red",
+      "file": "assets/traits/hair/hair_buzz_red.png",
+      "rarity": "common"
+    },
+    {
+      "id": "buzz_teal",
+      "name": "Buzz \u00b7 Teal",
+      "file": "assets/traits/hair/hair_buzz_teal.png",
+      "rarity": "common"
+    },
+    {
+      "id": "messy_black",
+      "name": "Messy \u00b7 Black",
+      "file": "assets/traits/hair/hair_messy_black.png",
+      "rarity": "common"
+    },
+    {
+      "id": "messy_brown",
+      "name": "Messy \u00b7 Brown",
+      "file": "assets/traits/hair/hair_messy_brown.png",
+      "rarity": "common"
+    },
+    {
+      "id": "messy_blonde",
+      "name": "Messy \u00b7 Blonde",
+      "file": "assets/traits/hair/hair_messy_blonde.png",
+      "rarity": "common"
+    },
+    {
+      "id": "messy_white",
+      "name": "Messy \u00b7 White",
+      "file": "assets/traits/hair/hair_messy_white.png",
+      "rarity": "common"
+    },
+    {
+      "id": "messy_red",
+      "name": "Messy \u00b7 Red",
+      "file": "assets/traits/hair/hair_messy_red.png",
+      "rarity": "common"
+    },
+    {
+      "id": "messy_teal",
+      "name": "Messy \u00b7 Teal",
+      "file": "assets/traits/hair/hair_messy_teal.png",
+      "rarity": "common"
+    },
+    {
+      "id": "mohawk_black",
+      "name": "Mohawk \u00b7 Black",
+      "file": "assets/traits/hair/hair_mohawk_black.png",
+      "rarity": "uncommon"
+    },
+    {
+      "id": "mohawk_brown",
+      "name": "Mohawk \u00b7 Brown",
+      "file": "assets/traits/hair/hair_mohawk_brown.png",
+      "rarity": "uncommon"
+    },
+    {
+      "id": "mohawk_blonde",
+      "name": "Mohawk \u00b7 Blonde",
+      "file": "assets/traits/hair/hair_mohawk_blonde.png",
+      "rarity": "uncommon"
+    },
+    {
+      "id": "mohawk_white",
+      "name": "Mohawk \u00b7 White",
+      "file": "assets/traits/hair/hair_mohawk_white.png",
+      "rarity": "uncommon"
+    },
+    {
+      "id": "mohawk_red",
+      "name": "Mohawk \u00b7 Red",
+      "file": "assets/traits/hair/hair_mohawk_red.png",
+      "rarity": "uncommon"
+    },
+    {
+      "id": "mohawk_teal",
+      "name": "Mohawk \u00b7 Teal",
+      "file": "assets/traits/hair/hair_mohawk_teal.png",
+      "rarity": "uncommon"
+    },
+    {
+      "id": "afro_black",
+      "name": "Afro \u00b7 Black",
+      "file": "assets/traits/hair/hair_afro_black.png",
+      "rarity": "rare"
+    },
+    {
+      "id": "afro_brown",
+      "name": "Afro \u00b7 Brown",
+      "file": "assets/traits/hair/hair_afro_brown.png",
+      "rarity": "rare"
+    },
+    {
+      "id": "afro_blonde",
+      "name": "Afro \u00b7 Blonde",
+      "file": "assets/traits/hair/hair_afro_blonde.png",
+      "rarity": "rare"
+    },
+    {
+      "id": "afro_white",
+      "name": "Afro \u00b7 White",
+      "file": "assets/traits/hair/hair_afro_white.png",
+      "rarity": "rare"
+    },
+    {
+      "id": "afro_red",
+      "name": "Afro \u00b7 Red",
+      "file": "assets/traits/hair/hair_afro_red.png",
+      "rarity": "rare"
+    },
+    {
+      "id": "afro_teal",
+      "name": "Afro \u00b7 Teal",
+      "file": "assets/traits/hair/hair_afro_teal.png",
+      "rarity": "rare"
+    },
+    {
+      "id": "fringe_black",
+      "name": "Fringe \u00b7 Black",
+      "file": "assets/traits/hair/hair_fringe_black.png",
+      "rarity": "common"
+    },
+    {
+      "id": "fringe_brown",
+      "name": "Fringe \u00b7 Brown",
+      "file": "assets/traits/hair/hair_fringe_brown.png",
+      "rarity": "common"
+    },
+    {
+      "id": "fringe_blonde",
+      "name": "Fringe \u00b7 Blonde",
+      "file": "assets/traits/hair/hair_fringe_blonde.png",
+      "rarity": "common"
+    },
+    {
+      "id": "fringe_white",
+      "name": "Fringe \u00b7 White",
+      "file": "assets/traits/hair/hair_fringe_white.png",
+      "rarity": "common"
+    },
+    {
+      "id": "fringe_red",
+      "name": "Fringe \u00b7 Red",
+      "file": "assets/traits/hair/hair_fringe_red.png",
+      "rarity": "common"
+    },
+    {
+      "id": "fringe_teal",
+      "name": "Fringe \u00b7 Teal",
+      "file": "assets/traits/hair/hair_fringe_teal.png",
+      "rarity": "common"
+    },
+    {
+      "id": "spiky_black",
+      "name": "Spiky \u00b7 Black",
+      "file": "assets/traits/hair/hair_spiky_black.png",
+      "rarity": "uncommon"
+    },
+    {
+      "id": "spiky_brown",
+      "name": "Spiky \u00b7 Brown",
+      "file": "assets/traits/hair/hair_spiky_brown.png",
+      "rarity": "uncommon"
+    },
+    {
+      "id": "spiky_blonde",
+      "name": "Spiky \u00b7 Blonde",
+      "file": "assets/traits/hair/hair_spiky_blonde.png",
+      "rarity": "uncommon"
+    },
+    {
+      "id": "spiky_white",
+      "name": "Spiky \u00b7 White",
+      "file": "assets/traits/hair/hair_spiky_white.png",
+      "rarity": "uncommon"
+    },
+    {
+      "id": "spiky_red",
+      "name": "Spiky \u00b7 Red",
+      "file": "assets/traits/hair/hair_spiky_red.png",
+      "rarity": "uncommon"
+    },
+    {
+      "id": "spiky_teal",
+      "name": "Spiky \u00b7 Teal",
+      "file": "assets/traits/hair/hair_spiky_teal.png",
+      "rarity": "uncommon"
+    },
+    {
+      "id": "ponytail_black",
+      "name": "Ponytail \u00b7 Black",
+      "file": "assets/traits/hair/hair_ponytail_black.png",
+      "rarity": "rare"
+    },
+    {
+      "id": "ponytail_brown",
+      "name": "Ponytail \u00b7 Brown",
+      "file": "assets/traits/hair/hair_ponytail_brown.png",
+      "rarity": "rare"
+    },
+    {
+      "id": "ponytail_blonde",
+      "name": "Ponytail \u00b7 Blonde",
+      "file": "assets/traits/hair/hair_ponytail_blonde.png",
+      "rarity": "rare"
+    },
+    {
+      "id": "ponytail_white",
+      "name": "Ponytail \u00b7 White",
+      "file": "assets/traits/hair/hair_ponytail_white.png",
+      "rarity": "rare"
+    },
+    {
+      "id": "ponytail_red",
+      "name": "Ponytail \u00b7 Red",
+      "file": "assets/traits/hair/hair_ponytail_red.png",
+      "rarity": "rare"
+    },
+    {
+      "id": "ponytail_teal",
+      "name": "Ponytail \u00b7 Teal",
+      "file": "assets/traits/hair/hair_ponytail_teal.png",
+      "rarity": "rare"
+    },
+    {
+      "id": "dread_black",
+      "name": "Dread \u00b7 Black",
+      "file": "assets/traits/hair/hair_dread_black.png",
+      "rarity": "rare"
+    },
+    {
+      "id": "dread_brown",
+      "name": "Dread \u00b7 Brown",
+      "file": "assets/traits/hair/hair_dread_brown.png",
+      "rarity": "rare"
+    },
+    {
+      "id": "dread_blonde",
+      "name": "Dread \u00b7 Blonde",
+      "file": "assets/traits/hair/hair_dread_blonde.png",
+      "rarity": "rare"
+    },
+    {
+      "id": "dread_white",
+      "name": "Dread \u00b7 White",
+      "file": "assets/traits/hair/hair_dread_white.png",
+      "rarity": "rare"
+    },
+    {
+      "id": "dread_red",
+      "name": "Dread \u00b7 Red",
+      "file": "assets/traits/hair/hair_dread_red.png",
+      "rarity": "rare"
+    },
+    {
+      "id": "dread_teal",
+      "name": "Dread \u00b7 Teal",
+      "file": "assets/traits/hair/hair_dread_teal.png",
+      "rarity": "rare"
+    },
+    {
+      "id": "none",
+      "name": "None",
+      "file": "assets/traits/hair/hair_none.png",
+      "rarity": "common"
+    }
+  ],
+  "eyes": [
+    {
+      "id": "normal",
+      "name": "Normal",
+      "file": "assets/traits/eyes/eyes_normal.png",
+      "rarity": "common"
+    },
+    {
+      "id": "wide",
+      "name": "Wide",
+      "file": "assets/traits/eyes/eyes_wide.png",
+      "rarity": "common"
+    },
+    {
+      "id": "angry",
+      "name": "Angry",
+      "file": "assets/traits/eyes/eyes_angry.png",
+      "rarity": "uncommon"
+    },
+    {
+      "id": "surprised",
+      "name": "Surprised",
+      "file": "assets/traits/eyes/eyes_surprised.png",
+      "rarity": "uncommon"
+    },
+    {
+      "id": "sleepy",
+      "name": "Sleepy",
+      "file": "assets/traits/eyes/eyes_sleepy.png",
+      "rarity": "common"
+    },
+    {
+      "id": "cyber",
+      "name": "Cyber",
+      "file": "assets/traits/eyes/eyes_cyber.png",
+      "rarity": "uncommon"
+    },
+    {
+      "id": "laser_red",
+      "name": "Laser Red",
+      "file": "assets/traits/eyes/eyes_laser_red.png",
+      "rarity": "legendary"
+    },
+    {
+      "id": "laser_blue",
+      "name": "Laser Blue",
+      "file": "assets/traits/eyes/eyes_laser_blue.png",
+      "rarity": "legendary"
+    },
+    {
+      "id": "holo",
+      "name": "Holo",
+      "file": "assets/traits/eyes/eyes_holo.png",
+      "rarity": "uncommon"
+    }
+  ],
+  "eyewear": [
+    {
+      "id": "none",
+      "name": "None",
+      "file": "assets/traits/eyewear/eyewear_none.png",
+      "rarity": "common"
+    },
+    {
+      "id": "sunglasses",
+      "name": "Sunglasses",
+      "file": "assets/traits/eyewear/eyewear_sunglasses.png",
+      "rarity": "common"
+    },
+    {
+      "id": "nvg",
+      "name": "Nvg",
+      "file": "assets/traits/eyewear/eyewear_nvg.png",
+      "rarity": "rare"
+    },
+    {
+      "id": "thermal",
+      "name": "Thermal",
+      "file": "assets/traits/eyewear/eyewear_thermal.png",
+      "rarity": "rare"
+    },
+    {
+      "id": "visor",
+      "name": "Visor",
+      "file": "assets/traits/eyewear/eyewear_visor.png",
+      "rarity": "uncommon"
+    },
+    {
+      "id": "analyzer",
+      "name": "Analyzer",
+      "file": "assets/traits/eyewear/eyewear_analyzer.png",
+      "rarity": "uncommon"
+    },
+    {
+      "id": "monocle",
+      "name": "Monocle",
+      "file": "assets/traits/eyewear/eyewear_monocle.png",
+      "rarity": "uncommon"
+    }
+  ],
+  "mouth": [
+    {
+      "id": "neutral",
+      "name": "Neutral",
+      "file": "assets/traits/mouth/mouth_neutral.png",
+      "rarity": "common"
+    },
+    {
+      "id": "smile",
+      "name": "Smile",
+      "file": "assets/traits/mouth/mouth_smile.png",
+      "rarity": "common"
+    },
+    {
+      "id": "frown",
+      "name": "Frown",
+      "file": "assets/traits/mouth/mouth_frown.png",
+      "rarity": "common"
+    },
+    {
+      "id": "cigar",
+      "name": "Cigar",
+      "file": "assets/traits/mouth/mouth_cigar.png",
+      "rarity": "rare"
+    },
+    {
+      "id": "cigarette",
+      "name": "Cigarette",
+      "file": "assets/traits/mouth/mouth_cigarette.png",
+      "rarity": "uncommon"
+    }
+  ],
+  "helmet": [
+    {
+      "id": "none",
+      "name": "None",
+      "file": "assets/traits/helmet/helmet_none.png",
+      "rarity": "common"
+    },
+    {
+      "id": "tactical",
+      "name": "Tactical",
+      "file": "assets/traits/helmet/helmet_tactical.png",
+      "rarity": "common"
+    },
+    {
+      "id": "riot",
+      "name": "Riot",
+      "file": "assets/traits/helmet/helmet_riot.png",
+      "rarity": "common"
+    },
+    {
+      "id": "biker",
+      "name": "Biker",
+      "file": "assets/traits/helmet/helmet_biker.png",
+      "rarity": "uncommon"
+    },
+    {
+      "id": "skull",
+      "name": "Skull",
+      "file": "assets/traits/helmet/helmet_skull.png",
+      "rarity": "rare"
+    },
+    {
+      "id": "space",
+      "name": "Space",
+      "file": "assets/traits/helmet/helmet_space.png",
+      "rarity": "rare"
+    },
+    {
+      "id": "crown",
+      "name": "Crown",
+      "file": "assets/traits/helmet/helmet_crown.png",
+      "rarity": "legendary"
+    },
+    {
+      "id": "bandana",
+      "name": "Bandana",
+      "file": "assets/traits/helmet/helmet_bandana.png",
+      "rarity": "uncommon"
+    }
+  ],
+  "accessory": [
+    {
+      "id": "none",
+      "name": "None",
+      "file": "assets/traits/accessory/accessory_none.png",
+      "rarity": "common"
+    },
+    {
+      "id": "pistol",
+      "name": "Pistol",
+      "file": "assets/traits/accessory/accessory_pistol.png",
+      "rarity": "uncommon"
+    },
+    {
+      "id": "revolver",
+      "name": "Revolver",
+      "file": "assets/traits/accessory/accessory_revolver.png",
+      "rarity": "uncommon"
+    },
+    {
+      "id": "smg",
+      "name": "Smg",
+      "file": "assets/traits/accessory/accessory_smg.png",
+      "rarity": "rare"
+    },
+    {
+      "id": "rifle1",
+      "name": "Rifle1",
+      "file": "assets/traits/accessory/accessory_rifle1.png",
+      "rarity": "rare"
+    },
+    {
+      "id": "rifle2",
+      "name": "Rifle2",
+      "file": "assets/traits/accessory/accessory_rifle2.png",
+      "rarity": "rare"
+    },
+    {
+      "id": "shotgun",
+      "name": "Shotgun",
+      "file": "assets/traits/accessory/accessory_shotgun.png",
+      "rarity": "rare"
+    },
+    {
+      "id": "katana",
+      "name": "Katana",
+      "file": "assets/traits/accessory/accessory_katana.png",
+      "rarity": "uncommon"
+    },
+    {
+      "id": "greatsword",
+      "name": "Greatsword",
+      "file": "assets/traits/accessory/accessory_greatsword.png",
+      "rarity": "rare"
+    },
+    {
+      "id": "baton",
+      "name": "Baton",
+      "file": "assets/traits/accessory/accessory_baton.png",
+      "rarity": "uncommon"
+    },
+    {
+      "id": "microchip",
+      "name": "Microchip",
+      "file": "assets/traits/accessory/accessory_microchip.png",
+      "rarity": "common"
+    },
+    {
+      "id": "coffee",
+      "name": "Coffee",
+      "file": "assets/traits/accessory/accessory_coffee.png",
+      "rarity": "common"
+    },
+    {
+      "id": "trophy",
+      "name": "Trophy",
+      "file": "assets/traits/accessory/accessory_trophy.png",
+      "rarity": "uncommon"
+    },
+    {
+      "id": "guitar",
+      "name": "Guitar",
+      "file": "assets/traits/accessory/accessory_guitar.png",
+      "rarity": "uncommon"
+    },
+    {
+      "id": "scanner",
+      "name": "Scanner",
+      "file": "assets/traits/accessory/accessory_scanner.png",
+      "rarity": "common"
+    },
+    {
+      "id": "plasma_orb",
+      "name": "Plasma Orb",
+      "file": "assets/traits/accessory/accessory_plasma_orb.png",
+      "rarity": "legendary"
+    },
+    {
+      "id": "flag",
+      "name": "Flag",
+      "file": "assets/traits/accessory/accessory_flag.png",
+      "rarity": "uncommon"
+    },
+    {
+      "id": "drone",
+      "name": "Drone",
+      "file": "assets/traits/accessory/accessory_drone.png",
+      "rarity": "rare"
+    },
+    {
+      "id": "blade_neon",
+      "name": "Blade Neon",
+      "file": "assets/traits/accessory/accessory_blade_neon.png",
+      "rarity": "legendary"
+    }
+  ],
+  "effect": [
+    {
+      "id": "none",
+      "name": "None",
+      "file": "assets/traits/effect/effect_none.png",
+      "rarity": "uncommon"
+    },
+    {
+      "id": "aura_cyan",
+      "name": "Aura Cyan",
+      "file": "assets/traits/effect/effect_aura_cyan.png",
+      "rarity": "rare"
+    },
+    {
+      "id": "aura_pink",
+      "name": "Aura Pink",
+      "file": "assets/traits/effect/effect_aura_pink.png",
+      "rarity": "rare"
+    },
+    {
+      "id": "scanlines",
+      "name": "Scanlines",
+      "file": "assets/traits/effect/effect_scanlines.png",
+      "rarity": "uncommon"
+    },
+    {
+      "id": "glitch",
+      "name": "Glitch",
+      "file": "assets/traits/effect/effect_glitch.png",
+      "rarity": "rare"
+    },
+    {
+      "id": "sparks",
+      "name": "Sparks",
+      "file": "assets/traits/effect/effect_sparks.png",
+      "rarity": "uncommon"
+    },
+    {
+      "id": "smoke",
+      "name": "Smoke",
+      "file": "assets/traits/effect/effect_smoke.png",
+      "rarity": "uncommon"
+    },
+    {
+      "id": "halo_gold",
+      "name": "Halo Gold",
+      "file": "assets/traits/effect/effect_halo_gold.png",
+      "rarity": "legendary"
+    },
+    {
+      "id": "matrix",
+      "name": "Matrix",
+      "file": "assets/traits/effect/effect_matrix.png",
+      "rarity": "uncommon"
+    }
+  ]
+}

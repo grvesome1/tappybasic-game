@@ -1,118 +1,1027 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="en" data-ui-version="2.8" data-game-id="moonshot">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Moonshot</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script>
+    (function () {
+      try {
+        if (window.top === window.self) window.location.replace('/');
+      } catch (_) {
+        // If framing info is restricted, do nothing.
+      }
+    })();
+  </script>
+  <title>Moonshot · ArcadeBridge · v2.8</title>
+  <!-- built by gruesøme -->
+  <!-- SIG_ENC_XOR5A_HEX=382f33362e7a38237a3d282f3f29a2373f -->
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@200;400;600;700;800;900&display=swap" rel="stylesheet" />
   <style>
-    :root{color-scheme:dark;}
-    html,body{height:100%;margin:0;background:#07090d;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;}
-    body{display:grid;place-items:center;padding:18px;box-sizing:border-box;}
-    .card{width:min(760px,100%);border:1px solid rgba(255,255,255,0.10);border-radius:18px;background:rgba(0,0,0,0.45);padding:18px;}
-    h1{margin:0 0 8px;font-size:20px;}
-    p{margin:0;color:rgba(255,255,255,0.72);font-size:13px;line-height:1.45;}
-    .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;align-items:center;}
-    button{appearance:none;border:1px solid rgba(255,255,255,0.14);background:rgba(34,211,238,0.18);color:#eaffff;padding:9px 12px;border-radius:14px;font-weight:650;cursor:pointer;}
-    button.secondary{background:rgba(255,255,255,0.08);}
-    .muted{color:rgba(255,255,255,0.55);font-size:12px;}
-    .kv{display:grid;grid-template-columns:120px 1fr;gap:6px 10px;margin-top:12px;font-size:12px;}
-    .k{color:rgba(255,255,255,0.55);} .v{color:rgba(255,255,255,0.86);word-break:break-word;}
-  </style>
-</head>
-<body>
-  <main class="card">
-    <h1>Moonshot</h1>
-    <p>This build is missing the full Moonshot game files, so this is a safe placeholder to prevent the arcade from recursively iframing itself.</p>
-    <p class="muted" style="margin-top:6px">It still implements the ArcadeBridge messages so the dashboard stays usable.</p>
+    :root{
+      color-scheme: dark;
+      --bg0: #020617;
+      --bg1: rgba(2, 6, 23, 0.74);
+      --panel: rgba(15, 23, 42, 0.62);
+      --panel2: rgba(15, 23, 42, 0.78);
+      --border: rgba(255,255,255,0.10);
+      --muted: rgba(229,231,235,0.70);
+      --text: rgba(229,231,235,0.96);
+      --cyan: #22d3ee;
+      --cyan2: rgba(34,211,238,0.22);
+      --yellow: #ffdd55;
+      --green: #22c55e;
+      --red: #ff4444;
+      --shadow: 0 24px 70px rgba(0,0,0,0.85);
+      --ease: cubic-bezier(0.16, 1, 0.3, 1);
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
 
-    <div class="kv">
-      <div class="k">Game ID</div><div class="v" id="gid">moonshot</div>
-      <div class="k">Run ID</div><div class="v" id="rid">(none)</div>
-      <div class="k">Run Type</div><div class="v" id="rtype">(none)</div>
-      <div class="k">Paid AC</div><div class="v" id="paid">0</div>
-      <div class="k">Promo AC</div><div class="v" id="promo">0</div>
-      <div class="k">Player</div><div class="v" id="addr">(unknown)</div>
+    <!DOCTYPE html>
+    <html lang="en" data-game-id="moonshot" data-game-mode="3d">
+    <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <title>Moonshot 3D</title>
+      <style>
+        html, body {
+          margin: 0;
+          padding: 0;
+          width: 100%;
+          height: 100%;
+          overflow: hidden;
+          background: radial-gradient(circle at top, #020617 0%, #020617 40%, #000 100%);
+          font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Barlow', sans-serif;
+          color: #e5e7eb;
+        }
+        #moonshot-root {
+          position: fixed;
+          inset: 0;
+          display: flex;
+          align-items: stretch;
+          justify-content: center;
+        }
+        #moonshot-canvas-container {
+          position: relative;
+          flex: 1;
+        }
+        #moonshot-hud {
+          position: absolute;
+          top: 10px;
+          left: 10px;
+          right: 10px;
+          display: flex;
+          justify-content: space-between;
+          font-size: 16px;
+          text-shadow: 0 0 8px rgba(56, 189, 248, 0.8);
+          pointer-events: none;
+          z-index: 10;
+        }
+        #moonshot-powerups-bar {
+          position: absolute;
+          top: 64px;
+          left: 50%;
+          transform: translateX(-50%);
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 4px 10px;
+          border-radius: 999px;
+          background: rgba(15, 23, 42, 0.8);
+          border: 1px solid rgba(56, 189, 248, 0.6);
+          box-shadow: 0 0 12px rgba(56, 189, 248, 0.75);
+          font-size: 11px;
+          pointer-events: none;
+          z-index: 9;
+        }
+        .moonshot-powerups-list { display: flex; gap: 6px; }
+        .moonshot-powerup-chip {
+          padding: 2px 8px;
+          border-radius: 999px;
+          background: rgba(15, 118, 110, 0.8);
+          border: 1px solid rgba(45, 212, 191, 0.8);
+          font-size: 11px;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          color: #a5f3fc;
+          text-shadow: 0 0 6px rgba(34, 211, 238, 0.9);
+        }
+        .moonshot-hud-block { display: flex; flex-direction: column; gap: 4px; }
+        .moonshot-label { font-size: 11px; text-transform: uppercase; opacity: 0.7; letter-spacing: 0.08em; }
+        .moonshot-value { font-size: 20px; font-weight: 700; }
+        #moonshot-center-message {
+          position: absolute;
+          left: 50%;
+          top: 50%;
+          transform: translate(-50%, -50%);
+          font-size: 18px;
+          color: #e5e7eb;
+          text-align: center;
+          text-shadow: 0 0 16px rgba(56, 189, 248, 0.9);
+          pointer-events: none;
+          z-index: 10;
+        }
+        #moonshot-tutorial {
+          position: absolute;
+          inset: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: radial-gradient(circle at top, rgba(15,23,42,0.96) 0%, rgba(15,23,42,0.94) 45%, rgba(15,23,42,0.9) 100%);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+          z-index: 20;
+        }
+        .moonshot-tutorial-inner {
+          max-width: 420px;
+          padding: 18px 20px 16px;
+          border-radius: 18px;
+          border: 1px solid rgba(55,65,81,0.95);
+          box-shadow: 0 22px 60px rgba(0,0,0,0.95);
+          background: radial-gradient(circle at top, rgba(17,24,39,1) 0%, rgba(15,23,42,0.96) 55%, rgba(15,23,42,0.94) 100%);
+          font-size: 13px;
+        }
+        .moonshot-tutorial-title {
+          font-size: 16px;
+          font-weight: 600;
+          margin-bottom: 8px;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          color: #f9fafb;
+        }
+        .moonshot-tutorial-body { color: #e5e7eb; margin-bottom: 10px; line-height: 1.45; }
+        .moonshot-tutorial-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 14px; margin-bottom: 10px; }
+        .moonshot-tutorial-item { font-size: 12px; color: #d1d5db; }
+        .moonshot-tutorial-item span.label {
+          display: block;
+          font-weight: 600;
+          color: #a5f3fc;
+          margin-bottom: 2px;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+        }
+        .moonshot-tutorial-footer { font-size: 12px; color: #9ca3af; margin-top: 4px; }
+        #moonshot-slow-overlay {
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+          background:
+            radial-gradient(circle at center, rgba(56, 189, 248, 0.18) 0%, transparent 55%),
+            radial-gradient(circle at top, rgba(8, 47, 73, 0.65) 0%, transparent 70%);
+          mix-blend-mode: screen;
+          opacity: 0;
+          transition: opacity 0.18s ease-out;
+          z-index: 8;
+        }
+        #moonshot-wagmi-toast {
+          position: absolute;
+          left: 14px;
+          bottom: 20px;
+          padding: 4px 10px;
+          border-radius: 999px;
+          background: rgba(22, 163, 74, 0.18);
+          border: 1px solid rgba(52, 211, 153, 0.9);
+          color: #bbf7d0;
+          font-size: 12px;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          text-shadow: 0 0 8px rgba(34, 197, 94, 0.9);
+          pointer-events: none;
+          opacity: 0;
+          transform: translateY(8px);
+          transition: opacity 0.15s ease-out, transform 0.15s ease-out;
+          z-index: 11;
+        }
+        #moonshot-wagmi-toast.visible { opacity: 1; transform: translateY(0); }
+        #moonshot-gameover-panel {
+          position: absolute;
+          left: 50%;
+          top: 60%;
+          transform: translate(-50%, -50%);
+          min-width: 260px;
+          padding: 14px 18px 12px;
+          border-radius: 16px;
+          background: radial-gradient(circle at top, rgba(15,23,42,0.98) 0%, rgba(15,23,42,0.94) 55%, rgba(15,23,42,0.9) 100%);
+          border: 1px solid rgba(55, 65, 81, 0.9);
+          box-shadow: 0 22px 60px rgba(0, 0, 0, 0.9);
+          font-size: 13px;
+          display: none;
+          z-index: 11;
+          text-align: left;
+        }
+        #moonshot-gameover-panel h2 {
+          margin: 0 0 6px;
+          font-size: 16px;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          color: #f9fafb;
+        }
+        .moonshot-summary-row { display: flex; justify-content: space-between; margin-bottom: 2px; }
+        .moonshot-summary-label { color: #9ca3af; }
+        .moonshot-summary-value { color: #e5e7eb; font-weight: 600; }
+        .moonshot-summary-hint { margin-top: 6px; font-size: 11px; color: #6b7280; }
+        #moonshot-speed-meter {
+          position: absolute;
+          left: 14px;
+          right: 14px;
+          bottom: 60px;
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          font-size: 12px;
+          color: #d1d5db;
+          pointer-events: none;
+          z-index: 30;
+        }
+        .moonshot-speed-label {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          opacity: 0.9;
+        }
+        .moonshot-speed-bar {
+          width: 100%;
+          height: 14px;
+          border-radius: 999px;
+          background: rgba(15, 23, 42, 0.92);
+          box-shadow: 0 0 10px rgba(15, 23, 42, 0.98) inset;
+          overflow: hidden;
+        }
+        .moonshot-speed-bar-fill {
+          width: 0%;
+          height: 100%;
+          background: linear-gradient(90deg, #22c55e, #22d3ee, #f97316);
+          box-shadow: 0 0 16px rgba(56, 189, 248, 0.95);
+          transition: width 0.08s linear;
+        }
+
+        /* ArcadeBridge run request gate (iframe only) */
+        #arcadeRunGate {
+          position: fixed;
+          inset: 0;
+          display: none;
+          align-items: center;
+          justify-content: center;
+          z-index: 9999;
+          background: linear-gradient(180deg, rgba(2,6,23,0.25) 0%, rgba(0,0,0,0.75) 100%);
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
+        }
+        #arcadeRunGate.show { display: flex; }
+        .arcadeCard {
+          width: min(540px, calc(100% - 28px));
+          border-radius: 18px;
+          border: 1px solid rgba(255,255,255,0.12);
+          background: rgba(2,6,23,0.82);
+          box-shadow: 0 22px 60px rgba(0,0,0,0.90);
+          padding: 14px 14px 12px;
+          text-align: center;
+        }
+        .arcadeTitle {
+          font-size: 12px;
+          font-weight: 900;
+          letter-spacing: 0.14em;
+          text-transform: uppercase;
+        }
+        .arcadeBody {
+          margin-top: 8px;
+          font-size: 12px;
+          color: rgba(229,231,235,0.75);
+          line-height: 1.45;
+        }
+        .arcadeBtn {
+          margin-top: 10px;
+          cursor: pointer;
+          border-radius: 999px;
+          border: 1px solid rgba(56,189,248,0.30);
+          background: rgba(56,189,248,0.14);
+          color: rgba(229,231,235,0.92);
+          font-size: 12px;
+          letter-spacing: 0.10em;
+          text-transform: uppercase;
+          padding: 10px 14px;
+        }
+        .arcadeHint {
+          margin-top: 10px;
+          font-size: 11px;
+          color: rgba(229,231,235,0.62);
+          min-height: 1.2em;
+        }
+      </style>
+    </head>
+    <body>
+      <div id="arcadeRunGate" aria-label="Start run" role="dialog" aria-modal="true">
+        <div class="arcadeCard">
+          <div class="arcadeTitle">Moonshot Run</div>
+          <div class="arcadeBody">Start a run to sync credits + scoring with the dashboard.</div>
+          <button class="arcadeBtn" id="btnStartRun" type="button">Start Run</button>
+          <div class="arcadeHint" id="arcadeHint"></div>
+        </div>
+      </div>
+
+      <div id="moonshot-root">
+        <div id="moonshot-canvas-container"></div>
+        <div id="moonshot-slow-overlay"></div>
+        <div id="moonshot-hud">
+          <div class="moonshot-hud-block" id="moonshot-hud-score">
+            <div class="moonshot-label">Score</div>
+            <div class="moonshot-value" id="moonshot-score">0</div>
+          </div>
+          <div class="moonshot-hud-block" id="moonshot-hud-high">
+            <div class="moonshot-label">High Score</div>
+            <div class="moonshot-value" id="moonshot-high-score">0</div>
+          </div>
+          <div class="moonshot-hud-block" id="moonshot-speed-block" style="display: none;">
+            <div class="moonshot-label">Speed</div>
+            <div class="moonshot-value" id="moonshot-speed">1.0x</div>
+          </div>
+          <div class="moonshot-hud-block" id="moonshot-hud-combo">
+            <div class="moonshot-label">Combo</div>
+            <div class="moonshot-value" id="moonshot-combo">x1</div>
+          </div>
+          <div class="moonshot-hud-block">
+            <div class="moonshot-label">WAGMI</div>
+            <div class="moonshot-value" id="moonshot-wagmi">0</div>
+          </div>
+          <div class="moonshot-hud-block" id="moonshot-axis-block">
+            <div class="moonshot-label">Axis</div>
+            <div class="moonshot-value" id="moonshot-axis-mode">V</div>
+          </div>
+        </div>
+        <div id="moonshot-powerups-bar">
+          <span class="moonshot-label">Powerups</span>
+          <div class="moonshot-powerups-list" id="moonshot-powerups"></div>
+        </div>
+        <div id="moonshot-center-message">Tap / Space to ignite engines</div>
+        <div id="moonshot-wagmi-toast">+1 WAGMI</div>
+        <div id="moonshot-gameover-panel">
+          <h2>Run Summary</h2>
+          <div class="moonshot-summary-row">
+            <span class="moonshot-summary-label">Score</span>
+            <span class="moonshot-summary-value" id="moonshot-final-score">0</span>
+          </div>
+          <div class="moonshot-summary-row">
+            <span class="moonshot-summary-label">High Score</span>
+            <span class="moonshot-summary-value" id="moonshot-final-high-score">0</span>
+          </div>
+          <div class="moonshot-summary-row">
+            <span class="moonshot-summary-label">WAGMI</span>
+            <span class="moonshot-summary-value" id="moonshot-final-wagmi">0</span>
+          </div>
+          <div class="moonshot-summary-row">
+            <span class="moonshot-summary-label">Best WAGMI</span>
+            <span class="moonshot-summary-value" id="moonshot-final-wagmi-best">0</span>
+          </div>
+          <div class="moonshot-summary-row">
+            <span class="moonshot-summary-label">Best Combo</span>
+            <span class="moonshot-summary-value" id="moonshot-final-combo">x1</span>
+          </div>
+          <div class="moonshot-summary-hint">Tap / click / Space to launch again.</div>
+        </div>
+        <div id="moonshot-tutorial" style="display: none;">
+          <div class="moonshot-tutorial-inner">
+            <div class="moonshot-tutorial-title">Moonshot 3D</div>
+            <div class="moonshot-tutorial-body">
+              Tap / click / Space to thrust. Thread the rocket through the gaps, grab powerups, and stack WAGMI.
+            </div>
+            <div class="moonshot-tutorial-grid">
+              <div class="moonshot-tutorial-item">
+                <span class="label">Controls</span>
+                Tap / click / Space to flap. P or Esc to pause.
+              </div>
+              <div class="moonshot-tutorial-item">
+                <span class="label">Near-miss</span>
+                Skim the candle edges to earn extra WAGMI.
+              </div>
+              <div class="moonshot-tutorial-item">
+                <span class="label">Powerups</span>
+                GUN, SLOW, DOUBLE, CECE and INVINC show up as glowing shards.
+              </div>
+              <div class="moonshot-tutorial-item">
+                <span class="label">Goal</span>
+                Climb score, combo and WAGMI. Leaderboard tracks your best runs.
+              </div>
+            </div>
+            <div class="moonshot-tutorial-footer">Tap / click / Space anywhere to launch.</div>
+          </div>
+        </div>
+
+        <div id="moonshot-speed-meter">
+          <div class="moonshot-speed-label">
+            <span>Speed</span>
+            <span id="moonshot-speed-value">1.0x</span>
+          </div>
+          <div class="moonshot-speed-bar">
+            <div class="moonshot-speed-bar-fill" id="moonshot-speed-bar-fill"></div>
+          </div>
+        </div>
+      </div>
+
+      <script>
+        (function () {
+          const gate = document.getElementById('arcadeRunGate');
+          const btn = document.getElementById('btnStartRun');
+          const hint = document.getElementById('arcadeHint');
+
+          const embedded = !!(window.parent && window.parent !== window);
+          let waiting = false;
+
+          function post(type, payload) {
+            if (!embedded) return;
+            try { window.parent.postMessage({ type, payload: payload || {} }, '*'); } catch {}
+          }
+
+          if (embedded && gate) {
+            gate.classList.add('show');
+            post('ARCADE:READY', { gameId: 'moonshot', mode: '3d' });
+          }
+
+          window.addEventListener('message', (ev) => {
+            const d = ev && ev.data;
+            if (!d || typeof d !== 'object') return;
+            if (String(d.type || '') !== 'ARCADE:RUN_GRANTED') return;
+            const p = d.payload || d;
+            const gid = String(p.gameId || '');
+            if (gid && gid !== 'moonshot') return;
+            waiting = false;
+            if (btn) btn.disabled = false;
+            if (hint) hint.textContent = '';
+            try { gate && gate.classList.remove('show'); } catch {}
+          });
+
+          btn && btn.addEventListener('click', () => {
+            if (!embedded || waiting) return;
+            waiting = true;
+            btn.disabled = true;
+            if (hint) hint.textContent = 'Starting run…';
+            post('ARCADE:REQUEST_RUN', { gameId: 'moonshot' });
+            window.setTimeout(() => {
+              if (!waiting) return;
+              waiting = false;
+              btn.disabled = false;
+              if (hint) hint.textContent = 'No response. Try again.';
+            }, 12000);
+          });
+        })();
+      </script>
+
+      <!-- Moonshot 3D client (shared) -->
+      <script type="module" src="/moonshot.js"></script>
+    </body>
+    </html>
+      <div class="sgTitle">Dashboard required</div>
+      <div class="sgBody">Moonshot is embed-only. Open the <strong>Arcade Dashboard</strong> and launch the game from there.</div>
+    </div>
+  </div>
+
+  <div id="root">
+    <canvas id="canvas"></canvas>
+
+    <div class="hud" aria-hidden="true">
+      <div class="chip"><span class="dot"></span><b>Moonshot</b><span class="mono" id="hudScore">Score 0</span></div>
+      <div class="chip"><span class="mono" id="hudRun">Run --</span><span class="mono" id="hudBest">Best 0</span></div>
     </div>
 
-    <div class="row">
-      <button id="btnRequestRun">Request Run</button>
-      <button id="btnSubmitScore" class="secondary">Submit Score (test)</button>
-      <button id="btnRequestPromo" class="secondary">Request Promo</button>
-    </div>
+    <div id="toast"></div>
 
-    <p class="muted" style="margin-top:12px">Tip: Replace this folder with the real Moonshot build at <code>/public/games/moonshot/</code>.</p>
-  </main>
+    <div class="overlay" id="overlay">
+      <div class="card">
+        <div class="row">
+          <div class="title">Moonshot</div>
+          <div class="title" style="opacity:0.75">ArcadeBridge v0.3</div>
+        </div>
+        <div class="subtitle" id="subText">
+          Launch from the dashboard. Start a run to spend Credits. Promo runs are not payout-eligible.
+        </div>
+
+        <div class="grid">
+          <div class="panel">
+            <h3>Controls</h3>
+            <div class="hint">Tap / Click / Space to thrust. Avoid debris. Score = gates passed.</div>
+            <div class="kpi">
+              <div class="k"><div class="l">Run cost</div><div class="v" id="kRunCost">10 Credits</div></div>
+              <div class="k"><div class="l">Promo runs</div><div class="v" id="kPromo">5</div></div>
+              <div class="k"><div class="l">Status</div><div class="v" id="kStatus">Ready</div></div>
+            </div>
+
+            <div class="btnrow">
+              <button class="btn primary" id="btnStart">Start Run</button>
+              <button class="btn" id="btnPromo">Claim Promo (Tx)</button>
+            </div>
+            <div class="hint" id="hintLine">Tip: Promo claim is a gas-paid transaction in the final build.</div>
+          </div>
+
+          <div class="panel">
+            <h3>Session</h3>
+            <div class="hint" id="sessionLine">Syncing with dashboard…</div>
+            <div class="kpi">
+              <div class="k"><div class="l">Paid Credits</div><div class="v" id="kPaid">0</div></div>
+              <div class="k"><div class="l">Promo Credits</div><div class="v" id="kPromoBal">0</div></div>
+              <div class="k"><div class="l">Run type</div><div class="v" id="kRunType">--</div></div>
+            </div>
+            <div class="hint" id="resultLine"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script>
-    // Games are intended to run embedded in the dashboard portal.
-    // If opened directly, bounce to the arcade shell (single-dashboard rule).
-    try { if (window.self === window.top) window.location.replace('/'); } catch {}
+    // built by gruesøme
+    // SIG_ENC_XOR5A_HEX=382f33362e7a38237a3d282f3f29a2373f
+    (function() {
+      'use strict';
 
-    const state = { gameId: 'moonshot', runId: '', runType: '', paidAC: 0, promoAC: 0, address: '' };
-    const $ = (id) => document.getElementById(id);
-    function render(){
-      $('rid').textContent = state.runId || '(none)';
-      $('rtype').textContent = state.runType || '(none)';
-      $('paid').textContent = String(state.paidAC || 0);
-      $('promo').textContent = String(state.promoAC || 0);
-      $('addr').textContent = state.address || '(unknown)';
-    }
+      const GAME_ID = 'moonshot';
+      const VERSION = '2.7';
 
-    function send(type, payload){
-      try { window.parent && window.parent.postMessage({ type, payload: payload || {} }, '*'); } catch {}
-    }
+      const EMBEDDED = (window.parent && window.parent !== window);
+      const standaloneGate = document.getElementById('standaloneGate');
+      if (!EMBEDDED) {
+        standaloneGate && standaloneGate.classList.add('show');
+        // No game boot when standalone.
+        return;
+      }
 
-    // Tell the dashboard we're alive.
-    send('ARCADE:READY', { gameId: state.gameId, version: 'placeholder' });
+      // Bridge + state
+      const bridge = {
+        post(type, payload) {
+          try { window.parent.postMessage(Object.assign({ type }, payload || {}), '*'); } catch (e) {}
+        }
+      };
 
-    window.addEventListener('message', (ev) => {
-      const data = ev && ev.data;
-      if (!data || typeof data !== 'object') return;
-      const type = String(data.type || '');
-      if (!type.startsWith('ARCADE:')) return;
+      const st = {
+        runCostAC: 10,
+        promoRuns: 5,
+        promoGrantAC: 50,
+        promoClaimed: false,
+        paidAC: 0,
+        promoAC: 0,
+        best: 0,
+        lastRunType: '--',
+        address: '',
+      };
+      let lastBestShown = 0;
 
-      if (type === 'ARCADE:SYNC') {
-        const p = data || {};
+      let activeGrant = null; // { runId, runType, costAC, grantedAt }
+      let running = false;
+      let gameover = false;
+
+      // UI refs
+      const UI = {
+        hudScore: document.getElementById('hudScore'),
+        hudRun: document.getElementById('hudRun'),
+        hudBest: document.getElementById('hudBest'),
+        overlay: document.getElementById('overlay'),
+        btnStart: document.getElementById('btnStart'),
+        btnPromo: document.getElementById('btnPromo'),
+        kRunCost: document.getElementById('kRunCost'),
+        kPromo: document.getElementById('kPromo'),
+        kStatus: document.getElementById('kStatus'),
+        kPaid: document.getElementById('kPaid'),
+        kPromoBal: document.getElementById('kPromoBal'),
+        kRunType: document.getElementById('kRunType'),
+        sessionLine: document.getElementById('sessionLine'),
+        resultLine: document.getElementById('resultLine'),
+        toast: document.getElementById('toast'),
+      };
+
+      function toast(msg) {
         try {
-          state.address = String((p.player && p.player.address) || '');
-          state.paidAC = Number((p.player && p.player.paidAC) || 0);
-          state.promoAC = Number((p.game && p.game.promoAC) || 0);
-        } catch {}
-        render();
+          UI.toast.textContent = msg;
+          UI.toast.classList.add('show');
+          clearTimeout(toast._t);
+          toast._t = setTimeout(()=>UI.toast.classList.remove('show'), 1800);
+        } catch(e){}
       }
 
-      if (type === 'ARCADE:RUN_GRANTED') {
-        const p = data || {};
-        try {
-          state.runId = String(p.runId || '');
-          state.runType = String(p.runType || '');
-          state.paidAC = Number(p.paidAC || state.paidAC || 0);
-          state.promoAC = Number(p.promoAC || state.promoAC || 0);
-        } catch {}
-        render();
+      function fmt(n) { return (Number.isFinite(n) ? Math.floor(n) : 0).toString(); }
+
+      function renderSession() {
+        UI.kRunCost.textContent = fmt(st.runCostAC) + ' Credits';
+        UI.kPromo.textContent = fmt(st.promoRuns);
+        UI.kPaid.textContent = fmt(st.paidAC);
+        UI.kPromoBal.textContent = fmt(st.promoAC);
+        const newBest = Number(st.best||0);
+        UI.hudBest.textContent = 'Best ' + fmt(newBest);
+        if (newBest > lastBestShown) {
+          lastBestShown = newBest;
+          try { UI.hudBest.classList.remove('pop'); void UI.hudBest.offsetWidth; UI.hudBest.classList.add('pop'); } catch {}
+        }
+        UI.kRunType.textContent = st.lastRunType || '--';
+        UI.hudRun.textContent = 'Run ' + (st.lastRunType || '--');
+        UI.btnPromo.disabled = !!st.promoClaimed;
+        UI.btnPromo.textContent = st.promoClaimed ? 'Promo Claimed' : 'Claim Promo (Tx)';
+        UI.sessionLine.textContent = st.address ? ('Connected as ' + st.address.slice(0,6) + '…' + st.address.slice(-4)) : 'Syncing with dashboard…';
       }
 
-      if (type === 'ARCADE:RUN_RECORDED') {
-        // no-op
+      // Game: simple rocket dodge (flappy-style)
+      const canvas = document.getElementById('canvas');
+      const ctx = canvas.getContext('2d', { alpha: false });
+
+      let W = 800, H = 600, DPR = 1;
+      function resize() {
+        DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+        W = Math.floor(window.innerWidth);
+        H = Math.floor(window.innerHeight);
+        canvas.width = Math.floor(W * DPR);
+        canvas.height = Math.floor(H * DPR);
+        canvas.style.width = W + 'px';
+        canvas.style.height = H + 'px';
+        ctx.setTransform(DPR,0,0,DPR,0,0);
       }
-    });
+      window.addEventListener('resize', resize, { passive: true });
+      resize();
 
-    $('btnRequestRun').addEventListener('click', () => {
-      send('ARCADE:REQUEST_RUN', { gameId: state.gameId });
-    });
+      const stars = [];
+      const trail = [];
+      function initStars() {
+        stars.length = 0;
+        const count = Math.floor((W * H) / 9000);
+        for (let i=0;i<count;i++) {
+          stars.push({
+            x: Math.random()*W,
+            y: Math.random()*H,
+            r: Math.random()*1.6 + 0.2,
+            a: Math.random()*0.7 + 0.2,
+            v: Math.random()*0.6 + 0.15,
+          });
+        }
+      }
+      initStars();
 
-    $('btnRequestPromo').addEventListener('click', () => {
-      send('ARCADE:REQUEST_PROMO', { gameId: state.gameId });
-    });
+      const rocket = { x: 110, y: 0, vy: 0, r: 14 };
+      const pipes = [];
+      let score = 0;
+        trail.length = 0;
+      let lastT = 0;
+      let spawnT = 0;
+      let runStart = 0;
 
-    $('btnSubmitScore').addEventListener('click', () => {
-      const score = Math.floor(1000 + Math.random() * 2500);
-      const durationMs = Math.floor(15000 + Math.random() * 20000);
-      // Prefer the modern message.
-      send('ARCADE:RUN_RESULT', { gameId: state.gameId, runId: state.runId || 'test_run', score, durationMs });
-    });
+      function resetRun() {
+        rocket.x = Math.min(130, W*0.22);
+        rocket.y = H*0.5;
+        rocket.vy = 0;
+        pipes.length = 0;
+        score = 0;
+        trail.length = 0;
+        lastT = 0;
+        spawnT = 0;
+        runStart = performance.now();
+        UI.hudScore.textContent = 'Score 0';
+        UI.resultLine.textContent = '';
+        gameover = false;
+      }
 
-    render();
+      function spawnPipe() {
+        const gapH = Math.max(150, Math.min(220, H*0.28));
+        const pad = 60;
+        const gapY = pad + Math.random()*(H - pad*2 - gapH);
+        const w = Math.max(56, Math.min(74, W*0.08));
+        pipes.push({
+          x: W + w + 10,
+          w,
+          gapY,
+          gapH,
+          passed: false
+        });
+      }
+
+      function drawBG(dt) {
+        // Gradient backdrop
+        const g = ctx.createLinearGradient(0,0,0,H);
+        g.addColorStop(0, '#030b1e');
+        g.addColorStop(1, '#000000');
+        ctx.fillStyle = g;
+        ctx.fillRect(0,0,W,H);
+
+        // Nebula haze (subtle depth)
+        const tt = performance.now() * 0.00008;
+        ctx.save();
+        ctx.globalCompositeOperation = 'screen';
+        for (let i=0;i<3;i++) {
+          const cx = W * (0.15 + 0.7 * (0.5 + 0.5*Math.sin(tt + i*1.7)));
+          const cy = H * (0.15 + 0.7 * (0.5 + 0.5*Math.cos(tt*0.9 + i*2.1)));
+          const r = Math.max(W,H) * (0.35 + i*0.08);
+          const gg = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+          gg.addColorStop(0, 'rgba(88, 101, 242, 0.12)');
+          gg.addColorStop(0.55, 'rgba(34, 211, 238, 0.06)');
+          gg.addColorStop(1, 'rgba(0, 0, 0, 0)');
+          ctx.fillStyle = gg;
+          ctx.fillRect(0,0,W,H);
+        }
+        ctx.restore();
+
+        // Stars
+        const t = performance.now();
+        for (const s of stars) {
+          s.y += s.v * dt * 0.06;
+          if (s.y > H + 10) { s.y = -10; s.x = Math.random()*W; }
+          const tw = 0.55 + 0.45*Math.sin(t*0.001*s.tw + s.p);
+          ctx.globalAlpha = s.a * tw;
+          ctx.fillStyle = '#e5e7eb';
+          ctx.beginPath();
+          ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+          ctx.fill();
+        }
+
+        // Trail particles
+        const nowT = performance.now();
+        for (let i = trail.length - 1; i >= 0; i--) {
+          const p = trail[i];
+          const age = nowT - p.t;
+          if (age > p.life) { trail.splice(i,1); continue; }
+          const k = 1 - age / p.life;
+          ctx.globalAlpha = 0.10 + 0.28 * k;
+          ctx.fillStyle = 'rgba(34,211,238,' + (0.20 + 0.55*k) + ')';
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r * (0.6 + 0.9*k), 0, Math.PI*2);
+          ctx.fill();
+        }
+
+        // Vignette
+        const vg = ctx.createRadialGradient(W/2, H/2, Math.min(W,H)*0.18, W/2, H/2, Math.max(W,H)*0.78);
+        vg.addColorStop(0, 'rgba(0,0,0,0)');
+        vg.addColorStop(1, 'rgba(0,0,0,0.55)');
+        ctx.fillStyle = vg;
+        ctx.globalAlpha = 1;
+        ctx.fillRect(0,0,W,H);
+
+        ctx.globalAlpha = 1;
+      }
+
+      function drawPipe(p) {
+        const x = p.x;
+        const topH = p.gapY;
+        const botY = p.gapY + p.gapH;
+        const botH = H - botY;
+
+        // Body
+        ctx.fillStyle = 'rgba(34,211,238,0.11)';
+        ctx.strokeStyle = 'rgba(34,211,238,0.22)';
+        ctx.lineWidth = 2;
+
+        // Top
+        roundRect(x, 0, p.w, topH, 12);
+        ctx.fill();
+        ctx.stroke();
+
+        // Bottom
+        roundRect(x, botY, p.w, botH, 12);
+        ctx.fill();
+        ctx.stroke();
+
+        // Inner glow
+        ctx.strokeStyle = 'rgba(34,211,238,0.10)';
+        ctx.lineWidth = 6;
+        ctx.stroke();
+
+        // Edge caps
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+        ctx.stroke();
+      }
+
+      function roundRect(x,y,w,h,r) {
+        const rr = Math.min(r, w*0.5, h*0.5);
+        ctx.beginPath();
+        ctx.moveTo(x+rr, y);
+        ctx.arcTo(x+w, y, x+w, y+h, rr);
+        ctx.arcTo(x+w, y+h, x, y+h, rr);
+        ctx.arcTo(x, y+h, x, y, rr);
+        ctx.arcTo(x, y, x+w, y, rr);
+        ctx.closePath();
+      }
+
+      function drawRocket() {
+        const x = rocket.x, y = rocket.y;
+        // Glow
+        ctx.save();
+        ctx.shadowColor = 'rgba(34,211,238,0.35)';
+        ctx.shadowBlur = 18;
+        ctx.fillStyle = 'rgba(34,211,238,0.18)';
+        ctx.beginPath();
+        ctx.arc(x, y, rocket.r + 7, 0, Math.PI*2);
+        ctx.fill();
+        ctx.restore();
+
+        // Body
+        ctx.fillStyle = 'rgba(229,231,235,0.92)';
+        ctx.strokeStyle = 'rgba(255,255,255,0.10)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(x, y, rocket.r*0.9, rocket.r*0.75, 0, 0, Math.PI*2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Window
+        ctx.fillStyle = 'rgba(34,211,238,0.88)';
+        ctx.beginPath();
+        ctx.arc(x + 6, y - 3, 4.2, 0, Math.PI*2);
+        ctx.fill();
+
+        // Flame
+        const flame = Math.max(0, Math.min(1, (-rocket.vy + 4)/10));
+        ctx.fillStyle = 'rgba(255,221,85,' + (0.35 + flame*0.45) + ')';
+        ctx.beginPath();
+        ctx.moveTo(x - rocket.r, y);
+        ctx.quadraticCurveTo(x - rocket.r - (10 + 10*flame), y - 6, x - rocket.r - 2, y - 3);
+        ctx.quadraticCurveTo(x - rocket.r - (10 + 10*flame), y + 6, x - rocket.r, y);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      function collide(p) {
+        const rx = rocket.x, ry = rocket.y, rr = rocket.r*0.88;
+        if (ry - rr <= 0 || ry + rr >= H) return true;
+
+        const withinX = (rx + rr > p.x) && (rx - rr < p.x + p.w);
+        if (!withinX) return false;
+
+        const inGap = (ry - rr > p.gapY) && (ry + rr < p.gapY + p.gapH);
+        return !inGap;
+      }
+
+      function tick(ts) {
+        if (!running) return;
+        if (!lastT) lastT = ts;
+        const dt = Math.min(32, ts - lastT);
+        lastT = ts;
+
+        drawBG(dt);
+
+        // Physics
+        const gravity = 0.00185 * H; // scale with viewport
+        rocket.vy += gravity * (dt/1000);
+        rocket.y += rocket.vy * (dt/16.67);
+
+        // Emit trail (visual-only)
+        trail.push({ x: rocket.x - rocket.r - 2, y: rocket.y + (Math.random()*6-3), r: 1.6 + Math.random()*2.2, t: performance.now(), life: 520 });
+        if (trail.length > 160) trail.splice(0, trail.length - 160);
+
+        // Spawn
+        spawnT += dt;
+        const spawnEvery = 1400;
+        if (spawnT >= spawnEvery) {
+          spawnT -= spawnEvery;
+          spawnPipe();
+        }
+
+        // Move pipes
+        const speed = Math.max(2.6, Math.min(4.4, W/260));
+        for (const p of pipes) {
+          p.x -= speed * (dt/16.67);
+          if (!p.passed && p.x + p.w < rocket.x - 2) {
+            p.passed = true;
+            score += 1;
+            UI.hudScore.textContent = 'Score ' + score;
+            try { UI.hudScore.classList.remove('pop'); void UI.hudScore.offsetWidth; UI.hudScore.classList.add('pop'); } catch {}
+          }
+        }
+
+        // Cull
+        while (pipes.length && pipes[0].x + pipes[0].w < -30) pipes.shift();
+
+        // Draw pipes
+        for (const p of pipes) drawPipe(p);
+        drawRocket();
+
+        // Collisions
+        for (const p of pipes) {
+          if (collide(p)) {
+            endRun('collision');
+            return;
+          }
+        }
+
+        requestAnimationFrame(tick);
+      }
+
+      function endRun(reason) {
+        if (!running) return;
+        running = false;
+        gameover = true;
+
+        UI.kStatus.textContent = 'Complete';
+        UI.btnStart.disabled = false;
+        UI.btnStart.textContent = 'Start Next Run';
+        UI.overlay.style.display = 'flex';
+        UI.resultLine.textContent = 'Last run: ' + score + ' · ' + (st.lastRunType || '--') + ' · ' + reason;
+
+        const durationMs = Math.max(0, performance.now() - runStart);
+
+        // Report result
+        if (activeGrant && activeGrant.runId) {
+          bridge.post('ARCADE:RUN_RESULT', {
+            gameId: GAME_ID,
+            runId: activeGrant.runId,
+            score: score,
+            durationMs: Math.floor(durationMs),
+            clientVersion: VERSION
+          });
+        }
+        activeGrant = null;
+      }
+
+      function onThrust() {
+        if (!running) return;
+        rocket.vy = Math.max(rocket.vy - 7.5, -14.5);
+      }
+
+      // Input
+      window.addEventListener('pointerdown', (e)=>{ e.preventDefault(); onThrust(); }, { passive:false });
+      window.addEventListener('keydown', (e)=>{
+        const k = e.key;
+        if (k === ' ' || k === 'Spacebar' || k === 'ArrowUp') {
+          e.preventDefault(); onThrust();
+        }
+      });
+
+      // Bridge handlers
+      window.addEventListener('message', (ev)=>{
+        const m = ev.data;
+        if (!m || typeof m !== 'object') return;
+
+        if (m.type === 'ARCADE:SYNC') {
+          if (m.game && m.game.id === GAME_ID) {
+            st.runCostAC = Number(m.game.runCostAC ?? st.runCostAC);
+            st.promoRuns = Number(m.game.promoRuns ?? st.promoRuns);
+            st.promoGrantAC = Number(m.game.promoGrantAC ?? st.promoGrantAC);
+            st.promoClaimed = !!m.game.promoClaimed;
+            st.promoAC = Number(m.game.promoAC ?? st.promoAC);
+          }
+          if (m.player) {
+            st.paidAC = Number(m.player.paidAC ?? st.paidAC);
+            st.best = Number(m.player.bestByGame?.[GAME_ID] ?? st.best);
+            st.address = String(m.player.address ?? st.address);
+          }
+          renderSession();
+        }
+
+        if (m.type === 'ARCADE:RUN_GRANTED' && m.gameId === GAME_ID) {
+          activeGrant = {
+            runId: String(m.runId || ''),
+            runType: String(m.runType || '--'),
+            costAC: Number(m.costAC ?? st.runCostAC),
+            grantedAt: Date.now()
+          };
+          st.lastRunType = activeGrant.runType;
+          UI.kRunType.textContent = activeGrant.runType;
+          UI.hudRun.textContent = 'Run ' + activeGrant.runType;
+          UI.kStatus.textContent = 'Running';
+          UI.overlay.style.display = 'none';
+          UI.btnStart.disabled = true;
+          UI.btnStart.textContent = 'Starting…';
+
+          resetRun();
+          running = true;
+          UI.btnStart.textContent = 'Start Run';
+          requestAnimationFrame(tick);
+        }
+
+        if (m.type === 'ARCADE:RUN_DENIED' && m.gameId === GAME_ID) {
+          UI.kStatus.textContent = 'Denied';
+          UI.btnStart.disabled = false;
+          toast(m.reason || 'Not enough Credits');
+        }
+
+        if (m.type === 'ARCADE:PROMO_CLAIMED' && m.gameId === GAME_ID) {
+          st.promoClaimed = true;
+          if (Number.isFinite(m.promoAC)) st.promoAC = Number(m.promoAC);
+          renderSession();
+          toast('Promo claimed — 5 free runs ready.');
+        }
+
+        if (m.type === 'ARCADE:RUN_RECORDED' && m.gameId === GAME_ID) {
+          if (Number.isFinite(m.best)) st.best = Number(m.best);
+          if (Number.isFinite(m.paidAC)) st.paidAC = Number(m.paidAC);
+          if (Number.isFinite(m.promoAC)) st.promoAC = Number(m.promoAC);
+          renderSession();
+          toast('Run recorded');
+        }
+      });
+
+      // Buttons
+      UI.btnStart.addEventListener('click', ()=>{
+        if (running) return;
+        UI.kStatus.textContent = 'Requesting…';
+        UI.btnStart.disabled = true;
+        bridge.post('ARCADE:REQUEST_RUN', { gameId: GAME_ID });
+        setTimeout(()=>{ if (!running) UI.btnStart.disabled = false; }, 800);
+      });
+
+      UI.btnPromo.addEventListener('click', ()=>{
+        if (st.promoClaimed) return;
+        bridge.post('ARCADE:REQUEST_PROMO', { gameId: GAME_ID });
+        toast('Promo claim requested (confirm in dashboard)');
+      });
+
+      // Boot
+      renderSession();
+      bridge.post('ARCADE:READY', { gameId: GAME_ID, version: VERSION });
+      toast('Ready');
+    })();
   </script>
 </body>
 </html>

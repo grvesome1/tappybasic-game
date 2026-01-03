@@ -1,0 +1,313 @@
+<!-- built by gruesøme -->
+<!-- Wallet Panel (drop-in). Root: .ga-wallet[data-ga-wallet] -->
+<div class="ga-wallet" data-ga-wallet>
+  <div class="ga-wallet__grid">
+
+    <!-- Account / Status -->
+    <section class="ga-card ga-card--hero ga-span2">
+      <div class="ga-card__head">
+        <div class="ga-card__titleRow">
+          <div class="ga-badge ga-badge--icon">
+            <svg class="ga-ico" aria-hidden="true"><use href="./assets/icons.svg#i-wallet"></use></svg>
+            <span>Account</span>
+          </div>
+          <div class="ga-pillRow">
+            <div class="ga-pill" id="gaNetPill" title="Network">
+              <span class="ga-dot" aria-hidden="true"></span>
+              <span id="gaNetLabel">Not connected</span>
+            </div>
+            <div class="ga-pill" id="gaPohPill" title="Proof-of-Human">
+              <span class="ga-dot ga-dot--warn" aria-hidden="true"></span>
+              <span id="gaPohLabel">PoH not verified</span>
+            </div>
+            <div class="ga-pill" id="gaGpPill" title="GP Grant Points (10/day)">
+              <svg class="ga-ico ga-ico--sm" aria-hidden="true"><use href="./assets/icons.svg#i-star"></use></svg>
+              <span><span id="gaGpNow">0</span>/10 GP</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="ga-heroRow">
+          <div class="ga-addrBlock">
+            <div class="ga-k">Wallet</div>
+            <div class="ga-v" id="gaAddr">—</div>
+            <div class="ga-mini muted" id="gaChain">—</div>
+          </div>
+
+          <div class="ga-snapRow">
+            <div class="ga-snap">
+              <div class="ga-k">Credits</div>
+              <div class="ga-v"><span id="gaPaidCredits">0</span> <span class="muted">paid</span> · <span id="gaPromoCredits">0</span> <span class="muted">promo</span></div>
+            </div>
+            <div class="ga-snap">
+              <div class="ga-k">Next payout</div>
+              <div class="ga-v" id="gaNextPayout">—</div>
+            </div>
+            <div class="ga-snap">
+              <div class="ga-k">PRO</div>
+              <div class="ga-v" id="gaProStatus">Not active</div>
+              <div class="ga-mini muted" id="gaProExp">—</div>
+            </div>
+          </div>
+
+          <div class="ga-heroActions">
+            <button class="ga-btn ga-btn--primary" id="gaBtnConnect" type="button">Connect wallet</button>
+            <button class="ga-btn ga-btn--ghost" id="gaBtnTutorial" type="button">How it works</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Buy Credits -->
+    <section class="ga-card ga-span1" aria-label="Buy Credits">
+      <div class="ga-card__head">
+        <div class="ga-card__titleRow">
+          <h2 class="ga-h2">Buy Credits</h2>
+          <div class="ga-badge">
+            <span>1 Credit</span>
+            <span class="muted">= $0.01</span>
+            <span class="muted">·</span>
+            <span>Bonus up to 15%</span>
+          </div>
+        </div>
+        <p class="muted">Spend in games + tournaments. Bonus is applied as extra Credits (smooth curve, no cliffs).</p>
+      </div>
+
+      <div class="ga-seg" role="tablist" aria-label="Purchase mode">
+        <button class="ga-seg__btn is-on" type="button" data-ga-mode="usd" role="tab" aria-selected="true">Pay (USD preview)</button>
+        <button class="ga-seg__btn" type="button" data-ga-mode="credits" role="tab" aria-selected="false">Target Credits</button>
+      </div>
+
+      <div class="ga-buyGrid">
+        <div class="ga-field">
+          <label class="ga-label" for="gaAmountInput" id="gaAmountLabel">USD preview</label>
+          <div class="ga-input">
+            <span class="ga-prefix" id="gaAmountPrefix">$</span>
+            <input id="gaAmountInput" inputmode="decimal" autocomplete="off" spellcheck="false" value="1.00" />
+            <button class="ga-chip" id="gaBtnMax" type="button" title="Set to a strong default">Best value</button>
+          </div>
+          <div class="ga-mini muted" id="gaQuoteLine">—</div>
+        </div>
+
+        <div class="ga-presets" aria-label="Quick amounts">
+          <button class="ga-preset" type="button" data-ga-preset="0.10">$0.10</button>
+          <button class="ga-preset" type="button" data-ga-preset="1">$1</button>
+          <button class="ga-preset" type="button" data-ga-preset="5">$5</button>
+          <button class="ga-preset" type="button" data-ga-preset="10">$10</button>
+          <button class="ga-preset" type="button" data-ga-preset="25">$25</button>
+          <button class="ga-preset" type="button" data-ga-preset="50">$50</button>
+          <button class="ga-preset" type="button" data-ga-preset="100">$100</button>
+          <button class="ga-preset" type="button" data-ga-preset="250">$250</button>
+        </div>
+
+        <div class="ga-slider">
+          <input id="gaSlider" type="range" min="0.1" max="100" step="0.1" value="1" />
+          <div class="ga-slider__labels">
+            <span>$0.10</span>
+            <span>$100</span>
+          </div>
+        </div>
+
+        <div class="ga-breakdown" aria-label="Purchase breakdown">
+          <div class="ga-break">
+            <span class="muted">Base credits</span>
+            <span id="gaBaseCredits">100</span>
+          </div>
+          <div class="ga-break">
+            <span class="muted">Bonus</span>
+            <span><span id="gaBonusPct">0.0%</span> <span class="muted">(+</span><span id="gaBonusCredits">0</span><span class="muted">)</span></span>
+          </div>
+          <div class="ga-break ga-break--strong">
+            <span>Total credits</span>
+            <span id="gaTotalCredits">100</span>
+          </div>
+          <div class="ga-break">
+            <span class="muted">Effective $/credit</span>
+            <span id="gaEff">0.0100</span>
+          </div>
+        </div>
+
+        <div class="ga-buyActions">
+          <button class="ga-btn ga-btn--primary" id="gaBtnBuy" type="button">
+            <svg class="ga-ico" aria-hidden="true"><use href="./assets/icons.svg#i-bolt"></use></svg>
+            <span>Buy with ETH (tx)</span>
+          </button>
+          <button class="ga-btn ga-btn--ghost" id="gaBtnExact" type="button">Custom exact amount (tx)</button>
+        </div>
+
+        <div class="ga-footnote muted">
+          <svg class="ga-ico ga-ico--sm" aria-hidden="true"><use href="./assets/icons.svg#i-info"></use></svg>
+          <span>USD is a preview anchor. Final ETH is quoted at transaction time. Bonus applies as extra credits.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- PRO Membership -->
+    <section class="ga-card ga-span1" aria-label="PRO Membership">
+      <div class="ga-card__head">
+        <div class="ga-card__titleRow">
+          <h2 class="ga-h2">PRO Membership</h2>
+          <div class="ga-badge ga-badge--icon">
+            <svg class="ga-ico" aria-hidden="true"><use href="./assets/icons.svg#i-crown"></use></svg>
+            <span>One NFT · one per wallet</span>
+          </div>
+        </div>
+        <p class="muted">Membership is on-chain. Avatar is permanently locked once minted.</p>
+      </div>
+
+      <div class="ga-planGrid">
+        <article class="ga-plan" data-ga-tier="1">
+          <div class="ga-plan__head">
+            <div class="ga-plan__name">Studio</div>
+            <div class="ga-plan__price">$2 <span class="muted">/ mo</span></div>
+          </div>
+          <ul class="ga-plan__list">
+            <li><span class="ga-bullet"></span>Avatar Studio access</li>
+            <li><span class="ga-bullet"></span>Achievement credit drops (small)</li>
+            <li class="muted"><span class="ga-bullet"></span>Tournaments: pay entry</li>
+          </ul>
+          <button class="ga-btn ga-btn--ghost ga-btn--full" data-ga-activate type="button">Activate (tx)</button>
+        </article>
+
+        <article class="ga-plan ga-plan--featured" data-ga-tier="2" aria-label="PRO Prime recommended">
+          <div class="ga-plan__ribbon">Recommended</div>
+          <div class="ga-plan__head">
+            <div class="ga-plan__name">PRO Prime</div>
+            <div class="ga-plan__price">$25 <span class="muted">/ mo</span></div>
+          </div>
+          <ul class="ga-plan__list">
+            <li><span class="ga-bullet"></span>Everything in Studio</li>
+            <li><span class="ga-bullet"></span>PRO payout boost pool eligibility</li>
+            <li><span class="ga-bullet"></span><strong>Free</strong> tournament entry</li>
+            <li><span class="ga-bullet"></span>Credit airdrop eligibility</li>
+          </ul>
+          <button class="ga-btn ga-btn--primary ga-btn--full" data-ga-activate type="button">Activate (tx)</button>
+        </article>
+
+        <article class="ga-plan" data-ga-tier="3">
+          <div class="ga-plan__head">
+            <div class="ga-plan__name">Lifetime / Annual</div>
+            <div class="ga-plan__price">$100</div>
+          </div>
+          <div class="ga-plan__mini muted">Lifetime if minted before <strong>Jan 30, 2026</strong> (UTC). Annual after.</div>
+          <div class="ga-countdown">
+            <div class="ga-countdown__k">Lifetime window ends</div>
+            <div class="ga-countdown__v">Jan 30, 2026 00:00 UTC</div>
+            <div class="ga-countdown__k">Time left</div>
+            <div class="ga-countdown__v" id="gaLifetimeLeft">—</div>
+          </div>
+          <button class="ga-btn ga-btn--ghost ga-btn--full" data-ga-activate type="button">Activate (tx)</button>
+        </article>
+      </div>
+    </section>
+
+    <!-- Avatar -->
+    <section class="ga-card ga-span2" aria-label="Avatar">
+      <div class="ga-card__head">
+        <div class="ga-card__titleRow">
+          <h2 class="ga-h2">Avatar</h2>
+          <div class="ga-badge ga-badge--icon">
+            <svg class="ga-ico" aria-hidden="true"><use href="./assets/icons.svg#i-lock"></use></svg>
+            <span>Permanent lock after mint</span>
+          </div>
+        </div>
+        <p class="muted">Design your 8‑bit avatar off-chain, then mint once to lock it permanently.</p>
+      </div>
+
+      <div class="ga-avatarGrid">
+        <div class="ga-avatarPreview" aria-label="Avatar preview">
+          <div class="ga-avatarPreview__frame">
+            <div class="ga-avatarPreview__img" id="gaAvatarPreview">
+              <div class="ga-avatarPreview__placeholder">
+                <div class="ga-avatarPreview__spark"></div>
+                <div class="ga-avatarPreview__text">
+                  <div class="ga-strong">No avatar minted</div>
+                  <div class="muted">Open Studio to design.</div>
+                </div>
+              </div>
+            </div>
+            <div class="ga-avatarPreview__meta">
+              <div class="ga-mini muted">Token</div>
+              <div class="ga-strong" id="gaAvatarToken">—</div>
+              <a class="ga-link muted" id="gaAvatarLink" href="#" rel="noreferrer">
+                <svg class="ga-ico ga-ico--sm" aria-hidden="true"><use href="./assets/icons.svg#i-link"></use></svg>
+                View on explorer
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <div class="ga-avatarActions">
+          <div class="ga-callout" id="gaAvatarGate">
+            <div class="ga-callout__head">
+              <div class="ga-strong">Studio required</div>
+              <div class="muted">Activate Studio ($2/mo) or PRO Prime ($25/mo) to mint.</div>
+            </div>
+            <div class="ga-callout__actions">
+              <button class="ga-btn ga-btn--primary" id="gaBtnOpenStudio" type="button">Open Avatar Studio</button>
+              <button class="ga-btn ga-btn--ghost" id="gaBtnMintAvatar" type="button">Mint avatar (tx)</button>
+            </div>
+          </div>
+
+          <div class="ga-legal muted">
+            <svg class="ga-ico ga-ico--sm" aria-hidden="true"><use href="./assets/icons.svg#i-info"></use></svg>
+            <span>Minting is user-gas-paid. Once minted, the avatar image + DNA are immutable.</span>
+          </div>
+
+          <div class="ga-callout ga-callout--big" aria-label="How does your avatar NFT work">
+            <div class="ga-strong">How does your avatar NFT work?</div>
+            <div class="ga-callout__bigText">
+              Customize a draft avatar, then mint (lock) the DNA. After minting, traits + nickname are locked and the metadata is immutable.
+              This NFT starts soulbound — when the next Avatar Studio releases, it will unlock and become tradeable.
+              Export PNG is enabled only after mint.
+            </div>
+          </div>
+
+          <div class="ga-miniGrid">
+            <div class="ga-miniCard">
+              <div class="ga-miniCard__k">GP Grant Points</div>
+              <div class="ga-miniCard__v"><span id="gaGpNow2">0</span>/10 today</div>
+              <div class="ga-miniCard__t muted">Earned from meaningful on-chain actions.</div>
+            </div>
+            <div class="ga-miniCard">
+              <div class="ga-miniCard__k">Eligible actions</div>
+              <div class="ga-miniCard__t muted">Buy Credits · Activate PRO · Claim payouts · Claim promos</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Toast -->
+  <div class="ga-toastHost" aria-live="polite" aria-atomic="true" id="gaToastHost"></div>
+
+  <!-- Modal -->
+  <div class="ga-modal" id="gaModal" aria-hidden="true">
+    <div class="ga-modal__backdrop" data-ga-close></div>
+    <div class="ga-modal__panel" role="dialog" aria-modal="true" aria-labelledby="gaModalTitle">
+      <div class="ga-modal__head">
+        <div class="ga-strong" id="gaModalTitle">How Wallet works</div>
+        <button class="ga-iconBtn" type="button" data-ga-close aria-label="Close">
+          <svg class="ga-ico" aria-hidden="true"><use href="./assets/icons.svg#i-x"></use></svg>
+        </button>
+      </div>
+      <div class="ga-modal__body">
+        <ol class="ga-steps">
+          <li><strong>Connect</strong> your wallet (session).</li>
+          <li><strong>Buy Credits</strong> with ETH (bonus applies automatically).</li>
+          <li><strong>Activate PRO</strong> if you want boosts + tournaments + avatar.</li>
+          <li><strong>Mint Avatar</strong> once you’re happy — it locks forever.</li>
+          <li><strong>Earn GP</strong> for meaningful transactions (max 10/day).</li>
+        </ol>
+        <div class="ga-modal__note muted">
+          This page is UI-first and uses an adapter pattern. Wire in your contract calls without rewriting the UI.
+        </div>
+      </div>
+      <div class="ga-modal__foot">
+        <button class="ga-btn ga-btn--primary" type="button" data-ga-close>Got it</button>
+      </div>
+    </div>
+  </div>
+</div>

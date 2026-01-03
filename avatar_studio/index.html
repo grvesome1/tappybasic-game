@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en" data-version="2.7">
+<head>
+  <!-- built by gruesøme -->
+  <!-- SIG_ENC_XOR5A_HEX=382f33362e7a38237a3d282f3f2999e2373f -->
+  <!-- Z3J1ZXPDuG1l -->
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>gruesøme's avatar studio</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="wrap">
+    <header class="top">
+      <div class="brand">
+        <div class="title">gruesøme's avatar studio</div>
+      </div>
+      <div class="chips">
+        <div class="chip good" id="chipMode"><span class="dot"></span><span id="chipModeText">Mode: standalone (assets)</span></div>
+          <div class="chip" id="chipStatus"><span class="dot"></span><span id="chipStatusText" role="status" aria-live="polite" aria-atomic="true">Assets: loading…</span></div>
+      </div>
+    </header>
+
+    <div class="toolbar">
+      <div class="toolbarLeft">
+        <button class="btn" id="btnRandom">Randomize</button>
+        <button class="btn" id="btnRoll" title="Roll the current tab (R)">Roll tab</button>
+        <button class="btn" id="btnExport" title="Mint (lock) to enable export">Export PNG</button>
+        <button class="btn warn" id="btnMint" title="Locks the current DNA in this app (cannot be edited afterward)">Mint (lock)</button>
+      </div>
+      <div class="toolbarRight">
+        <div class="helpPillWrap">
+          <button class="pill pillBtn" id="helpPill" type="button" aria-describedby="helpBubble">How does your avatar NFT work?</button>
+          <div class="helpBubble" id="helpBubble" role="tooltip">
+            <div class="helpBubbleTitle">How it works</div>
+            <div class="helpBubbleText">Customize a draft avatar, then mint (lock) the DNA. After minting, traits + nickname are locked and the metadata is immutable. This NFT starts soulbound — when the next Avatar Studio releases, it will unlock and become tradeable. Export PNG is enabled only after mint.</div>
+          </div>
+        </div>
+        <div class="pill" id="mintPill">Not minted</div>
+        <button class="pill pillBtn" id="metaTogglePill" type="button" aria-controls="mintPanel" aria-expanded="false" title="Show/hide Mint & Metadata">Metadata ▸</button>
+      </div>
+    </div>
+
+    <div class="main">
+      <section class="panel preview">
+        <div class="panelHead">
+          <div>
+            <div class="panelTitle">Preview</div>
+            
+          </div>
+        </div>
+
+        <div class="canvasWrap">
+          <canvas id="canvas" width="280" height="280"></canvas>
+        </div>
+
+        <div class="metaGrid">
+          <div class="metaRow">
+            <div class="metaLabel">DNA</div>
+            <div class="metaValue mono" id="dna">…</div>
+            <button class="btn small" id="btnCopyDNA">Copy</button>
+          </div>
+
+          <div class="metaRow">
+            <div class="metaLabel">Hash</div>
+            <div class="metaValue mono" id="hash">…</div>
+            <button class="btn small" id="btnCopyHash">Copy</button>
+            <div class="mono" id="hashFull" style="display:none"></div>
+          </div>
+
+          <div class="metaRow">
+            <div class="metaLabel">Nickname</div>
+            <div class="metaValue"><input id="nickname" type="text" maxlength="24" placeholder="Public handle (set-once)"/></div>
+            <div class="mono" id="nickCount">0/24</div>
+          </div>
+          <div class="metaRow">
+            <div class="metaLabel">Minted</div>
+            <div class="metaValue mono" id="mintMeta">no</div>
+            <div></div>
+          </div>
+        </div>
+
+        <div class="hint">
+          Mint lock is enforced by this app (localStorage). True immutability happens when you mint the DNA/hash on-chain.
+          Nickname is shown on leaderboards and other public views while your membership is active and the Gen1 token remains soulbound.
+          Future: after the next gruesøme's avatar studio ships, the admin may permanently unlock transfers so Gen1 becomes tradeable collectibles.
+        </div>
+      </section>
+
+      <section class="panel traits">
+        <div class="panelHead">
+          <div>
+            <div class="panelTitle">Traits</div>
+            <div class="panelSub">Everything unlocked · Search with /</div>
+          </div>
+          <div class="badge" id="gridCount">0 items</div>
+        </div>
+
+        <div class="traitsTop">
+          <div class="tabs" id="tabs" role="tablist" aria-label="Trait categories"></div>
+          <div class="searchRow">
+            <label class="srOnly" for="search">Search traits</label>
+            <input id="search" placeholder="Search traits… (press /)" autocomplete="off" autocapitalize="off" spellcheck="false" />
+          </div>
+        </div>
+
+        <div class="gridWrap" id="gridWrap">
+          <div class="grid" id="grid"></div>
+        </div>
+      </section>
+
+      <section class="panel mint" id="mintPanel">
+        <div class="panelHead">
+          <div>
+            <div class="panelTitle">Mint & Metadata</div>
+            <div class="panelSub">Snapshot JSON for minting / tokenURI metadata</div>
+          </div>
+          <div class="badge" id="metaSize">0 bytes</div>
+        </div>
+
+        <div class="mintActions">
+          <button class="btn" id="btnCopyJSON">Copy JSON</button>
+          <button class="btn" id="btnDownloadJSON">Download JSON</button>
+        </div>
+
+        <pre class="mono pre" id="metaJson">{}</pre>
+      </section>
+    </div>
+
+    <footer class="foot">
+      <div class="footLeft">
+        <span class="mono">Shortcuts:</span>
+        <span class="mono">/</span> search ·
+        <span class="mono">R</span> roll tab
+      </div>
+      <div class="footRight mono">built by gruesøme</div>
+    </footer>
+
+    <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

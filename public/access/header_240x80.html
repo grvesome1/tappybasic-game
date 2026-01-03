@@ -1,45 +1,3665 @@
 <!doctype html>
 <html lang="en">
 <head>
+  <!-- built by gruesøme (v3.4.1 — header-only) -->
+  <!-- YnVpbHQgYnkgZ3J1ZXPDuG1l -->
+  <!-- c2lnOjpidWlsdCBieSBncnVlc8O4bWU= -->
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Access Header</title>
-  <style>
-    :root{color-scheme: dark;}
-    html,body{height:100%;margin:0;background:transparent;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;}
-    body{display:flex;align-items:center;justify-content:center;overflow:hidden;}
-    /* Mark header state so parent fallback logic can detect it if needed. */
-    body{ }
-
-    .chip{
-      width:100%;
-      height:100%;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      gap:10px;
-      padding:10px 12px;
-      box-sizing:border-box;
-      border-radius:16px;
-      border:1px solid rgba(255,255,255,0.10);
-      background:linear-gradient(180deg, rgba(0,0,0,0.55), rgba(0,0,0,0.30));
-      box-shadow: 0 0 0 1px rgba(34,211,238,0.10) inset;
-    }
-    .dot{width:8px;height:8px;border-radius:50%;background:#22d3ee;box-shadow:0 0 18px rgba(34,211,238,0.7);}
-    .t{font-weight:650;letter-spacing:0.2px;color:rgba(255,255,255,0.92);font-size:13px;white-space:nowrap;}
-    .s{color:rgba(255,255,255,0.60);font-size:12px;white-space:nowrap;}
-  </style>
-</head>
-<body class="is-header">
-  <div class="chip" role="img" aria-label="Access granted">
-    <span class="dot" aria-hidden="true"></span>
-    <span class="t">Access Granted</span>
-    <span class="s">Docked Gate</span>
-  </div>
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>gruesøme's arcade — Header Badge 240x80 v3.4.1</title>
 
   <script>
-    // This embed is intended for the dashboard dock. If opened directly, bounce.
-    try { if (window.self === window.top) window.location.replace('/'); } catch {}
+    // Dashboard is the only user-facing URL.
+    // Allow this page only when embedded as a same-origin iframe.
+    (function(){
+      try{
+        if (window.top === window.self) window.location.replace('/');
+      }catch{}
+    })();
+  </script>
+
+  <script>
+    // built by gruesøme
+    // c2lnOjpidWlsdCBieSBncnVlc8O4bWU=
+    // Header-only config: no UI, no audio, straight title, embed to 240x80.
+    window.__GA_CONFIG__ = {
+      mode: 'header',
+      ui: '0',
+      audio: '0',
+      curve: '0',
+      zoomfit: '1',
+      embed: '1'
+    };
+  </script>
+
+  <!-- Inline favicon to avoid 404 errors (tiny SVG) -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PGNpcmNsZSBjeD0iMzIiIGN5PSIzMiIgcj0iMzIiIGZpbGw9IiMyMmQzZWUiIC8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGRvbWluYW50LWJhc2VsaW5lPSJjZW50cmFsIiBmb250LXNpemU9IjM2IiBmaWxsPSIjMDAwIj7imIU8L3RleHQ+PC9zdmc+" />
+
+  <style>
+    :root{
+      --bg0:#020617;
+      --bg1:#000000;
+      /* Accent set to r122 g154 b159 */
+      --accent: 122,154,159;
+      /* Dock positioning under the 3D title */
+      --dockUnderTitle: 100px;
+      /* ENTER button neon (green) */
+      --enter: 77,255,143;
+      --ui: rgba(8,14,28,.62);
+      --txt:#e5e7eb;
+      --mut:#94a3b8;
+      --br: rgba(255,255,255,.10);
+    }
+    html,body{
+      height:100%;
+      margin:0;
+      background:radial-gradient(circle at 25% 10%, #06122a 0%, var(--bg0) 35%, var(--bg1) 100%);
+      overflow:hidden;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;
+    }
+    /* Scene container (full-screen by default; animates into a 240x80 header after ENTER) */
+    #app{
+      position:fixed;
+      left:0; top:0;
+      width:100vw; height:100vh;
+      overflow:hidden;
+      will-change: left, top, width, height, border-radius, box-shadow, filter;
+      transition:
+        left 950ms cubic-bezier(.18,1,.22,1),
+        top  950ms cubic-bezier(.18,1,.22,1),
+        width 950ms cubic-bezier(.18,1,.22,1),
+        height 950ms cubic-bezier(.18,1,.22,1),
+        border-radius 950ms cubic-bezier(.18,1,.22,1),
+        box-shadow 950ms cubic-bezier(.18,1,.22,1),
+        filter 950ms cubic-bezier(.18,1,.22,1);
+    }
+
+    /* Header mode (240x80). This is the exact size requested for the dashboard header. */
+    body.is-header #app{
+      left:16px;
+      top:16px;
+      width:240px;
+      height:80px;
+      border-radius:18px;
+      border: 1px solid rgba(255,255,255,.12);
+      box-shadow: 0 18px 42px rgba(0,0,0,.50);
+      filter: saturate(1.06) contrast(1.03);
+    }
+
+    /* Embed header mode (fills the 240x80 viewport with no offset).
+       Used by header_240x80.html. */
+    body.is-header.is-embed #app{
+      left:0;
+      top:0;
+      border-radius:18px;
+      border: 1px solid rgba(255,255,255,.12);
+      box-shadow: 0 18px 42px rgba(0,0,0,.50);
+    }
+
+    /* Glass frame overlay in header mode (keeps the badge look, without replacing WebGL). */
+    body.is-header #app::after{
+      content:"";
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+      border-radius:18px;
+      background:
+        radial-gradient(120% 160% at 20% 15%, rgba(255,255,255,.10) 0%, rgba(255,255,255,0) 46%),
+        linear-gradient(180deg, rgba(255,255,255,.08) 0%, rgba(0,0,0,.14) 100%);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.10),
+        inset 0 -1px 0 rgba(0,0,0,.35);
+    }
+
+    /* Hide gate UI once we collapse into header */
+    body.is-header .walletDock,
+    body.is-header .gateDock,
+    body.is-header .enterDock,
+    body.is-header .boot-error{ display:none !important; }
+
+    /* Explicit UI disable (used by the standalone header build). */
+    body.no-ui .walletDock,
+    body.no-ui .gateDock,
+    body.no-ui .enterDock,
+    body.no-ui .boot-error{ display:none !important; }
+
+    /* In header mode, the canvas should not eat pointer events */
+    body.is-header canvas{ pointer-events:none; }
+
+    /* Keep WebGL visible in header mode so the 240x80 header uses the SAME
+       true 3D title rendering as fullscreen (no CSS text overlay). */
+    .gaWebgl{ opacity: 1; transition: opacity 650ms cubic-bezier(.2,.9,.2,1); }
+    body.is-header .gaWebgl{ opacity: 1; transition-delay: 0ms; }
+
+    /* Legacy 240x80 CSS header overlay (disabled in v3.4; we render the real 3D title instead). */
+    .dashHeader{ display:none !important; }
+
+    .dashHeader__stars{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      display:block;
+      filter: saturate(1.05) contrast(1.06);
+    }
+
+    .dashHeader__frame{
+      position:absolute;
+      inset:0;
+      border-radius:18px;
+      border:1px solid rgba(255,255,255,.12);
+      background:
+        radial-gradient(120% 160% at 20% 15%, rgba(255,255,255,.10) 0%, rgba(255,255,255,0) 46%),
+        linear-gradient(180deg, rgba(255,255,255,.08) 0%, rgba(0,0,0,.14) 100%);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.10),
+        inset 0 -1px 0 rgba(0,0,0,.35);
+    }
+
+    .dashHeader__text{
+      position:absolute;
+      left: 14px;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      text-align:center;
+      font-weight: 900;
+      letter-spacing: .055em;
+      font-size: 18px;
+      line-height: 1;
+      isolation:isolate;
+
+      /* Metallic 3D face (high contrast at 240x80). */
+      color: transparent;
+      -webkit-text-fill-color: transparent;
+      background:
+        linear-gradient(180deg,
+          rgba(255,255,255,.98) 0%,
+          rgba(227,252,255,.96) 38%,
+          rgba(var(--accent), .92) 100%);
+      background-size: 220% 140%;
+      background-position: 10% 0%;
+      -webkit-background-clip: text;
+      background-clip: text;
+
+      /* Gunmetal rim */
+      -webkit-text-stroke: 1.15px rgba(33,38,46,.96);
+
+      /* Subtle bevel + neon presence */
+      text-shadow:
+        -1px -1px 0 rgba(255,255,255,.06),
+        0 0 10px rgba(var(--accent), .22),
+        0 0 18px rgba(var(--accent), .14),
+        0 10px 18px rgba(0,0,0,.45);
+
+      filter: drop-shadow(0 12px 18px rgba(0,0,0,.42));
+      animation: dashSheen 7.2s linear infinite;
+      user-select:none;
+      pointer-events:none;
+    }
+
+    /* Extruded depth (creates a true 3D read without WebGL) */
+    .dashHeader__text::before{
+      content: attr(data-text);
+      position:absolute;
+      inset:0;
+      transform: translate(3px,3px);
+      color: rgba(10,12,15,.96);
+      -webkit-text-stroke: 1.35px rgba(0,0,0,.72);
+      text-shadow:
+        1px 1px 0 rgba(0,0,0,.38),
+        2px 2px 0 rgba(0,0,0,.28),
+        3px 3px 0 rgba(0,0,0,.22);
+      filter: blur(.18px);
+      z-index:-1;
+      pointer-events:none;
+    }
+
+    @keyframes dashSheen{
+      0%{ background-position: -30% 0%; }
+      100%{ background-position: 130% 0%; }
+    }
+    
+
+    /* Header hover typewriter */
+    .dashHeader{ cursor: default; }
+    .dashHeader.is-typing .dashHeader__text{ animation: none; }
+    .dashHeader.is-typing .dashHeader__text::after{
+      content: '▍';
+      display: inline-block;
+      margin-left: 2px;
+      color: rgba(233,251,255,.75);
+      animation: gaCaretBlink 700ms steps(1) infinite;
+    }
+    @keyframes gaCaretBlink{
+      0%, 50%{ opacity: 1; }
+      50.01%, 100%{ opacity: 0; }
+    }
+canvas{display:block;width:100%;height:100%}
+
+    .boot-error{
+      position:fixed;left:16px;right:16px;bottom:70px;z-index:20;
+      border:1px solid rgba(255,80,80,.35);
+      background:rgba(10,10,18,.72);
+      color:rgba(255,230,230,.92);
+      padding:10px 12px;
+      border-radius:14px;
+      display:none;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      font-size:12px;
+      line-height:1.35;
+      white-space:pre-wrap;
+    }
+
+    /* --- Wallet connect button (Linea-only) --- */
+    .walletDock{
+      position:fixed;
+      left:50%;
+      top:50%;
+      /* Centered under the title, ~100px down */
+      transform: translate(-50%, calc(-50% + var(--dockUnderTitle)));
+      z-index:50;
+      pointer-events:auto;
+      user-select:none;
+      will-change: transform, opacity, filter;
+    }
+
+    .walletDock.is-flyaway{
+      pointer-events:none;
+      animation: walletFlyAway .95s cubic-bezier(.2,.9,.2,1) forwards;
+    }
+
+    @keyframes walletFlyAway{
+      0%{
+        transform: translate(-50%, calc(-50% + var(--dockUnderTitle))) translateY(0) scale(1);
+        opacity:1;
+        filter: blur(0px);
+      }
+      55%{
+        opacity:1;
+      }
+      100%{
+        transform: translate(-50%, calc(-50% + var(--dockUnderTitle))) translateY(-240px) rotateX(20deg) rotateZ(-6deg) scale(.72);
+        opacity:0;
+        filter: blur(7px);
+      }
+    }
+
+    /* --- Proof of Humanity gate (appears after connect) --- */
+    .gateDock{
+      position:fixed;
+      left:50%;
+      /*
+        Keep the gate expansion stable (no drifting into the title) while
+        keeping it visually centered under the headline.
+        We anchor by the TOP edge (no -50% translate) and bias the base top upward a bit.
+      */
+      top: calc(50% - 44px);
+      --gatePush: 0px;
+      transform: translate(-50%, calc(var(--dockUnderTitle) + var(--gatePush))) scale(.92);
+      z-index:55;
+      opacity:0;
+      pointer-events:none;
+      filter: blur(10px);
+      will-change: transform, opacity, filter;
+      text-align:center;
+    }
+
+    /* When retry extras are shown, nudge the whole gate down for extra breathing room */
+    .gateDock.has-extras{ --gatePush: 44px; }
+
+    .gateDock.is-in{
+      pointer-events:auto;
+      animation: gateFlyIn .85s cubic-bezier(.15,1,.25,1) forwards;
+    }
+
+    .gateDock.is-flyaway{
+      pointer-events:none;
+      animation: gateFlyAway .75s cubic-bezier(.2,.9,.2,1) forwards;
+    }
+
+    @keyframes gateFlyIn{
+      0%{
+        transform: translate(-50%, calc(var(--dockUnderTitle) + var(--gatePush) + 26px)) scale(.90);
+        opacity:0;
+        filter: blur(10px);
+      }
+      100%{
+        transform: translate(-50%, calc(var(--dockUnderTitle) + var(--gatePush))) scale(1);
+        opacity:1;
+        filter: blur(0px);
+      }
+    }
+
+    @keyframes gateFlyAway{
+      0%{
+        transform: translate(-50%, calc(var(--dockUnderTitle) + var(--gatePush))) scale(1);
+        opacity:1;
+        filter: blur(0px);
+      }
+      100%{
+        transform: translate(-50%, calc(var(--dockUnderTitle) + var(--gatePush) - 220px)) rotateX(18deg) rotateZ(8deg) scale(.78);
+        opacity:0;
+        filter: blur(9px);
+      }
+    }
+
+    /* --- ENTER gate (appears after PoH verified) --- */
+    .enterDock{
+      position:fixed;
+      left:50%;
+      top:50%;
+      transform: translate(-50%, calc(-50% + var(--dockUnderTitle))) translateY(160px) scale(.92);
+      z-index:60;
+      opacity:0;
+      pointer-events:none;
+      filter: blur(12px);
+      will-change: transform, opacity, filter;
+      text-align:center;
+    }
+
+    .enterDock.is-in{
+      pointer-events:auto;
+      animation: enterFlyIn .85s cubic-bezier(.15,1,.25,1) forwards;
+    }
+
+    .enterDock.is-flyaway{
+      pointer-events:none;
+      animation: enterFlyAway .8s cubic-bezier(.2,.9,.2,1) forwards;
+    }
+
+    @keyframes enterFlyIn{
+      0%{
+        transform: translate(-50%, calc(-50% + var(--dockUnderTitle))) translateY(170px) scale(.90);
+        opacity:0;
+        filter: blur(12px);
+      }
+      100%{
+        transform: translate(-50%, calc(-50% + var(--dockUnderTitle))) translateY(0px) scale(1);
+        opacity:1;
+        filter: blur(0px);
+      }
+    }
+
+    @keyframes enterFlyAway{
+      0%{
+        transform: translate(-50%, calc(-50% + var(--dockUnderTitle))) translateY(0px) scale(1);
+        opacity:1;
+        filter: blur(0px);
+      }
+      100%{
+        transform: translate(-50%, calc(-50% + var(--dockUnderTitle))) translateY(-240px) rotateX(22deg) rotateZ(-8deg) scale(.70);
+        opacity:0;
+        filter: blur(10px);
+      }
+    }
+
+    .gateTitle{
+      margin: 0 0 10px 0;
+      font-size: 12px;
+      letter-spacing: .26em;
+      text-transform: uppercase;
+      color: rgba(229,231,235,.88);
+      user-select:none;
+    }
+
+    .gateHint{
+      margin-top: 10px;
+      font-size: 12px;
+      color: rgba(148,163,184,.92);
+      line-height: 1.35;
+      min-height: 1.35em;
+      user-select:none;
+    }
+
+    /* --- PoH retry extras (privacy bubble + verify link) --- */
+    .gateExtras{
+      /* collapsed by default; expanded via .is-in */
+      margin-top: 0;
+      max-height: 0;
+      overflow: hidden;
+      opacity: 0;
+      transform: translateY(10px);
+      filter: blur(8px);
+      pointer-events: none;
+
+      display: grid;
+      justify-items: center;
+      gap: 12px;
+      transition:
+        max-height 340ms ease,
+        margin-top 340ms ease,
+        opacity 340ms ease,
+        transform 340ms ease,
+        filter 340ms ease;
+    }
+    .gateExtras.is-in{
+      margin-top: 14px;
+      max-height: 520px;
+      /* Allow the privacy tooltip to extend beyond the container */
+      overflow: visible;
+      opacity: 1;
+      transform: translateY(0);
+      filter: blur(0);
+      pointer-events: auto;
+    }
+    .gateExtrasRow{
+      display:flex;
+      gap: 12px;
+      justify-content: center;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+
+    /* Verify button uses the same 3D chassis but a unique accent (warm metallic gold) */
+    .verifyBtn{
+      --accent: 255, 183, 74;
+      --dz: 24px;
+      --r: 16px;
+    }
+    .verifyBtn .walletBtn__face{ padding: 12px 14px; }
+    .verifyBtn .walletBtn__glyph{
+      background: rgba(var(--accent), .14);
+      border-color: rgba(var(--accent), .26);
+    }
+    .verifyBtn .walletBtn__text{ letter-spacing: .14em; }
+
+    /* Privacy bubble (unique pill + tooltip) */
+    .privacyPill{
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.14);
+      background:
+        linear-gradient(180deg,
+          rgba(255,255,255,.14),
+          rgba(255,255,255,.06) 18%,
+          rgba(0,0,0,.22) 48%,
+          rgba(0,0,0,.76)
+        ),
+        repeating-linear-gradient(90deg,
+          rgba(255,255,255,.08) 0,
+          rgba(255,255,255,.08) 1px,
+          rgba(0,0,0,.02) 2px,
+          rgba(0,0,0,.02) 5px
+        );
+      background-color: rgb(8, 11, 18);
+      box-shadow:
+        0 18px 50px rgba(0,0,0,.44),
+        inset 0 1px 0 rgba(255,255,255,.10);
+      color: rgba(229,231,235,.92);
+      font-size: 12px;
+      letter-spacing: .10em;
+      text-transform: uppercase;
+      user-select: none;
+      cursor: pointer;
+      outline: none;
+      isolation: isolate;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    .privacyPill:hover{ border-color: rgba(var(--accent), .30); }
+    .privacyPill:active{ transform: translateY(1px); }
+    .privacyPill:focus-visible{
+      box-shadow:
+        0 18px 50px rgba(0,0,0,.44),
+        0 0 0 2px rgba(var(--accent), .38),
+        inset 0 1px 0 rgba(255,255,255,.10);
+    }
+    .privacyPill__icon{
+      width: 18px;
+      height: 18px;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      border: 1px solid rgba(var(--accent), .26);
+      background: rgba(var(--accent), .12);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.10);
+      color: rgba(229,231,235,.92);
+      font-weight: 900;
+      font-size: 12px;
+    }
+    .privacyTip{
+      position: absolute;
+      left: 50%;
+      bottom: calc(100% + 12px);
+      transform: translate(-50%, 8px) scale(.985);
+      width: min(680px, calc(100vw - 28px));
+      /* No scroll; the message types in and the panel grows naturally. */
+      max-height: none;
+      overflow: visible;
+      padding: 12px 12px 10px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(6, 10, 18, .92);
+      box-shadow: 0 26px 80px rgba(0,0,0,.55);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 80;
+      transition: opacity 160ms ease, transform 160ms ease;
+      text-align: left;
+    }
+    .privacyTip::after{
+      content:"";
+      position:absolute;
+      left:50%;
+      bottom:-7px;
+      width: 14px;
+      height: 14px;
+      transform: translateX(-50%) rotate(45deg);
+      background: rgba(6, 10, 18, .92);
+      border-right: 1px solid rgba(255,255,255,.10);
+      border-bottom: 1px solid rgba(255,255,255,.10);
+    }
+    .privacyTip__title{
+      font-size: 12px;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      color: rgba(229,231,235,.92);
+      margin: 0 0 8px 0;
+    }
+    .privacyTip__body{
+      font-size: 12px;
+      color: rgba(203,213,225,.92);
+      line-height: 1.50;
+      letter-spacing: .01em;
+      white-space: pre-wrap;
+    }
+
+    .privacyTip__linkRow{
+      margin-top: 10px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(255,255,255,.10);
+      display: none;
+    }
+    .privacyTip__linkRow.is-on{ display: block; }
+
+    .privacyTip__link{
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      border: 1px solid rgba(var(--accent), .24);
+      background: rgba(var(--accent), .08);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.10);
+      color: rgba(229,231,235,.94);
+      text-decoration: none;
+      font-weight: 800;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      font-size: 11px;
+    }
+    .privacyTip__link::after{
+      content: '↗';
+      color: rgba(var(--accent), 1);
+      font-weight: 900;
+      letter-spacing: 0;
+    }
+    .privacyTip__link:hover{
+      border-color: rgba(var(--accent), .46);
+      background: rgba(var(--accent), .12);
+    }
+
+    .privacyTip.is-typing .privacyTip__body::after{
+      content: "▍";
+      display: inline-block;
+      margin-left: 2px;
+      color: rgba(233,251,255,.65);
+      animation: gaCaretBlink 700ms steps(1) infinite;
+    }
+
+    .privacyPill:hover .privacyTip,
+    .privacyPill:focus-within .privacyTip,
+    .privacyPill.is-open .privacyTip{
+      opacity: 1;
+      transform: translate(-50%, 0px) scale(1);
+      pointer-events: auto;
+    }
+
+    .walletBtn{
+      --rx: 0deg;
+      --ry: 0deg;
+      /* thicker chassis = more "full 3D" */
+      --dz: 28px;
+      --r: 18px;
+      --press: 0;
+
+      position:relative;
+      border:0;
+      background:transparent;
+      color: inherit;
+      text-decoration: none;
+      padding:0;
+      cursor:pointer;
+      outline:none;
+      perspective: 1100px;
+      transform-style: preserve-3d;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    .walletBtn:active{ --press: 1; }
+
+    /* The rigid body that actually tilts in 3D (keeps all layers aligned) */
+    .walletBtn__rigid{
+      position:relative;
+      display:inline-block;
+      transform-style: preserve-3d;
+      transform: rotateX(var(--rx)) rotateY(var(--ry));
+      will-change: transform;
+      transition: transform 120ms ease-out;
+    }
+
+    /* Keyboard accessibility (kept sleek + on-theme) */
+    .walletBtn:focus-visible .walletBtn__face{
+      border-color: rgba(var(--accent), .55);
+      box-shadow:
+        0 20px 56px rgba(0,0,0,.44),
+        0 0 0 2px rgba(var(--accent), .40),
+        0 0 28px rgba(var(--accent), .18),
+        inset 0 1px 0 rgba(255,255,255,.14);
+    }
+
+    .walletBtn.enterBtn:focus-visible .walletBtn__face{
+      border-color: rgba(var(--enter), .62);
+      box-shadow:
+        0 20px 60px rgba(0,0,0,.46),
+        0 0 0 2px rgba(var(--enter), .50),
+        0 0 34px rgba(var(--enter), .22),
+        inset 0 1px 0 rgba(255,255,255,.14);
+    }
+
+    .walletBtn__layer{
+      position:absolute;
+      inset:0;
+      border-radius: var(--r);
+      will-change: transform;
+      pointer-events:none;
+      backface-visibility: hidden;
+    }
+
+    .walletBtn__shadow{
+      /* Deeper shadow to sell thickness */
+      transform: translateZ(calc(var(--dz) * -1.25)) translateY(24px) scale(1.02);
+      filter: blur(18px);
+      background: radial-gradient(circle at 30% 20%, rgba(0,0,0,.62), rgba(0,0,0,.18) 58%, rgba(0,0,0,0));
+      opacity: .98;
+    }
+
+    /* Underside plate (dark metal) */
+    .walletBtn__bottom{
+      transform: translateZ(0px) translateY(14px) scale(.992);
+      border-radius: calc(var(--r) + 2px);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.06), rgba(0,0,0,.62) 62%, rgba(0,0,0,.78)),
+        repeating-linear-gradient(90deg,
+          rgba(255,255,255,.05) 0,
+          rgba(255,255,255,.05) 1px,
+          rgba(0,0,0,.02) 2px,
+          rgba(0,0,0,.02) 5px
+        );
+      border: 1px solid rgba(0,0,0,.55);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.06),
+        inset 0 -1px 0 rgba(0,0,0,.85);
+      opacity: .95;
+    }
+
+    /* Depth stack layers (simulate extruded side walls) */
+    .walletBtn__depth{
+      border-radius: calc(var(--r) + 1px);
+      border: 1px solid rgba(255,255,255,.07);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.07);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.10), rgba(0,0,0,.62)),
+        repeating-linear-gradient(90deg,
+          rgba(255,255,255,.07) 0,
+          rgba(255,255,255,.07) 1px,
+          rgba(0,0,0,.02) 2px,
+          rgba(0,0,0,.02) 5px
+        );
+      opacity: .88;
+    }
+
+    .walletBtn__depth--a{
+      transform: translateZ(calc(var(--dz) * 0.28)) translateY(10px) scale(.996);
+      opacity: .82;
+    }
+
+    .walletBtn__depth--b{
+      transform: translateZ(calc(var(--dz) * 0.56)) translateY(6px) scale(.999);
+      opacity: .86;
+    }
+
+    .walletBtn__edge{
+      transform: translateZ(calc(var(--dz) * 0.74)) translateY(2px);
+      /* Brushed metal rim (near the top) */
+      background:
+        linear-gradient(180deg,
+          rgba(255,255,255,.18),
+          rgba(255,255,255,.06) 18%,
+          rgba(0,0,0,.18) 50%,
+          rgba(0,0,0,.55)
+        ),
+        repeating-linear-gradient(90deg,
+          rgba(255,255,255,.10) 0,
+          rgba(255,255,255,.10) 1px,
+          rgba(0,0,0,.02) 2px,
+          rgba(0,0,0,.02) 4px
+        );
+      border:1px solid rgba(255,255,255,.10);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.10),
+        inset 0 -1px 0 rgba(0,0,0,.55);
+      opacity:.92;
+    }
+
+    .walletBtn__face{
+      position:relative;
+      display:flex;
+      align-items:center;
+      gap:12px;
+      padding:14px 16px;
+      border-radius: var(--r);
+      transform: translateZ(calc(var(--dz) * (1 - (var(--press) * 0.16))));
+      transform-style: preserve-3d;
+
+      /* IMPORTANT: keep animated sheen/sweep effects clipped to the button.
+         This also prevents blend-mode highlights from spilling onto the starfield. */
+      overflow: hidden;
+      clip-path: inset(0 round var(--r));
+      isolation: isolate;
+      contain: paint;
+
+      /* Metallic face with accent sheen */
+      background:
+        linear-gradient(180deg,
+          rgba(255,255,255,.10),
+          rgba(255,255,255,.04) 18%,
+          rgba(0,0,0,.18) 48%,
+          rgba(0,0,0,.62)
+        ),
+        repeating-linear-gradient(90deg,
+          rgba(255,255,255,.06) 0,
+          rgba(255,255,255,.06) 1px,
+          rgba(0,0,0,.02) 2px,
+          rgba(0,0,0,.02) 4px
+        ),
+        radial-gradient(220px 90px at 20% -20%, rgba(255,255,255,.18), rgba(255,255,255,0) 60%),
+        radial-gradient(240px 120px at 100% 35%, rgba(var(--accent), .22), rgba(var(--accent),0) 70%);
+      /* Opaque base to prevent seeing internal layers through the face */
+      background-color: rgb(8, 11, 18);
+      border:1px solid rgba(var(--accent), .28);
+      box-shadow:
+        0 18px 46px rgba(0,0,0,.38),
+        inset 0 1px 0 rgba(255,255,255,.12);
+
+      color: rgba(229,231,235,.94);
+      font-size: 13px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    /* Inner bevel ring for a stronger "machined" 3D read */
+    .walletBtn__face::before{
+      content:"";
+      position:absolute;
+      inset: 1px;
+      border-radius: calc(var(--r) - 1px);
+      border: 1px solid rgba(255,255,255,.08);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.10),
+        inset 0 -1px 0 rgba(0,0,0,.62);
+      pointer-events:none;
+      opacity:.95;
+    }
+
+    .walletBtn__face::after{
+      content:"";
+      position:absolute;
+      inset:0;
+      border-radius: var(--r);
+      background:
+        radial-gradient(120px 70px at 18% 0%, rgba(255,255,255,.16), rgba(255,255,255,0) 60%),
+        radial-gradient(220px 90px at 100% 40%, rgba(var(--accent), .24), rgba(var(--accent),0) 65%);
+      pointer-events:none;
+      /* Keep blends local to the button (no spill onto the starfield) */
+      mix-blend-mode: normal;
+      opacity:.95;
+    }
+
+    .walletBtn__glyph{
+      width:18px;
+      height:18px;
+      display:grid;
+      place-items:center;
+      border-radius:8px;
+      background: rgba(var(--accent), .14);
+      border:1px solid rgba(var(--accent), .22);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.10);
+      color: rgba(255,255,255,.92);
+      font-size: 14px;
+      transform: translateZ(1px);
+    }
+
+    .walletBtn__text{
+      white-space:nowrap;
+      transform: translateZ(1px);
+      font-weight: 750;
+      letter-spacing: .12em;
+      text-shadow:
+        0 0 14px rgba(var(--accent), .20),
+        0 0 28px rgba(var(--accent), .10);
+    }
+
+    .walletBtn__tag{
+      margin-left:4px;
+      padding:4px 8px;
+      border-radius:999px;
+      border:1px solid rgba(var(--accent), .28);
+      background: rgba(var(--accent), .10);
+      color: rgba(229,231,235,.92);
+      font-size: 11px;
+      letter-spacing: .14em;
+      transform: translateZ(1px);
+    }
+
+    .walletBtn:hover .walletBtn__face{
+      border-color: rgba(var(--accent), .38);
+      box-shadow:
+        0 20px 56px rgba(0,0,0,.42),
+        0 0 0 1px rgba(var(--accent), .10),
+        inset 0 1px 0 rgba(255,255,255,.14);
+    }
+
+    /* press is handled by --press now; keep a tiny visual nudge */
+    .walletBtn:active .walletBtn__shadow{ opacity: .86; }
+
+    .walletBtn.is-connected .walletBtn__face{
+      border-color: rgba(var(--accent), .55);
+      box-shadow:
+        0 20px 56px rgba(0,0,0,.44),
+        0 0 34px rgba(var(--accent), .24),
+        inset 0 1px 0 rgba(255,255,255,.14);
+    }
+
+    /* --- ENTER button (green neon, looping sci-fi animation) --- */
+    .enterBtn .walletBtn__face{
+      border-color: rgba(var(--enter), .42);
+      background:
+        linear-gradient(180deg,
+          rgba(255,255,255,.10),
+          rgba(255,255,255,.04) 18%,
+          rgba(0,0,0,.18) 48%,
+          rgba(0,0,0,.62)
+        ),
+        repeating-linear-gradient(90deg,
+          rgba(255,255,255,.06) 0,
+          rgba(255,255,255,.06) 1px,
+          rgba(0,0,0,.02) 2px,
+          rgba(0,0,0,.02) 4px
+        ),
+        radial-gradient(220px 90px at 20% -20%, rgba(255,255,255,.18), rgba(255,255,255,0) 60%),
+        radial-gradient(260px 130px at 100% 35%, rgba(var(--enter), .24), rgba(var(--enter),0) 70%);
+      /* Opaque base to prevent seeing internal layers through the face */
+      background-color: rgb(8, 11, 18);
+      box-shadow:
+        0 20px 60px rgba(0,0,0,.46),
+        0 0 40px rgba(var(--enter), .12),
+        inset 0 1px 0 rgba(255,255,255,.14);
+    }
+
+    .enterBtn .walletBtn__face::after{
+      background:
+        radial-gradient(120px 70px at 18% 0%, rgba(255,255,255,.18), rgba(255,255,255,0) 60%),
+        radial-gradient(240px 110px at 100% 40%, rgba(var(--enter), .26), rgba(var(--enter),0) 65%);
+      opacity: .95;
+    }
+
+    .enterBtn .walletBtn__glyph{
+      background: rgba(var(--enter), .14);
+      border-color: rgba(var(--enter), .24);
+      color: rgba(255,255,255,.92);
+    }
+
+    .enterBtn .walletBtn__text{
+      color: rgba(var(--enter), 1);
+      font-weight: 800;
+      letter-spacing: .24em;
+      text-shadow:
+        0 0 14px rgba(var(--enter), .45),
+        0 0 36px rgba(var(--enter), .18);
+    }
+
+    .enterBtn .walletBtn__tag{
+      border-color: rgba(var(--enter), .34);
+      background: rgba(var(--enter), .10);
+      color: rgba(225,255,238,.92);
+    }
+
+    /*
+      ENTER sci‑fi sweep:
+      Implemented as a *background layer* (not a pseudo-element) to guarantee
+      it never draws outside the button in any browser.
+    */
+    .enterBtn.is-armed .walletBtn__face{
+      animation:
+        enterBreath 1.65s ease-in-out infinite,
+        enterSweepBg 2.25s linear infinite;
+
+      background:
+        /* sweep layer (animated via background-position) */
+        linear-gradient(115deg,
+          rgba(255,255,255,0) 0%,
+          rgba(var(--enter), .08) 35%,
+          rgba(var(--enter), .44) 49%,
+          rgba(var(--enter), .10) 62%,
+          rgba(255,255,255,0) 76%
+        ),
+        /* base metallic layers */
+        linear-gradient(180deg,
+          rgba(255,255,255,.10),
+          rgba(255,255,255,.04) 18%,
+          rgba(0,0,0,.18) 48%,
+          rgba(0,0,0,.62)
+        ),
+        repeating-linear-gradient(90deg,
+          rgba(255,255,255,.06) 0,
+          rgba(255,255,255,.06) 1px,
+          rgba(0,0,0,.02) 2px,
+          rgba(0,0,0,.02) 4px
+        ),
+        radial-gradient(220px 90px at 20% -20%, rgba(255,255,255,.18), rgba(255,255,255,0) 60%),
+        radial-gradient(260px 130px at 100% 35%, rgba(var(--enter), .24), rgba(var(--enter),0) 70%);
+
+      /* Opaque base to prevent seeing internal layers through the face */
+      background-color: rgb(8, 11, 18);
+
+      background-size:
+        280% 100%,
+        auto,
+        auto,
+        auto,
+        auto;
+
+      background-position:
+        -240% 0,
+        0 0,
+        0 0,
+        0 0,
+        0 0;
+
+      background-repeat: no-repeat;
+    }
+
+    .enterBtn.is-armed .walletBtn__glyph{
+      animation: enterGlyph 1.9s ease-in-out infinite;
+    }
+
+    .enterBtn.is-armed .walletBtn__text{
+      animation: enterFlicker 3.4s ease-in-out infinite;
+    }
+
+    @keyframes enterBreath{
+      0%{
+        box-shadow:
+          0 20px 60px rgba(0,0,0,.46),
+          0 0 34px rgba(var(--enter), .14),
+          inset 0 1px 0 rgba(255,255,255,.14);
+        border-color: rgba(var(--enter), .40);
+      }
+      50%{
+        box-shadow:
+          0 22px 66px rgba(0,0,0,.50),
+          0 0 54px rgba(var(--enter), .26),
+          inset 0 1px 0 rgba(255,255,255,.14);
+        border-color: rgba(var(--enter), .62);
+      }
+      100%{
+        box-shadow:
+          0 20px 60px rgba(0,0,0,.46),
+          0 0 34px rgba(var(--enter), .14),
+          inset 0 1px 0 rgba(255,255,255,.14);
+        border-color: rgba(var(--enter), .40);
+      }
+    }
+
+    @keyframes enterSweepBg{
+      0%{
+        background-position:
+          -240% 0,
+          0 0,
+          0 0,
+          0 0,
+          0 0;
+      }
+      100%{
+        background-position:
+          240% 0,
+          0 0,
+          0 0,
+          0 0,
+          0 0;
+      }
+    }
+
+    @keyframes enterGlyph{
+      0%{ transform: translateZ(1px) rotate(0deg); box-shadow: inset 0 1px 0 rgba(255,255,255,.10); }
+      50%{ transform: translateZ(1px) rotate(90deg); box-shadow: 0 0 22px rgba(var(--enter), .22), inset 0 1px 0 rgba(255,255,255,.12); }
+      100%{ transform: translateZ(1px) rotate(180deg); box-shadow: inset 0 1px 0 rgba(255,255,255,.10); }
+    }
+
+    @keyframes enterFlicker{
+      0%, 100%{ filter: brightness(1.0); opacity: 1; }
+      45%{ filter: brightness(1.08); }
+      50%{ filter: brightness(0.95); }
+      56%{ filter: brightness(1.10); }
+      72%{ filter: brightness(1.02); }
+    }
+
+    @media (max-width: 520px){
+      .walletBtn__face{padding:12px 14px;font-size:12px;}
+      :root{ --dockUnderTitle: 92px; }
+    }
+  </style>
+</head>
+<body class="is-header is-embed no-ui">
+  <div id="app">
+    <!-- Dashboard header widget (shown only after ENTER collapse) -->
+    <div class="dashHeader" id="dashHeader" aria-hidden="true">
+      <canvas class="dashHeader__stars" id="dashHeaderStars" width="240" height="80" aria-hidden="true"></canvas>
+      <div class="dashHeader__frame" aria-hidden="true"></div>
+      <div class="dashHeader__text" data-text="gruesøme's arcade" aria-label="gruesøme's arcade">gruesøme's arcade</div>
+    </div>
+  </div>
+  <div class="boot-error" id="bootError"></div>
+
+  <div class="walletDock" id="walletDock">
+    <button class="walletBtn" id="walletBtn" type="button" aria-label="Connect Wallet (Linea)">
+      <span class="walletBtn__layer walletBtn__shadow"></span>
+      <span class="walletBtn__rigid">
+        <span class="walletBtn__layer walletBtn__bottom"></span>
+        <span class="walletBtn__layer walletBtn__depth walletBtn__depth--a"></span>
+        <span class="walletBtn__layer walletBtn__depth walletBtn__depth--b"></span>
+        <span class="walletBtn__layer walletBtn__edge"></span>
+        <span class="walletBtn__face">
+          <span class="walletBtn__glyph" aria-hidden="true">◇</span>
+          <span class="walletBtn__text" id="walletLabel">Connect Wallet</span>
+          <span class="walletBtn__tag" aria-hidden="true">LINEA</span>
+        </span>
+      </span>
+    </button>
+  </div>
+
+  <div class="gateDock" id="pohDock" aria-hidden="true">
+    <div class="gateTitle">Proof of Humanity</div>
+    <button class="walletBtn gateBtn" id="pohBtn" type="button" aria-label="Check Proof of Humanity">
+      <span class="walletBtn__layer walletBtn__shadow"></span>
+      <span class="walletBtn__rigid">
+        <span class="walletBtn__layer walletBtn__bottom"></span>
+        <span class="walletBtn__layer walletBtn__depth walletBtn__depth--a"></span>
+        <span class="walletBtn__layer walletBtn__depth walletBtn__depth--b"></span>
+        <span class="walletBtn__layer walletBtn__edge"></span>
+        <span class="walletBtn__face">
+          <span class="walletBtn__glyph" aria-hidden="true">⬢</span>
+          <span class="walletBtn__text" id="pohLabel">Check PoH</span>
+          <span class="walletBtn__tag" aria-hidden="true">POH</span>
+        </span>
+      </span>
+    </button>
+    <div class="gateHint" id="pohHint"></div>
+
+    <!-- PoH retry extras (shown when PoH is not found / retry state) -->
+    <div class="gateExtras" id="pohExtras" aria-hidden="true">
+      <div class="gateExtrasRow">
+        <a
+          class="walletBtn verifyBtn"
+          id="verifyBtn"
+          href="https://in.sumsub.com/websdk/p/uni_BKWTkQpZ2EqnGoY7?utm_source=LineaHub"
+          rel="noopener noreferrer"
+          aria-label="Verify Proof of Humanity"
+          role="button"
+        >
+          <span class="walletBtn__layer walletBtn__shadow"></span>
+          <span class="walletBtn__rigid">
+            <span class="walletBtn__layer walletBtn__bottom"></span>
+            <span class="walletBtn__layer walletBtn__depth walletBtn__depth--a"></span>
+            <span class="walletBtn__layer walletBtn__depth walletBtn__depth--b"></span>
+            <span class="walletBtn__layer walletBtn__edge"></span>
+            <span class="walletBtn__face">
+              <span class="walletBtn__glyph" aria-hidden="true">↗</span>
+              <span class="walletBtn__text">Verify Here!</span>
+              <span class="walletBtn__tag" aria-hidden="true">VERIFY</span>
+            </span>
+          </span>
+        </a>
+
+        <div class="privacyPill" id="privacyPill" tabindex="0" role="button" aria-label="What about my privacy?">
+          <span class="privacyPill__icon" aria-hidden="true">i</span>
+          <span class="privacyPill__text">What about my privacy?</span>
+
+          <div class="privacyTip" role="dialog" aria-label="Privacy information">
+            <div class="privacyTip__title">Privacy</div>
+            <div class="privacyTip__body" id="privacyBody" aria-live="polite"></div>
+            <div class="privacyTip__linkRow" id="privacyLinkRow" aria-hidden="true">
+              <a class="privacyTip__link" href="https://docs.linea.build/get-started/how-to/verify-users-with-proof-of-humanity" rel="noopener noreferrer">Learn more (Linea docs)</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="enterDock" id="enterDock" aria-hidden="true">
+    <button class="walletBtn enterBtn" id="enterBtn" type="button" aria-label="Enter">
+      <span class="walletBtn__layer walletBtn__shadow"></span>
+      <span class="walletBtn__rigid">
+        <span class="walletBtn__layer walletBtn__bottom"></span>
+        <span class="walletBtn__layer walletBtn__depth walletBtn__depth--a"></span>
+        <span class="walletBtn__layer walletBtn__depth walletBtn__depth--b"></span>
+        <span class="walletBtn__layer walletBtn__edge"></span>
+        <span class="walletBtn__face">
+          <span class="walletBtn__glyph" aria-hidden="true">⟡</span>
+          <span class="walletBtn__text" id="enterLabel">ENTER</span>
+          <span class="walletBtn__tag" aria-hidden="true">ACCESS</span>
+        </span>
+      </span>
+    </button>
+  </div>
+
+  <!-- Import map:
+       - Avoids bare specifier errors when running from a local server
+       - Pins Three.js + examples modules to a known-good CDN version
+       - Adds font loaders + TextGeometry for true 3D extruded marquee text
+  -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+
+        "three/examples/jsm/postprocessing/EffectComposer.js": "https://unpkg.com/three@0.160.0/examples/jsm/postprocessing/EffectComposer.js",
+        "three/examples/jsm/postprocessing/RenderPass.js": "https://unpkg.com/three@0.160.0/examples/jsm/postprocessing/RenderPass.js",
+        "three/examples/jsm/postprocessing/UnrealBloomPass.js": "https://unpkg.com/three@0.160.0/examples/jsm/postprocessing/UnrealBloomPass.js",
+
+        "three/examples/jsm/loaders/TTFLoader.js": "https://unpkg.com/three@0.160.0/examples/jsm/loaders/TTFLoader.js",
+        "three/examples/jsm/loaders/FontLoader.js": "https://unpkg.com/three@0.160.0/examples/jsm/loaders/FontLoader.js",
+        "three/examples/jsm/geometries/TextGeometry.js": "https://unpkg.com/three@0.160.0/examples/jsm/geometries/TextGeometry.js",
+        "three/examples/jsm/utils/BufferGeometryUtils.js": "https://unpkg.com/three@0.160.0/examples/jsm/utils/BufferGeometryUtils.js",
+
+        "three/examples/jsm/environments/RoomEnvironment.js": "https://unpkg.com/three@0.160.0/examples/jsm/environments/RoomEnvironment.js"
+      }
+    }
+  </script>
+
+  <script type="module">
+    // built by gruesøme
+    // YnVpbHQgYnkgZ3J1ZXPDuG1l
+
+    const bootErrorEl = document.getElementById('bootError');
+    function showBootError(msg){
+      bootErrorEl.style.display = 'block';
+      bootErrorEl.textContent = msg;
+    }
+
+    // Basic WebGL availability check
+    try {
+      const c = document.createElement('canvas');
+      const gl = c.getContext('webgl') || c.getContext('experimental-webgl');
+      if (!gl) {
+        showBootError('WebGL is not available in this browser/profile.\nTry disabling “Use hardware acceleration” restrictions, or test in Chrome/Edge.');
+      }
+    } catch (e) {
+      showBootError('WebGL initialization failed: ' + (e?.message || String(e)));
+    }
+
+    import * as THREE from "three";
+    import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
+    import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
+    import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
+    import { TTFLoader } from "three/examples/jsm/loaders/TTFLoader.js";
+    import { FontLoader } from "three/examples/jsm/loaders/FontLoader.js";
+    import { TextGeometry } from "three/examples/jsm/geometries/TextGeometry.js";
+    import * as BufferGeometryUtils from "three/examples/jsm/utils/BufferGeometryUtils.js";
+    import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
+
+    const root = document.getElementById("app");
+
+    // ---------------- Mode / Config ----------------
+    // built by gruesøme
+    // c2lnOjpidWlsdCBieSBncnVlc8O4bWU=
+    //
+    // This file supports both:
+    // - Access page (default)
+    // - Header-only mode (240x80, no UI, no audio, no curvature)
+    //
+    // Configure via:
+    // - Query params: ?mode=header&ui=0&audio=0&curve=0&zoomfit=1
+    // - Or by setting window.__GA_CONFIG__ before this module runs.
+    const __GA_CFG = (typeof window !== 'undefined' && window.__GA_CONFIG__) ? window.__GA_CONFIG__ : {};
+    const QS = new URLSearchParams(location.search);
+    const MODE = String(__GA_CFG.mode ?? QS.get('mode') ?? 'access').toLowerCase() === 'header' ? 'header' : 'access';
+    const UI_ENABLED = String(__GA_CFG.ui ?? QS.get('ui') ?? '1') !== '0' && MODE !== 'header';
+    const AUDIO_ENABLED = String(__GA_CFG.audio ?? QS.get('audio') ?? '1') !== '0' && MODE !== 'header';
+    const CURVE_ENABLED = String(__GA_CFG.curve ?? QS.get('curve') ?? '1') !== '0' && MODE !== 'header';
+    const ZOOMFIT_ENABLED = String(__GA_CFG.zoomfit ?? QS.get('zoomfit') ?? (MODE === 'header' ? '1' : '0')) === '1';
+    const EMBED_HEADER = String(__GA_CFG.embed ?? QS.get('embed') ?? '0') === '1';
+
+    if (!UI_ENABLED) document.body.classList.add('no-ui');
+    if (MODE === 'header') {
+      document.body.classList.add('is-header');
+      if (EMBED_HEADER) document.body.classList.add('is-embed');
+    }
+
+    // ---------------- Audio (hooks + asset folder) ----------------
+    // built by gruesøme
+    // c2lnOjpidWlsdCBieSBncnVlc8O4bWU=
+    // Drop your audio files in: /assets/audio/
+    // You can change filenames below if you prefer.
+    const AUDIO_FILES = {
+      bgm: { src: 'assets/audio/background-music.mp3', loop: true, volume: 0.46 },
+      wallet_press: { src: 'assets/audio/wallet-connect-press.mp3', volume: 0.90 },
+      wallet_warp: { src: 'assets/audio/wallet-connect-warp.mp3', volume: 0.92 },
+      poh_granted: { src: 'assets/audio/poh-access-granted.mp3', volume: 0.95 },
+      poh_not_found: { src: 'assets/audio/poh-not-found.mp3', volume: 0.95 },
+      // Optional: PoH retry button pressed
+      retry_press: { src: 'assets/audio/poh-retry-press.mp3', volume: 0.92 },
+      enter_press: { src: 'assets/audio/enter-pressed.mp3', volume: 1.00 },
+      verify_press: { src: 'assets/audio/verify-here-press.mp3', volume: 0.92 },
+      typing: { src: 'assets/audio/typing.mp3', volume: 0.60 }
+    };
+
+    const clamp01 = (v) => {
+      const n = Number(v);
+      if (!Number.isFinite(n)) return 0;
+      return Math.max(0, Math.min(1, n));
+    };
+
+    function createAudioHub(cfg){
+      /**
+       * Lightweight audio hub.
+       *
+       * What it solves:
+       * - Autoplay policies (unlock on first user gesture)
+       * - Reliable SFX even when triggered asynchronously after a click
+       * - Per-character "typing" ticks (uses WebAudio grains sliced from typing.mp3)
+       */
+      const hub = {
+        enabled: true,
+        unlocked: false,
+        bgmWanted: true,
+        bgmVolumeBase: clamp01(cfg?.bgm?.volume ?? 0.46),
+        _cfg: cfg || {},
+        _bgm: null,
+        _sfx: new Map(),
+        _loops: new Map(),
+        _queue: [],
+        _ctx: null,
+        _master: null,
+        _buffers: new Map(),
+        _bufferLoads: new Map(),
+        _grainLastMs: new Map(),
+        _peaks: new Map(),
+
+        init(){
+          try {
+            const bg = new Audio(this._cfg?.bgm?.src || '');
+            bg.preload = 'auto';
+            bg.loop = !!this._cfg?.bgm?.loop;
+            bg.volume = this.bgmVolumeBase;
+            this._bgm = bg;
+
+            for (const [k, v] of Object.entries(this._cfg || {})) {
+              if (k === 'bgm') continue;
+              const a = new Audio(v?.src || '');
+              a.preload = 'auto';
+              a.loop = false;
+              a.volume = clamp01(v?.volume ?? 0.95);
+              this._sfx.set(k, a);
+            }
+          } catch {
+            /* ignore */
+          }
+
+          // Preload WebAudio buffer(s) used for per-character ticks.
+          this._prepareWebAudio();
+          this._preloadBuffer('typing');
+          return this;
+        },
+
+        _prepareWebAudio(){
+          if (this._ctx) return;
+          const AC = window.AudioContext || window.webkitAudioContext;
+          if (!AC) return;
+          try {
+            const ctx = new AC();
+            this._ctx = ctx;
+            const master = ctx.createGain();
+            master.gain.value = 1;
+            master.connect(ctx.destination);
+            this._master = master;
+          } catch {
+            this._ctx = null;
+            this._master = null;
+          }
+        },
+
+        _preloadBuffer(name){
+          const src = this._cfg?.[name]?.src;
+          const ctx = this._ctx;
+          if (!src || !ctx) return;
+          if (this._buffers.has(name) || this._bufferLoads.has(name)) return;
+
+          const p = fetch(src)
+            .then((r) => r.arrayBuffer())
+            .then((ab) => {
+              // decodeAudioData differs across browsers: promise and callback forms exist.
+              return new Promise((resolve, reject) => {
+                const ok = (buf) => resolve(buf);
+                const fail = (e) => reject(e);
+                try {
+                  const ret = ctx.decodeAudioData(ab, ok, fail);
+                  if (ret && typeof ret.then === 'function') ret.then(ok).catch(fail);
+                } catch (e) {
+                  fail(e);
+                }
+              });
+            })
+            .then((buf) => {
+              // Precompute energy peaks for "typing" so per-character ticks always hit
+              // the audible parts of the sample (user-provided typing.mp3 is often a few
+              // seconds long with multiple key sounds).
+              if (name === 'typing') {
+                this._peaks.set('typing', this._computePeaks(buf));
+              }
+              this._buffers.set(name, buf);
+              this._bufferLoads.delete(name);
+              return buf;
+            })
+            .catch(() => {
+              this._bufferLoads.delete(name);
+            });
+
+          this._bufferLoads.set(name, p);
+        },
+
+        _computePeaks(buf){
+          try {
+            const ch0 = buf.getChannelData(0);
+            const sr = buf.sampleRate || 44100;
+            const win = Math.max(64, Math.floor(sr * 0.015)); // ~15ms
+            const hop = win;
+            let max = 0;
+            const e = [];
+            for (let i = 0; i < ch0.length; i += hop) {
+              let sum = 0;
+              const end = Math.min(ch0.length, i + win);
+              for (let j = i; j < end; j++) {
+                const s = ch0[j];
+                sum += s * s;
+              }
+              const n = Math.max(1, end - i);
+              const rms = Math.sqrt(sum / n);
+              e.push(rms);
+              if (rms > max) max = rms;
+            }
+            if (max <= 1e-6) return [];
+
+            const pickPeaks = (th) => {
+              const peaks = [];
+              for (let k = 1; k < e.length - 1; k++) {
+                const v = e[k];
+                if (v > th && v >= e[k - 1] && v >= e[k + 1]) {
+                  peaks.push((k * hop) / sr);
+                }
+              }
+              return peaks;
+            };
+
+            // Try a strong threshold first, fall back if the sample is soft.
+            let peaks = pickPeaks(max * 0.55);
+            if (peaks.length < 6) peaks = pickPeaks(max * 0.35);
+            if (peaks.length < 6) peaks = pickPeaks(max * 0.22);
+            return peaks.slice(0, 256);
+          } catch {
+            return [];
+          }
+        },
+
+        _flushQueue(){
+          const q = this._queue.splice(0);
+          for (const ev of q) {
+            if (!ev) continue;
+            if (ev.t === 'bgm') this.playBgm();
+            if (ev.t === 'sfx') this.playSfx(ev.name);
+            if (ev.t === 'loop') this.playLoop(ev.name, ev.key);
+            if (ev.t === 'stoploop') this.stopLoop(ev.key);
+          }
+        },
+
+        unlock(){
+          if (this.unlocked) return;
+          this.unlocked = true;
+          // Resume WebAudio in the user gesture.
+          try { this._ctx?.resume?.(); } catch { /* ignore */ }
+          // Prime BGM in the gesture; this is the most reliable way to satisfy autoplay policies.
+          if (this.bgmWanted) this.playBgm();
+          this._flushQueue();
+        },
+
+        typingTick({
+          volume = null,
+          durMin = 0.045,
+          durMax = 0.075,
+          rateMin = 0.95,
+          rateMax = 1.10,
+          minIntervalMs = 18
+        } = {}){
+          if (!this.enabled) return;
+          this._prepareWebAudio();
+          const ctx = this._ctx;
+          const master = this._master;
+          if (!ctx || !master) return;
+
+          // Ensure buffer is available.
+          if (!this._buffers.has('typing')) {
+            this._preloadBuffer('typing');
+            return;
+          }
+
+          // Autoplay policies: only tick after unlock.
+          if (!this.unlocked) return;
+
+          if (ctx.state === 'suspended') {
+            try { ctx.resume?.(); } catch { /* ignore */ }
+            if (ctx.state === 'suspended') return;
+          }
+
+          const nowMs = performance.now();
+          const last = this._grainLastMs.get('typing') || 0;
+          if (nowMs - last < minIntervalMs) return;
+          this._grainLastMs.set('typing', nowMs);
+
+          const buf = this._buffers.get('typing');
+          if (!buf) return;
+
+          const srcNode = ctx.createBufferSource();
+          srcNode.buffer = buf;
+          srcNode.playbackRate.value = rateMin + Math.random() * (rateMax - rateMin);
+
+          const g = ctx.createGain();
+          const baseVol = clamp01(volume ?? (this._cfg?.typing?.volume ?? 0.6));
+          const t0 = ctx.currentTime;
+          const dur = durMin + Math.random() * (durMax - durMin);
+          const maxOffset = Math.max(0, buf.duration - dur - 0.01);
+          const peaks = this._peaks.get('typing');
+          let offset = 0;
+          if (peaks && peaks.length) {
+            const p = peaks[(Math.random() * peaks.length) | 0];
+            const jitter = (Math.random() - 0.5) * 0.012; // +/- ~6ms
+            offset = Math.max(0, Math.min(maxOffset, p + jitter));
+          } else {
+            offset = maxOffset > 0 ? Math.random() * maxOffset : 0;
+          }
+
+          g.gain.setValueAtTime(0, t0);
+          g.gain.linearRampToValueAtTime(baseVol, t0 + 0.005);
+          g.gain.linearRampToValueAtTime(0, t0 + dur);
+
+          srcNode.connect(g);
+          g.connect(master);
+
+          try {
+            srcNode.start(t0, offset, dur);
+            srcNode.stop(t0 + dur + 0.03);
+          } catch {
+            /* ignore */
+          }
+        },
+
+        requestBgm(){
+          this.bgmWanted = true;
+          this.playBgm();
+        },
+
+        playBgm(){
+          if (!this.enabled) return;
+          if (!this.unlocked) {
+            // Queue until we unlock
+            this._queue.push({ t: 'bgm' });
+            return;
+          }
+          const bg = this._bgm;
+          if (!bg) return;
+          try { bg.load?.(); } catch { /* ignore */ }
+          const p = bg.play?.();
+          if (p && typeof p.catch === 'function') p.catch(() => { /* autoplay blocked */ });
+        },
+
+        fadeBgmTo(targetVol, ms = 650){
+          const bg = this._bgm;
+          if (!bg) return;
+          const start = bg.volume;
+          const end = clamp01(targetVol);
+          const t0 = performance.now();
+          const dur = Math.max(1, ms);
+          const easeOutCubic = (x) => 1 - Math.pow(1 - x, 3);
+          const step = () => {
+            const u = (performance.now() - t0) / dur;
+            const k = u >= 1 ? 1 : u;
+            bg.volume = start + (end - start) * easeOutCubic(k);
+            if (k < 1) requestAnimationFrame(step);
+          };
+          step();
+        },
+
+        restoreBgm(ms = 700){
+          this.fadeBgmTo(this.bgmVolumeBase, ms);
+        },
+
+        playSfx(name){
+          if (!this.enabled) return;
+          if (!this.unlocked) {
+            this._queue.push({ t: 'sfx', name });
+            return;
+          }
+          const base = this._sfx.get(name);
+          if (!base) return;
+          try {
+            // Clone allows overlap without cutting off a currently-playing sound.
+            const a = base.cloneNode();
+            a.volume = base.volume;
+            a.currentTime = 0;
+            const p = a.play();
+            if (p && typeof p.catch === 'function') p.catch(() => void 0);
+          } catch {
+            /* ignore */
+          }
+        },
+
+        playLoop(name, key = name){
+          if (!this.enabled) return;
+          if (!this.unlocked) {
+            this._queue.push({ t: 'loop', name, key });
+            return;
+          }
+          const src = this._cfg?.[name]?.src;
+          if (!src) return;
+          const vol = clamp01(this._cfg?.[name]?.volume ?? 0.7);
+          this.stopLoop(key);
+          try {
+            const a = new Audio(src);
+            a.preload = 'auto';
+            a.loop = true;
+            a.volume = vol;
+            a.currentTime = 0;
+            const p = a.play();
+            if (p && typeof p.catch === 'function') p.catch(() => void 0);
+            this._loops.set(key, a);
+          } catch {
+            /* ignore */
+          }
+        },
+
+        stopLoop(key){
+          const a = this._loops.get(key);
+          if (!a) return;
+          try { a.pause(); } catch { /* ignore */ }
+          try { a.currentTime = 0; } catch { /* ignore */ }
+          this._loops.delete(key);
+        }
+      };
+      return hub.init();
+    }
+
+    // Audio is disabled in header-only mode by default.
+    const audioHub = (AUDIO_ENABLED)
+      ? createAudioHub(AUDIO_FILES)
+      : {
+          enabled: false,
+          unlocked: false,
+          requestBgm() {},
+          unlock() {},
+          fadeBgmTo() {},
+          restoreBgm() {},
+          playSfx() {},
+          typingTick() {},
+          playLoop() {},
+          stopLoop() {}
+        };
+
+    // Try to start BGM immediately (will usually be blocked until gesture),
+    // then "unlock" audio on the first user interaction.
+    if (AUDIO_ENABLED) {
+      audioHub.requestBgm();
+      const unlockAudioOnce = () => audioHub.unlock();
+      window.addEventListener('pointerdown', unlockAudioOnce, { once: true, passive: true });
+      window.addEventListener('keydown', unlockAudioOnce, { once: true });
+    }
+
+    // Expose for integration/testing
+    window.__GRUESOME_ARCADE__ = window.__GRUESOME_ARCADE__ || {};
+    window.__GRUESOME_ARCADE__.audio = audioHub;
+
+    // ---------- Renderer ----------
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      alpha: true,
+      powerPreference: "high-performance"
+    });
+    // Header badge is small; allow higher DPR to keep text/shapes crisp.
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 3));
+    // Keep canvas CSS sizing controlled by CSS (100% of #app) so the
+    // full-screen -> header shrink animation stays visually seamless.
+    renderer.setSize(window.innerWidth, window.innerHeight, false);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.05;
+    renderer.domElement.classList.add('gaWebgl');
+    root.appendChild(renderer.domElement);
+
+    // ---------- Scene / Camera ----------
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x00020a, 0.012);
+
+    // Metallic materials (gunmetal outline) need something to reflect.
+    // RoomEnvironment gives a lightweight, procedural environment map.
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    pmrem.dispose();
+
+    const ZOOM_MIN = 6.2;
+    const ZOOM_MAX = 26.0; // "zoom all the way out" default
+
+    // Dashboard header target (requested size)
+    const HEADER_W = 240;
+    const HEADER_H = 80;
+    let isHeaderMode = false;
+    let headerTargetZoom = ZOOM_MAX;
+    let headerSpeedMult = 1.0;
+    // Make the 3D title fill a bit more of the 240x80 header without relying on
+    // parent iframe scaling (which can blur). Lower zoom => larger title.
+    const HEADER_ZOOM_MULT = 0.82;
+    // We keep two title variants:
+    // - Curved (access page)
+    // - Straight (header badge)
+    const titleFitCurved = { size: new THREE.Vector3(), center: new THREE.Vector3(), ready: false };
+    const titleFitStraight = { size: new THREE.Vector3(), center: new THREE.Vector3(), ready: false };
+    let activeTitleFit = titleFitCurved;
+
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.05, 600);
+    camera.position.set(0, 0.25, ZOOM_MAX);
+
+    // ---------- Lights ----------
+    const key = new THREE.DirectionalLight(0x9ff7ff, 1.15);
+    key.position.set(5, 6, 6);
+    scene.add(key);
+
+    const rim = new THREE.DirectionalLight(0xa855f7, 0.65);
+    rim.position.set(-6, 2, -4);
+    scene.add(rim);
+
+    const fill = new THREE.AmbientLight(0x2dd4bf, 0.12);
+    scene.add(fill);
+
+    // ---------- Post (Bloom) ----------
+    const composer = new EffectComposer(renderer);
+    composer.addPass(new RenderPass(scene, camera));
+
+    const bloomPass = new UnrealBloomPass(
+      new THREE.Vector2(window.innerWidth, window.innerHeight),
+      0.85,
+      0.55,
+      0.12
+    );
+    composer.addPass(bloomPass);
+
+    let bloomEnabled = true;
+
+    // ---------- Starfield ----------
+    function makeStarLayer(count, zSpan, radius, sizeBase, speed, colorMode = 0) {
+      const geo = new THREE.BufferGeometry();
+      const positions = new Float32Array(count * 3);
+      const sizes = new Float32Array(count);
+      const colors = new Float32Array(count * 3);
+
+      const colA = new THREE.Color(0x7dd3fc);
+      const colB = new THREE.Color(0xa78bfa);
+      const colC = new THREE.Color(0x22d3ee);
+      const colD = new THREE.Color(0xf472b6);
+
+      for (let i = 0; i < count; i++) {
+        const i3 = i * 3;
+        const t = Math.random() * Math.PI * 2;
+        const r = radius * Math.pow(Math.random(), 0.55);
+        const x = Math.cos(t) * r;
+        const y = (Math.random() - 0.5) * radius * 0.65;
+        const z = (Math.random() * zSpan) - (zSpan * 0.5);
+
+        positions[i3 + 0] = x;
+        positions[i3 + 1] = y;
+        positions[i3 + 2] = z;
+
+        sizes[i] = sizeBase * (0.6 + Math.random() * 1.6);
+
+        let c = colA.clone();
+        if (colorMode === 1) {
+          const pick = Math.random();
+          if (pick < 0.50) c = colA.clone();
+          else if (pick < 0.78) c = colB.clone();
+          else if (pick < 0.94) c = colC.clone();
+          else c = colD.clone();
+        } else {
+          c.lerp(colB, Math.random() * 0.25);
+        }
+        c.multiplyScalar(0.75 + Math.random() * 0.4);
+
+        colors[i3 + 0] = c.r;
+        colors[i3 + 1] = c.g;
+        colors[i3 + 2] = c.b;
+      }
+
+      geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+      geo.setAttribute("aSize", new THREE.BufferAttribute(sizes, 1));
+      geo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+
+      const mat = new THREE.ShaderMaterial({
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+        vertexColors: true,
+        uniforms: {
+          uTime: { value: 0 },
+          uPixelRatio: { value: Math.min(window.devicePixelRatio || 1, 3) },
+          uBaseSize: { value: 1.0 },
+          uSpeed: { value: speed },
+          uZSpan: { value: zSpan }
+        },
+        vertexShader: `
+          uniform float uTime;
+          uniform float uPixelRatio;
+          uniform float uBaseSize;
+          uniform float uSpeed;
+          uniform float uZSpan;
+          attribute float aSize;
+          varying vec3 vColor;
+
+          void main() {
+            vColor = color;
+            vec3 p = position;
+
+            float z = p.z + (uTime * uSpeed);
+            z = mod(z + (uZSpan * 0.5), uZSpan) - (uZSpan * 0.5);
+            p.z = z;
+
+            vec4 mvPosition = modelViewMatrix * vec4(p, 1.0);
+            gl_Position = projectionMatrix * mvPosition;
+
+            float depth = clamp(1.0 - (-mvPosition.z / 80.0), 0.15, 1.25);
+            gl_PointSize = aSize * uBaseSize * uPixelRatio * (9.0 * depth) / max(0.6, -mvPosition.z);
+          }
+        `,
+        fragmentShader: `
+          varying vec3 vColor;
+          void main() {
+            vec2 uv = gl_PointCoord.xy - vec2(0.5);
+            float d = length(uv);
+            float core = smoothstep(0.20, 0.0, d);
+            float halo = smoothstep(0.55, 0.18, d);
+            float a = core * 0.95 + halo * 0.45;
+            vec3 col = vColor * (core * 1.35 + halo * 0.75);
+            gl_FragColor = vec4(col, a);
+          }
+        `
+      });
+
+      const points = new THREE.Points(geo, mat);
+      points.userData = { mat };
+      return points;
+    }
+
+    const starsFar = makeStarLayer(1400, 220, 65, 1.0, 8.5, 0);
+    const starsNear = makeStarLayer(900, 120, 40, 1.25, 18.0, 1);
+
+    starsFar.position.z = -40;
+    starsNear.position.z = -20;
+
+    scene.add(starsFar);
+    scene.add(starsNear);
+
+    // ---------- Warp streaks ----------
+    function makeStreaks(count, zSpan, radius) {
+      const positions = new Float32Array(count * 3);
+      const colors = new Float32Array(count * 3);
+
+      const c1 = new THREE.Color(0x22d3ee);
+      const c2 = new THREE.Color(0xa78bfa);
+
+      for (let i = 0; i < count; i++) {
+        const i3 = i * 3;
+        const t = Math.random() * Math.PI * 2;
+        const r = radius * Math.pow(Math.random(), 0.45);
+
+        positions[i3 + 0] = Math.cos(t) * r;
+        positions[i3 + 1] = (Math.random() - 0.5) * radius * 0.35;
+        positions[i3 + 2] = (Math.random() * zSpan) - (zSpan * 0.5);
+
+        const c = c1.clone().lerp(c2, Math.random() * 0.6).multiplyScalar(0.55 + Math.random() * 0.35);
+        colors[i3 + 0] = c.r;
+        colors[i3 + 1] = c.g;
+        colors[i3 + 2] = c.b;
+      }
+
+      const mat = new THREE.LineBasicMaterial({
+        vertexColors: true,
+        transparent: true,
+        opacity: 0.55,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      });
+
+      const lines = [];
+      for (let i = 0; i < count; i++) {
+        const i3 = i * 3;
+        const g = new THREE.BufferGeometry();
+        const p = new Float32Array(6);
+        p[0] = positions[i3 + 0];
+        p[1] = positions[i3 + 1];
+        p[2] = positions[i3 + 2];
+        p[3] = positions[i3 + 0];
+        p[4] = positions[i3 + 1];
+        p[5] = positions[i3 + 2] - (0.8 + Math.random() * 3.4);
+        g.setAttribute("position", new THREE.BufferAttribute(p, 3));
+
+        const c = new Float32Array(6);
+        c[0] = colors[i3 + 0]; c[1] = colors[i3 + 1]; c[2] = colors[i3 + 2];
+        c[3] = colors[i3 + 0]; c[4] = colors[i3 + 1]; c[5] = colors[i3 + 2];
+        g.setAttribute("color", new THREE.BufferAttribute(c, 3));
+
+        const ln = new THREE.Line(g, mat);
+        ln.userData = {
+          x: positions[i3 + 0],
+          y: positions[i3 + 1],
+          z: positions[i3 + 2],
+          len: 0.8 + Math.random() * 3.4,
+          zSpan
+        };
+        lines.push(ln);
+        scene.add(ln);
+      }
+      return lines;
+    }
+
+    let warpEnabled = true;
+    const streaks = makeStreaks(220, 140, 28);
+
+    // ---------- 3D Title (Extruded) ----------
+    // NOTE: Some sci-fi fonts/CDN subsets omit the "ø" glyph. To guarantee a real
+    // "o-with-slash" in 3D, we render "gruesome" and physically add the slash.
+    const TITLE_UI = "gruesøme's arcade";
+
+    // Bend geometry on the X axis into a gentle arc (marquee look)
+    function bendTextGeometry(geometry, radius) {
+      const pos = geometry.attributes.position;
+      const v = new THREE.Vector3();
+      for (let i = 0; i < pos.count; i++) {
+        v.fromBufferAttribute(pos, i);
+        const theta = v.x / radius;
+        const s = Math.sin(theta);
+        const c = Math.cos(theta);
+        const x = s * radius;
+        const z = v.z + (c - 1) * radius;
+        pos.setXYZ(i, x, v.y, z);
+      }
+      pos.needsUpdate = true;
+      geometry.computeVertexNormals();
+    }
+
+    function loadFontFromTTF(url) {
+      return new Promise((resolve, reject) => {
+        const loader = new TTFLoader();
+        loader.load(
+          url,
+          (json) => {
+            try {
+              // TTFLoader output matches the typeface JSON format FontLoader understands
+              const fl = new FontLoader();
+              resolve(fl.parse(json));
+            } catch (e) {
+              reject(e);
+            }
+          },
+          undefined,
+          (err) => reject(err)
+        );
+      });
+    }
+
+    function loadFontFromTypefaceJSON(url) {
+      return new Promise((resolve, reject) => {
+        const loader = new FontLoader();
+        loader.load(url, resolve, undefined, (err) => reject(err));
+      });
+    }
+
+    const titleGroup = new THREE.Group();
+    titleGroup.position.set(0, 0.05, 0);
+    scene.add(titleGroup);
+
+    // Two title variants:
+    // - Curved: used on the access page
+    // - Straight: used for the 240x80 header badge (no curvature)
+    const titleCurvedGroup = new THREE.Group();
+    const titleStraightGroup = new THREE.Group();
+    titleGroup.add(titleCurvedGroup);
+    titleGroup.add(titleStraightGroup);
+
+    const titleVariants = {
+      curved: { group: titleCurvedGroup, mats: null, outline: null, glowBase: 0.16 },
+      straight: { group: titleStraightGroup, mats: null, outline: null, glowBase: 0.16 }
+    };
+
+    // Active refs (used by the pulse/bloom loop)
+    let activeTitleKey = (MODE === 'header') ? 'straight' : 'curved';
+    let titleFrontMat = null;
+    let titleBackMat = null;
+    let titleGlowMat = null;
+    let titleOutlineMat = null;
+    let titleOutlineTubes = null;
+
+    // Final accent requested: r122 g154 b159 (#7a9a9f)
+    const accentColor = new THREE.Color('#7a9a9f');
+
+    function applyAccentToMaterials(mats){
+      const front = mats?.front;
+      const backMat = mats?.back;
+      const glowMat = mats?.glow;
+      // Front: bright face + neon emissive
+      if (front) {
+        const face = accentColor.clone().lerp(new THREE.Color(0xffffff), 0.68);
+        front.color.copy(face);
+        front.emissive.copy(accentColor);
+      }
+      // Back: slightly shifted hue for depth
+      if (backMat) {
+        const back = accentColor.clone();
+        back.offsetHSL(0.12, -0.15, -0.18);
+        backMat.color.copy(back.clone().lerp(new THREE.Color(0x111827), 0.35));
+        backMat.emissive.copy(back);
+      }
+      // Glow: same accent
+      if (glowMat) {
+        glowMat.color.copy(accentColor);
+      }
+    }
+
+    // Title crossfade (curved -> straight) for a seamless ENTER -> header transition.
+    const titleFade = {
+      curved: (MODE === 'header') ? 0 : 1,
+      straight: (MODE === 'header') ? 1 : 0
+    };
+    const titleMorph = { active: false, t0: 0, dur: 950 };
+
+    function setActiveTitle(key){
+      const k = (key === 'straight') ? 'straight' : 'curved';
+      activeTitleKey = k;
+      const v = titleVariants[k];
+      titleFrontMat = v?.mats?.front || null;
+      titleBackMat = v?.mats?.back || null;
+      titleGlowMat = v?.mats?.glow || null;
+      titleOutlineMat = v?.mats?.outline || null;
+      titleOutlineTubes = v?.outline || null;
+      activeTitleFit = (k === 'straight') ? titleFitStraight : titleFitCurved;
+    }
+
+    function startTitleMorphToStraight(durationMs = 950){
+      if (titleMorph.active) return;
+      titleMorph.active = true;
+      titleMorph.t0 = performance.now();
+      titleMorph.dur = Math.max(300, Number(durationMs) || 950);
+      // Ensure both variants are drawable during the crossfade.
+      titleCurvedGroup.visible = true;
+      titleStraightGroup.visible = true;
+      // Start from the current values (normally 1/0).
+      titleFade.curved = Math.max(0, Math.min(1, titleFade.curved));
+      titleFade.straight = Math.max(0, Math.min(1, titleFade.straight));
+    }
+
+    function finishTitleMorphToStraight(){
+      titleMorph.active = false;
+      titleFade.curved = 0;
+      titleFade.straight = 1;
+      titleCurvedGroup.visible = false;
+      titleStraightGroup.visible = true;
+      setActiveTitle('straight');
+    }
+
+    function setMatFade(mat, fade){
+      if (!mat) return;
+      const f = Math.max(0, Math.min(1, fade));
+      mat.opacity = f;
+      const shouldTrans = f < 0.999;
+      if (mat.transparent !== shouldTrans) {
+        mat.transparent = shouldTrans;
+        mat.needsUpdate = true;
+      }
+      const shouldDW = !shouldTrans;
+      if (mat.depthWrite !== shouldDW) {
+        mat.depthWrite = shouldDW;
+        mat.needsUpdate = true;
+      }
+    }
+
+    async function buildTitle() {
+      // Primary: Orbitron TTF via Fontsource CDN (sci-fi)
+      const orbitronTTF = "https://cdn.jsdelivr.net/fontsource/fonts/orbitron@latest/latin-800-normal.ttf";
+      // Fallback: Three.js bundled typeface (guaranteed to load)
+      const fallbackTypeface = "https://unpkg.com/three@0.160.0/examples/fonts/helvetiker_bold.typeface.json";
+
+      let font;
+      try {
+        font = await loadFontFromTTF(orbitronTTF);
+      } catch (e) {
+        console.warn("Orbitron TTF failed; falling back to Helvetiker.", e);
+        font = await loadFontFromTypefaceJSON(fallbackTypeface);
+      }
+
+      // More "full 3D" title: thicker extrusion + richer bevel
+      const size = 1.24;
+      const depth = 0.46;
+      const textOpts = {
+        font,
+        size,
+        height: depth,
+        curveSegments: 22,
+        bevelEnabled: true,
+        bevelThickness: 0.065,
+        bevelSize: 0.048,
+        bevelOffset: 0,
+        bevelSegments: 8
+      };
+
+      // --- Outline edge extraction ---
+      // Goal: a clean metallic outline that does NOT draw lines across the curved
+      // front faces.
+      //
+      // Fix: extract ONLY edges shared by a CAP face (materialIndex=0) and a SIDE
+      // face (materialIndex=1). This yields perimeter edges only (including inner
+      // holes), removing the noisy lines on the front face.
+      const OUTLINE_EPS = 1e-4;
+
+      function qKey(x, y, z) {
+        const qx = Math.round(x / OUTLINE_EPS);
+        const qy = Math.round(y / OUTLINE_EPS);
+        const qz = Math.round(z / OUTLINE_EPS);
+        return qx + "," + qy + "," + qz;
+      }
+
+      function collectCapSideBoundarySegments(geometry) {
+        const posAttr = geometry?.attributes?.position;
+        if (!posAttr) return new Float32Array(0);
+
+        const pos = posAttr.array;
+        const idx = geometry.index ? geometry.index.array : null;
+
+        // Map each element (index entry if indexed; vertex if non-indexed) to a materialIndex.
+        const elemCount = idx ? idx.length : posAttr.count;
+        const matByElem = new Uint8Array(elemCount);
+        matByElem.fill(255);
+
+        if (geometry.groups && geometry.groups.length) {
+          for (const g of geometry.groups) {
+            const start = g.start | 0;
+            const end = Math.min(elemCount, start + (g.count | 0));
+            for (let i = start; i < end; i++) matByElem[i] = g.materialIndex;
+          }
+        }
+
+        // Edge map keyed by quantized endpoint positions to survive vertex duplication.
+        const edgeMap = new Map();
+        const triCount = idx ? ((idx.length / 3) | 0) : ((posAttr.count / 3) | 0);
+
+        const addEdgeIdx = (ia, ib, bit) => {
+          const ax = pos[ia * 3 + 0], ay = pos[ia * 3 + 1], az = pos[ia * 3 + 2];
+          const bx = pos[ib * 3 + 0], by = pos[ib * 3 + 1], bz = pos[ib * 3 + 2];
+          const ka = qKey(ax, ay, az);
+          const kb = qKey(bx, by, bz);
+          const key = (ka < kb) ? (ka + "|" + kb) : (kb + "|" + ka);
+          const e = edgeMap.get(key);
+          if (e) e.mask |= bit;
+          else edgeMap.set(key, { mask: bit, ax, ay, az, bx, by, bz });
+        };
+
+        for (let t = 0; t < triCount; t++) {
+          const base = t * 3;
+          const mi = matByElem[base];
+          const bit = (mi === 0) ? 1 : 2; // 1 = cap, 2 = side
+
+          let a, b, c;
+          if (idx) {
+            a = idx[base + 0];
+            b = idx[base + 1];
+            c = idx[base + 2];
+          } else {
+            a = base + 0;
+            b = base + 1;
+            c = base + 2;
+          }
+
+          addEdgeIdx(a, b, bit);
+          addEdgeIdx(b, c, bit);
+          addEdgeIdx(c, a, bit);
+        }
+
+        // Keep only edges that appear in BOTH cap and side triangles.
+        let count = 0;
+        for (const e of edgeMap.values()) if (e.mask === 3) count++;
+        const out = new Float32Array(count * 6);
+        let o = 0;
+        for (const e of edgeMap.values()) {
+          if (e.mask !== 3) continue;
+          out[o++] = e.ax; out[o++] = e.ay; out[o++] = e.az;
+          out[o++] = e.bx; out[o++] = e.by; out[o++] = e.bz;
+        }
+        return out;
+      }
+
+      function concatSegments(arrays) {
+        let total = 0;
+        for (const a of arrays) total += a.length;
+        const out = new Float32Array(total);
+        let off = 0;
+        for (const a of arrays) {
+          out.set(a, off);
+          off += a.length;
+        }
+        return out;
+      }
+
+      // Merge for consistent lighting/outline/glow
+      const merge = BufferGeometryUtils.mergeGeometries || BufferGeometryUtils.mergeBufferGeometries;
+      if (!merge) throw new Error("BufferGeometryUtils merge function unavailable.");
+
+      // 4x thicker visual outline (requested)
+      const outlineRadius = Math.max(0.03, size * 0.03);
+      const tubeGeo = new THREE.CylinderGeometry(outlineRadius, outlineRadius, 1, 6, 1, true);
+
+      const a = new THREE.Vector3();
+      const b = new THREE.Vector3();
+      const mid = new THREE.Vector3();
+      const dir = new THREE.Vector3();
+      const up = new THREE.Vector3(0, 1, 0);
+      const q = new THREE.Quaternion();
+      const m = new THREE.Matrix4();
+      const s = new THREE.Vector3();
+
+      const clearGroup = (g) => {
+        while (g.children.length) g.remove(g.children[0]);
+      };
+
+      function buildVariant(key, bendRadius){
+        const container = titleVariants[key]?.group;
+        if (!container) return;
+        clearGroup(container);
+
+        // Split text to guarantee the "ø" look
+        const leftGeo = new TextGeometry("grues", textOpts);
+        const oGeo = new TextGeometry("o", textOpts);
+        const rightGeo = new TextGeometry("me's arcade", textOpts);
+
+        leftGeo.computeBoundingBox();
+        oGeo.computeBoundingBox();
+        rightGeo.computeBoundingBox();
+
+        const w = (g) => (g.boundingBox.max.x - g.boundingBox.min.x);
+        const leftW = w(leftGeo);
+        const oW = w(oGeo);
+        const rightW = w(rightGeo);
+        const gap = size * 0.035;
+
+        // Lay out in a single coordinate space via geometry translations
+        leftGeo.translate(0, 0, 0);
+        oGeo.translate(leftW + gap, 0, 0);
+        rightGeo.translate(leftW + gap + oW + gap, 0, 0);
+
+        const totalW = leftW + gap + oW + gap + rightW;
+        const centerX = totalW / 2;
+        leftGeo.translate(-centerX, 0, 0);
+        oGeo.translate(-centerX, 0, 0);
+        rightGeo.translate(-centerX, 0, 0);
+
+        // Build the slash to make "ø" visually
+        oGeo.computeBoundingBox();
+        const oBox = oGeo.boundingBox;
+        const oW2 = (oBox.max.x - oBox.min.x);
+        const oH2 = (oBox.max.y - oBox.min.y);
+        const oCX = (oBox.min.x + oBox.max.x) / 2;
+        const oCY = (oBox.min.y + oBox.max.y) / 2;
+        const slashLen = Math.sqrt(oW2 * oW2 + oH2 * oH2) * 1.18;
+        // Make the slash thicker so the main accent color reads clearly.
+        const slashThick = Math.max(0.14, size * 0.125);
+        const slashDepth = depth * 0.85;
+
+        // Use ExtrudeGeometry (not BoxGeometry) so we can reliably drop the cap faces
+        // from the outline source (materialIndex=0 caps, materialIndex=1 sides).
+        const slashShape = new THREE.Shape();
+        const hw = slashLen * 0.5;
+        const hh = slashThick * 0.5;
+        slashShape.moveTo(-hw, -hh);
+        slashShape.lineTo( hw, -hh);
+        slashShape.lineTo( hw,  hh);
+        slashShape.lineTo(-hw,  hh);
+        slashShape.lineTo(-hw, -hh);
+
+        const slashGeo = new THREE.ExtrudeGeometry(slashShape, {
+          depth: slashDepth,
+          bevelEnabled: false,
+          steps: 1
+        });
+
+        // Slash direction: keep the v3.4 diagonal
+        slashGeo.rotateZ(Math.PI / 4);
+        // Nudge slightly forward so the slash reads clearly in the "ø"
+        slashGeo.translate(oCX, oCY, depth * 0.14);
+
+        // Optional marquee arc (disabled for the header badge)
+        const r = (typeof bendRadius === 'number' && Number.isFinite(bendRadius) && Math.abs(bendRadius) > 1e-3) ? bendRadius : 0;
+        if (r > 0) {
+          bendTextGeometry(leftGeo, r);
+          bendTextGeometry(oGeo, r);
+          bendTextGeometry(rightGeo, r);
+          bendTextGeometry(slashGeo, r);
+        }
+
+        const merged = merge([
+          leftGeo.toNonIndexed(),
+          oGeo.toNonIndexed(),
+          rightGeo.toNonIndexed(),
+          slashGeo.toNonIndexed()
+        ], false);
+
+        // Center the title geometry.
+        merged.computeBoundingBox();
+        const center = new THREE.Vector3();
+        merged.boundingBox.getCenter(center);
+        merged.translate(-center.x, -center.y, -center.z);
+        // Translate component source geometries too so outline extraction lines up.
+        leftGeo.translate(-center.x, -center.y, -center.z);
+        oGeo.translate(-center.x, -center.y, -center.z);
+        rightGeo.translate(-center.x, -center.y, -center.z);
+        slashGeo.translate(-center.x, -center.y, -center.z);
+
+        // Physical materials read as more "real" 3D (clearcoat + reflections)
+        const mats = {
+          front: new THREE.MeshPhysicalMaterial({
+            color: 0xe9fbff,
+            emissive: accentColor.clone(),
+            emissiveIntensity: 0.65,
+            metalness: 1.0,
+            roughness: 0.20,
+            clearcoat: 0.78,
+            clearcoatRoughness: 0.12,
+            envMapIntensity: 1.35
+          }),
+          back: new THREE.MeshPhysicalMaterial({
+            color: 0xa78bfa,
+            emissive: 0xa78bfa,
+            emissiveIntensity: 0.45,
+            metalness: 0.86,
+            roughness: 0.28,
+            clearcoat: 0.55,
+            clearcoatRoughness: 0.18,
+            envMapIntensity: 1.15
+          }),
+          glow: new THREE.MeshBasicMaterial({
+            color: accentColor.clone(),
+            transparent: true,
+            opacity: 0.16,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+          }),
+          outline: new THREE.MeshPhysicalMaterial({
+            color: 0x2b2f36,            // gunmetal
+            metalness: 1.0,
+            roughness: 0.28,
+            clearcoat: 0.65,
+            clearcoatRoughness: 0.18,
+            envMapIntensity: 1.25
+          })
+        };
+
+        // Front mesh
+        const mesh = new THREE.Mesh(merged, mats.front);
+        // Lift slightly to keep composition balanced with the thicker extrusion.
+        mesh.position.set(0, 0.20, 0.08);
+        container.add(mesh);
+
+        // Build metallic outline tubes ONLY around CAP↔SIDE boundary edges.
+        const segPos = concatSegments([
+          collectCapSideBoundarySegments(leftGeo),
+          collectCapSideBoundarySegments(oGeo),
+          collectCapSideBoundarySegments(rightGeo),
+          collectCapSideBoundarySegments(slashGeo)
+        ]);
+        const segCount = (segPos.length / 6) | 0;
+
+        const tubes = new THREE.InstancedMesh(tubeGeo, mats.outline, segCount);
+        tubes.frustumCulled = false;
+
+        for (let i = 0; i < segCount; i++) {
+          const o = i * 6;
+          a.fromArray(segPos, o);
+          b.fromArray(segPos, o + 3);
+          dir.subVectors(b, a);
+          const len = dir.length();
+          if (len < 1e-6) {
+            m.identity();
+            tubes.setMatrixAt(i, m);
+            continue;
+          }
+          mid.addVectors(a, b).multiplyScalar(0.5);
+          dir.multiplyScalar(1 / len);
+          q.setFromUnitVectors(up, dir);
+          s.set(1, len, 1);
+          m.compose(mid, q, s);
+          tubes.setMatrixAt(i, m);
+        }
+        tubes.instanceMatrix.needsUpdate = true;
+
+        // Match title transform + nudge outward slightly to avoid z-fighting
+        tubes.position.copy(mesh.position);
+        tubes.scale.copy(mesh.scale).multiplyScalar(1.002);
+        tubes.renderOrder = 999;
+        container.add(tubes);
+
+        // Back mesh (depth + dual-tone)
+        const backMesh = new THREE.Mesh(merged, mats.back);
+        backMesh.position.set(0, 0.18, -0.40);
+        backMesh.scale.set(1.01, 1.01, 1.01);
+        container.add(backMesh);
+
+        // Glow shell
+        const glowMesh = new THREE.Mesh(merged, mats.glow);
+        glowMesh.position.copy(mesh.position);
+        glowMesh.scale.set(1.03, 1.03, 1.03);
+        container.add(glowMesh);
+
+        // Apply final accent colors
+        applyAccentToMaterials(mats);
+
+        // Store variant refs
+        titleVariants[key].mats = mats;
+        titleVariants[key].outline = tubes;
+
+        // Cache bounds for header fit.
+        const fit = (key === 'straight') ? titleFitStraight : titleFitCurved;
+        try {
+          const bb = new THREE.Box3().setFromObject(container);
+          bb.getSize(fit.size);
+          bb.getCenter(fit.center);
+          fit.ready = true;
+        } catch {
+          fit.ready = false;
+        }
+      }
+
+      // Build both variants.
+      // - Curved: access page (unless curve is explicitly disabled)
+      // - Straight: header badge (always no curvature)
+      const curvedRadius = CURVE_ENABLED ? 18.0 : 0;
+      buildVariant('curved', curvedRadius);
+      buildVariant('straight', 0);
+
+      // Visibility + active refs
+      titleCurvedGroup.visible = (MODE !== 'header');
+      titleStraightGroup.visible = (MODE === 'header');
+      titleFade.curved = (MODE === 'header') ? 0 : 1;
+      titleFade.straight = (MODE === 'header') ? 1 : 0;
+      setActiveTitle(MODE === 'header' ? 'straight' : 'curved');
+
+      // Header-only mode: lock rendering/camera sizing once the title exists.
+      if (MODE === 'header') {
+        window.setTimeout(() => {
+          try { enableHeaderMode(); } catch { /* ignore */ }
+        }, 0);
+      }
+    }
+
+    buildTitle().catch((e) => {
+      console.error(e);
+      showBootError("3D text failed to load/render.\n" + (e?.message || String(e)));
+    });
+
+    // ---------- Header collapse (post-ENTER) ----------
+    // After the user presses ENTER, the whole scene smoothly shrinks into a
+    // 240x80 dashboard header, matching the requested dashboard header size.
+    function computeFitZoom(aspect, fit = activeTitleFit){
+      const f = fit || activeTitleFit;
+      if (!f?.ready) return ZOOM_MAX;
+      const fov = THREE.MathUtils.degToRad(camera.fov);
+      const h = Math.max(0.01, f.size.y);
+      const w = Math.max(0.01, f.size.x);
+      const fitH = (h * 0.5) / Math.tan(fov / 2);
+      const fitW = (w * 0.5) / (Math.tan(fov / 2) * Math.max(0.01, aspect));
+      // Margin so glow + outline don't clip at small sizes.
+      // Slightly tighter than v3.4 so the header badge fills more of 240x80.
+      const d = Math.max(fitH, fitW) * 1.15;
+      return d + f.size.z * 1.25;
+    }
+
+    function enableHeaderMode(){
+      if (isHeaderMode) return;
+
+      // Finalize the straight, non-curved header title.
+      // If the morph is still running, this safely snaps it to the end state.
+      try { finishTitleMorphToStraight(); } catch { /* ignore */ }
+
+      isHeaderMode = true;
+      headerSpeedMult = 0.42;
+      warpEnabled = false;
+
+      // Fit camera for a wide header aspect ratio (240x80 = 3.0).
+      const aspect = HEADER_W / HEADER_H;
+      // Always fit using the straight title variant.
+      headerTargetZoom = clamp(computeFitZoom(aspect, titleFitStraight) * HEADER_ZOOM_MULT, ZOOM_MIN, ZOOM_MAX);
+      targetYaw = 0;
+      targetPitch = 0;
+      targetZoom = headerTargetZoom;
+      dragging = false;
+
+      // Recompute renderer/camera/composer sizes for crisp header rendering.
+      resize();
+    }
+
+    function collapseToHeader(){
+      if (document.body.classList.contains('is-header')) return;
+      document.body.classList.add('is-header');
+
+      // Start the curved->straight title transition immediately so it reads as
+      // a single continuous animation with the CSS shrink.
+      startTitleMorphToStraight(950);
+
+      // Begin easing the camera toward the header-fit zoom right away (keeps the
+      // title filling the shrinking container smoothly).
+      const aspect = HEADER_W / HEADER_H;
+      headerTargetZoom = clamp(computeFitZoom(aspect, titleFitStraight) * HEADER_ZOOM_MULT, ZOOM_MIN, ZOOM_MAX);
+      targetYaw = 0;
+      targetPitch = 0;
+      targetZoom = headerTargetZoom;
+      dragging = false;
+
+      // Wait for the CSS shrink transition to mostly complete, then snap
+      // the renderer/camera to the exact header resolution.
+      // We keep WebGL running so the header is the *real* 3D title.
+      window.setTimeout(enableHeaderMode, 980);
+    }
+
+    // --- 240x80 Dashboard Header Starfield (2D canvas) ---
+    const dashHeaderStars = document.getElementById('dashHeaderStars');
+    let dashStarsRunning = false;
+
+    function startDashHeaderStars(){
+      if (dashStarsRunning) return;
+      if (!dashHeaderStars) return;
+      const ctx = dashHeaderStars.getContext('2d', { alpha: true });
+      if (!ctx) return;
+
+      dashStarsRunning = true;
+
+      const ACC_R = 122, ACC_G = 154, ACC_B = 159;
+      const DPR_MAX = 2;
+      let dpr = Math.min(window.devicePixelRatio || 1, DPR_MAX);
+
+      function resizeBadgeCanvas(){
+        dpr = Math.min(window.devicePixelRatio || 1, DPR_MAX);
+        dashHeaderStars.width = Math.floor(HEADER_W * dpr);
+        dashHeaderStars.height = Math.floor(HEADER_H * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.fillStyle = 'rgba(0,0,0,1)';
+        ctx.fillRect(0, 0, HEADER_W, HEADER_H);
+      }
+      resizeBadgeCanvas();
+
+      const stars = [];
+      const COUNT = 220;
+      for (let i = 0; i < COUNT; i++) {
+        stars.push({
+          x: (Math.random() * 2 - 1),
+          y: (Math.random() * 2 - 1) * 0.65,
+          z: Math.random() * 0.95 + 0.05,
+          p: Math.random(),
+          a: Math.random()
+        });
+      }
+
+      let burst = 0.10;
+      let last = performance.now();
+
+      function respawn(s){
+        s.x = (Math.random() * 2 - 1);
+        s.y = (Math.random() * 2 - 1) * 0.65;
+        s.z = 1.0;
+        s.p = Math.random();
+        s.a = Math.random();
+      }
+
+      function frame(now){
+        if (!dashStarsRunning) return;
+        requestAnimationFrame(frame);
+        const dt = Math.min(40, now - last) / 1000;
+        last = now;
+
+        // Trailing fade for a sleek warp feel.
+        ctx.fillStyle = 'rgba(0,0,0,0.32)';
+        ctx.fillRect(0, 0, HEADER_W, HEADER_H);
+
+        const cx = HEADER_W * 0.5;
+        const cy = HEADER_H * 0.5;
+        const scale = 92;
+        const baseSpeed = 0.55;
+        const sp = baseSpeed + burst;
+        burst *= Math.pow(0.001, dt);
+
+        for (let i = 0; i < stars.length; i++) {
+          const s = stars[i];
+          const z0 = s.z;
+          s.z -= dt * 0.85 * sp * (1.0 + s.p * 1.35);
+          if (s.z <= 0.05) { respawn(s); continue; }
+
+          const x0 = cx + (s.x / z0) * scale;
+          const y0 = cy + (s.y / z0) * scale;
+          const x1 = cx + (s.x / s.z) * scale;
+          const y1 = cy + (s.y / s.z) * scale;
+
+          if (x1 < -20 || x1 > HEADER_W + 20 || y1 < -20 || y1 > HEADER_H + 20) {
+            respawn(s);
+            continue;
+          }
+
+          const alpha = Math.min(1, (1.0 - s.z) * 0.95);
+          const isAccent = s.a > 0.84;
+          ctx.strokeStyle = isAccent
+            ? `rgba(${ACC_R},${ACC_G},${ACC_B},${0.80 * alpha})`
+            : `rgba(233,251,255,${0.58 * alpha})`;
+          ctx.lineWidth = isAccent ? 1.35 : 1.0;
+          ctx.beginPath();
+          ctx.moveTo(x0, y0);
+          ctx.lineTo(x1, y1);
+          ctx.stroke();
+        }
+      }
+
+      // Keep crisp if the devicePixelRatio changes (zoom / display move)
+      window.addEventListener('resize', () => {
+        if (!dashStarsRunning) return;
+        resizeBadgeCanvas();
+      }, { passive: true });
+
+      requestAnimationFrame(frame);
+    }
+
+    // --- Dash header hover typing (audio + typewriter) ---
+    const dashHeaderEl = document.getElementById('dashHeader');
+    const dashHeaderText = dashHeaderEl?.querySelector('.dashHeader__text');
+    const DASH_HEADER_FULL = (dashHeaderText?.textContent || "gruesøme's arcade").trim();
+
+    function createTypewriter({ el, fullText, msPerChar = 28, classTarget = null, className = 'is-typing', onStart, onChar, onDone, onStop }){
+      let i = 0;
+      let t = 0;
+      let active = false;
+      const text = String(fullText ?? '');
+
+      const stop = ({ finalize = true } = {}) => {
+        if (!active) return;
+        active = false;
+        if (t) { window.clearTimeout(t); t = 0; }
+        if (finalize && el) {
+          el.textContent = text;
+          // Keep 3D depth layer in sync (uses data-text)
+          el.setAttribute('data-text', el.textContent);
+        }
+        if (classTarget) classTarget.classList.remove(className);
+        try { onStop?.(); } catch {}
+      };
+
+      const start = ({ restart = true } = {}) => {
+        if (!el) return;
+        if (active) return;
+        active = true;
+        if (classTarget) classTarget.classList.add(className);
+        if (restart) {
+          i = 0;
+          el.textContent = '';
+          el.setAttribute('data-text', '');
+        }
+        try { onStart?.(); } catch {}
+
+        const step = () => {
+          if (!active) return;
+          i = Math.min(text.length, i + 1);
+          el.textContent = text.slice(0, i);
+          // Keep 3D depth layer in sync (uses data-text)
+          el.setAttribute('data-text', el.textContent);
+
+          const ch = text[i - 1];
+          try { onChar?.(ch, i); } catch {}
+
+          if (i >= text.length) {
+            active = false;
+            if (classTarget) classTarget.classList.remove(className);
+            try { onDone?.(); } catch {}
+            return;
+          }
+
+          // Double typing speed (v3.3): keep punctuation pauses but cut them in half.
+          const extra = (ch === '\n') ? 110 : (',.;:'.includes(ch) ? 30 : 0);
+          t = window.setTimeout(step, msPerChar + extra);
+        };
+        step();
+      };
+
+      return { start, stop, isActive: () => active };
+    }
+
+    const headerWriter = createTypewriter({
+      el: dashHeaderText,
+      fullText: DASH_HEADER_FULL,
+      msPerChar: 19,
+      classTarget: dashHeaderEl,
+      onChar: (ch) => {
+        // Per-character tick (sliced from assets/audio/typing.mp3).
+        // Slightly softer on spaces/newlines so it stays pleasant.
+        let v = 0.56;
+        if (ch === ' ') v = 0.28;
+        else if (ch === '\n') v = 0.16;
+        else if (',.;:'.includes(ch)) v = 0.40;
+        audioHub.typingTick({ volume: v, durMin: 0.040, durMax: 0.065, minIntervalMs: 10 });
+      }
+    });
+
+    if (dashHeaderEl) {
+      dashHeaderEl.addEventListener('mouseenter', () => headerWriter.start({ restart: true }), { passive: true });
+      dashHeaderEl.addEventListener('focusin', () => headerWriter.start({ restart: true }));
+      dashHeaderEl.addEventListener('mouseleave', () => headerWriter.stop({ finalize: true }), { passive: true });
+      dashHeaderEl.addEventListener('pointerdown', () => headerWriter.start({ restart: true }), { passive: true });
+    }
+
+    // (Removed) Curved rail + glass panel container.
+    // Text now floats cleanly in the starfield.
+
+    // ---------- Interaction ----------
+    let dragging = false;
+    let lastX = 0, lastY = 0;
+    let targetYaw = 0, targetPitch = 0;
+    let yaw = 0, pitch = 0;
+    let targetZoom = camera.position.z;
+
+    const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+    const el = renderer.domElement;
+
+    el.addEventListener("pointerdown", (e) => {
+      dragging = true;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      el.setPointerCapture?.(e.pointerId);
+    }, { passive: true });
+
+    el.addEventListener("pointermove", (e) => {
+      if (!dragging) return;
+      const dx = e.clientX - lastX;
+      const dy = e.clientY - lastY;
+      lastX = e.clientX;
+      lastY = e.clientY;
+
+      targetYaw += dx * 0.0026;
+      targetPitch += dy * 0.0020;
+      targetPitch = clamp(targetPitch, -0.35, 0.35);
+    }, { passive: true });
+
+    el.addEventListener("pointerup", () => { dragging = false; }, { passive: true });
+    el.addEventListener("pointercancel", () => { dragging = false; }, { passive: true });
+
+    el.addEventListener("wheel", (e) => {
+      targetZoom += e.deltaY * 0.0048;
+      targetZoom = clamp(targetZoom, ZOOM_MIN, ZOOM_MAX);
+    }, { passive: true });
+
+    let pulse = 0;
+    window.addEventListener("keydown", (e) => {
+      if (e.code === "Space") pulse = 1.0;
+      if (e.code === "KeyR") {
+        targetYaw = 0; targetPitch = 0; targetZoom = ZOOM_MAX;
+      }
+    });
+
+    // ---------- Animation ----------
+    const clock = new THREE.Clock();
+
+    // UI removed: no on-screen FPS / toggles.
+
+    function resize() {
+      const w = isHeaderMode ? HEADER_W : window.innerWidth;
+      const h = isHeaderMode ? HEADER_H : window.innerHeight;
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+
+      try { renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 3)); } catch {}
+      renderer.setSize(w, h, false);
+      composer.setSize(w, h);
+      bloomPass.setSize(w, h);
+
+      const pr = Math.min(window.devicePixelRatio || 1, 3);
+      starsFar.userData.mat.uniforms.uPixelRatio.value = pr;
+      starsNear.userData.mat.uniforms.uPixelRatio.value = pr;
+
+      // (No UI / no LineMaterial outlines)
+    }
+    window.addEventListener("resize", resize, { passive: true });
+
+    // ---------------- Wallet Connect + PoH Gate (Linea-only) ----------------
+    // NOTE: Dependency-free (no Web3Modal) so the page stays lightweight.
+    const walletDock = document.getElementById('walletDock');
+    const walletBtn = document.getElementById('walletBtn');
+    const walletLabel = document.getElementById('walletLabel');
+
+    const pohDock = document.getElementById('pohDock');
+    const pohBtn = document.getElementById('pohBtn');
+    const pohLabel = document.getElementById('pohLabel');
+    const pohHint = document.getElementById('pohHint');
+
+    // PoH retry extras (privacy bubble + verify link)
+    const pohExtras = document.getElementById('pohExtras');
+    const verifyBtn = document.getElementById('verifyBtn');
+    const privacyPill = document.getElementById('privacyPill');
+    const privacyBody = document.getElementById('privacyBody');
+    const privacyLinkRow = document.getElementById('privacyLinkRow');
+    const privacyTipEl = privacyPill?.querySelector('.privacyTip');
+
+
+    const enterDock = document.getElementById('enterDock');
+    const enterBtn = document.getElementById('enterBtn');
+    const enterLabel = document.getElementById('enterLabel');
+
+    // Gate / connect flow should not run in header-only mode.
+    const GATE_ENABLED = (MODE === 'access') && UI_ENABLED;
+
+    // Proof of Humanity (PoH) endpoints (Linea)
+    // Provided format: https://.../poh/v2/YOUR_ADDRESS
+    const POH_API = "https://poh-api.linea.build/poh/v2/YOUR_ADDRESS";
+    const POH_SIGNER_API = "https://poh-signer-api.linea.build/poh/v2/YOUR_ADDRESS";
+
+    // Starfield boost for the connect transition
+    const STAR_SPEED_FAR_BASE = starsFar.userData.mat.uniforms.uSpeed.value;
+    const STAR_SPEED_NEAR_BASE = starsNear.userData.mat.uniforms.uSpeed.value;
+    const WARP_SPEED_BASE = 26.0;
+    let speedBoost = 1.0;
+    let boostEndMs = 0;
+
+    function startSpeedBoost(mult = 3.0, seconds = 3.0){
+      speedBoost = mult;
+      boostEndMs = performance.now() + Math.max(0, seconds) * 1000;
+    }
+
+    function updateBoost(){
+      if (speedBoost !== 1.0 && performance.now() >= boostEndMs) {
+        speedBoost = 1.0;
+      }
+    }
+
+    const TIMING = {
+      // If the user already connected previously (eth_accounts), auto-run the
+      // wallet success animation after this delay so the flow doesn't stall.
+      WALLET_AUTO_DELAY_MS: 850,
+      // Hyperspeed duration during the wallet -> PoH transition.
+      CONNECT_HYPER_MS: 3000,
+      // Make the PoH check feel intentional even if it returns immediately.
+      POH_MIN_CHECK_MS: 900,
+      // Hold the "Access Granted" state briefly before swapping to ENTER.
+      POH_RESULT_HOLD_MS: 950,
+      // Slight gap between PoH gate fly-away and ENTER fly-in.
+      ENTER_IN_DELAY_MS: 220,
+      // Network timeouts
+      CONNECT_TIMEOUT_MS: 20000,
+      POH_TIMEOUT_MS: 10000
+    };
+
+    const sleep = (ms) => new Promise((r) => window.setTimeout(r, Math.max(0, ms)));
+
+    function setPohText(t){
+      pohLabel.textContent = t;
+    }
+
+    function setPohHint(t){
+      pohHint.textContent = t || "";
+    }
+
+    function showPohExtras(show){
+      if (!pohExtras) return;
+      // When retry UI expands, keep the whole PoH block comfortably below the 3D title.
+      if (pohDock) pohDock.classList.toggle('has-extras', !!show);
+      if (show) {
+        pohExtras.classList.add('is-in');
+        pohExtras.setAttribute('aria-hidden', 'false');
+      } else {
+        pohExtras.classList.remove('is-in');
+        pohExtras.setAttribute('aria-hidden', 'true');
+        if (privacyPill) privacyPill.classList.remove('is-open');
+      }
+    }
+
+    function setEnterText(t){
+      enterLabel.textContent = t;
+    }
+
+    function showEnterGate(){
+      if (!enterDock) return;
+      enterDock.style.display = '';
+      enterDock.classList.remove('is-flyaway');
+      enterDock.classList.add('is-in');
+      enterDock.setAttribute('aria-hidden', 'false');
+      enterBtn.disabled = false;
+      enterBtn.classList.add('is-armed');
+      setEnterText('ENTER');
+    }
+
+    function flyAwayPohDock(){
+      if (!pohDock) return;
+      pohDock.classList.remove('is-in');
+      pohDock.classList.add('is-flyaway');
+      pohBtn.disabled = true;
+      pohDock.style.pointerEvents = 'none';
+      window.setTimeout(() => {
+        pohDock.style.display = 'none';
+      }, 820);
+    }
+
+    function flyAwayEnterDock(){
+      if (!enterDock) return;
+      enterDock.classList.remove('is-in');
+      enterDock.classList.add('is-flyaway');
+      enterDock.style.pointerEvents = 'none';
+      window.setTimeout(() => {
+        enterDock.style.display = 'none';
+      }, 860);
+    }
+
+    // PoH gate is hidden until after wallet connection.
+    pohBtn.disabled = true;
+    setPohHint("");
+    if (pohDock) pohDock.style.display = 'none';
+    showPohExtras(false);
+
+    // ENTER gate is hidden until PoH is verified.
+    enterBtn.disabled = true;
+    enterBtn.classList.remove('is-armed');
+    if (enterDock) enterDock.style.display = 'none';
+
+    // Gate phase: wallet -> transition -> poh -> verified/denied -> enter
+    let gatePhase = "wallet";
+
+    // Privacy bubble: no scroll + typewriter + typing audio (loops until done).
+    // built by gruesøme
+    // c2lnOjpidWlsdCBieSBncnVlc8O4bWU=
+    const PRIVACY_TEXT = `I understand you care about your privacy, just like I do.
+
+Good news: Proof of Humanity (PoH) liveness verification is private and benefits you and the entire network — similar to how a secure, non-custodial wallet benefits you.
+
+• The biometric scan does NOT store your face anywhere.
+• It simply verifies you are human and unique.
+• Then it permanently attaches “true” to your wallet address and generates a unique, unintelligible hash that states it.
+
+No captchas. No pictures of traffic lights. No usernames or passwords. No 2-step verification codes.
+
+Just connect your secure wallet and go — one of the ways Web3 is evolving beyond Web2.
+
+If you want to learn more, open the Linea docs link below.
+
+Search terms: dead internet theory • rational privacy in crypto`;
+
+
+    const privacyWriter = createTypewriter({
+      el: privacyBody,
+      fullText: PRIVACY_TEXT,
+      msPerChar: 8,
+      classTarget: privacyTipEl,
+      className: 'is-typing',
+      onStart: () => {
+        if (privacyLinkRow) {
+          privacyLinkRow.classList.remove('is-on');
+          privacyLinkRow.setAttribute('aria-hidden', 'true');
+        }
+      },
+      onChar: (ch) => {
+        // Per-character tick. Slightly softer on whitespace.
+        let v = 0.58;
+        if (ch === ' ') v = 0.30;
+        else if (ch === '\n') v = 0.18;
+        else if (',.;:'.includes(ch)) v = 0.42;
+        // Per-character tick: allow very fast typing without skipping ticks.
+        audioHub.typingTick({ volume: v, durMin: 0.030, durMax: 0.055, minIntervalMs: 0 });
+      },
+      onDone: () => {
+        if (privacyLinkRow) {
+          privacyLinkRow.classList.add('is-on');
+          privacyLinkRow.setAttribute('aria-hidden', 'false');
+        }
+      },
+      onStop: () => {
+        if (privacyLinkRow) {
+          privacyLinkRow.classList.remove('is-on');
+          privacyLinkRow.setAttribute('aria-hidden', 'true');
+        }
+      }
+    });
+
+    // Desktop hover shows the bubble via CSS; we also start/stop typing for polish.
+    (function bindPrivacyPill(){
+      if (!GATE_ENABLED) return;
+      if (!privacyPill) return;
+
+      const open = () => {
+        privacyPill.classList.add('is-open');
+        privacyWriter.start({ restart: true });
+      };
+
+      const close = ({ finalize = true } = {}) => {
+        privacyPill.classList.remove('is-open');
+        privacyWriter.stop({ finalize });
+        if (!finalize && privacyBody) privacyBody.textContent = '';
+      };
+
+      privacyPill.addEventListener('mouseenter', () => {
+        if (privacyPill.classList.contains('is-open')) return;
+        privacyWriter.start({ restart: true });
+      }, { passive: true });
+
+      privacyPill.addEventListener('mouseleave', () => {
+        if (privacyPill.classList.contains('is-open')) return;
+        privacyWriter.stop({ finalize: false });
+        if (privacyBody) privacyBody.textContent = '';
+      }, { passive: true });
+
+      // Mobile/touch: tap to lock open/close
+      privacyPill.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (privacyPill.classList.contains('is-open')) {
+          close({ finalize: true });
+        } else {
+          open();
+        }
+      });
+
+      document.addEventListener('click', () => close({ finalize: true }));
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') close({ finalize: true });
+      });
+    })();
+
+    // Verify Here button audio hook
+    if (GATE_ENABLED && verifyBtn) {
+      verifyBtn.addEventListener('click', () => {
+        audioHub.playSfx('verify_press');
+      }, { passive: true });
+    }
+
+
+    const LINEA = {
+      chainId: '0xe708', // 59144
+      chainName: 'Linea',
+      nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+      rpcUrls: ['https://rpc.linea.build'],
+      blockExplorerUrls: ['https://lineascan.build']
+    };
+
+    const shortAddr = (a) => (a && a.length > 10) ? `${a.slice(0, 6)}…${a.slice(-4)}` : (a || '');
+
+    let walletAccount = null;
+    let walletBusy = false;
+
+    function setWalletText(t){
+      walletLabel.textContent = t;
+    }
+
+    function setWalletConnected(isConnected){
+      walletBtn.classList.toggle('is-connected', !!isConnected);
+    }
+
+    function getEth(){
+      return window.ethereum || null;
+    }
+
+    async function getChainId(){
+      const eth = getEth();
+      if (!eth?.request) return null;
+      try {
+        return await eth.request({ method: 'eth_chainId' });
+      } catch {
+        return null;
+      }
+    }
+
+    async function switchToLinea(){
+      const eth = getEth();
+      if (!eth?.request) throw new Error('No EIP-1193 wallet detected.');
+
+      const current = await getChainId();
+      if (current && current.toLowerCase() === LINEA.chainId) return;
+
+      try {
+        await eth.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: LINEA.chainId }]
+        });
+      } catch (err) {
+        // 4902: unknown chain
+        if (err?.code === 4902 || err?.data?.originalError?.code === 4902) {
+          await eth.request({ method: 'wallet_addEthereumChain', params: [LINEA] });
+          await eth.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: LINEA.chainId }] });
+          return;
+        }
+        throw err;
+      }
+    }
+
+    async function connectWallet(){
+      const eth = getEth();
+      if (!eth?.request) {
+        // Keep it simple: navigate to MetaMask download if no wallet is present.
+        window.location.href = 'https://metamask.io/download/';
+        return false;
+      }
+
+      setWalletText('Switching…');
+      await switchToLinea();
+
+      setWalletText('Connecting…');
+      const accounts = await eth.request({ method: 'eth_requestAccounts' });
+      walletAccount = accounts?.[0] || null;
+
+      if (!walletAccount) {
+        setWalletConnected(false);
+        setWalletText('Connect Wallet');
+        return false;
+      }
+
+      setWalletConnected(true);
+      setWalletText(shortAddr(walletAccount));
+
+      return true;
+    }
+
+    function flyAwayWalletDock(){
+      if (!walletDock) return;
+      walletDock.classList.add('is-flyaway');
+      walletBtn.disabled = true;
+      walletBtn.style.pointerEvents = 'none';
+      // Remove from layout after the animation so it doesn't steal clicks
+      window.setTimeout(() => {
+        walletDock.style.display = 'none';
+      }, 980);
+    }
+
+    function showPohGate(){
+      if (!pohDock) return;
+      pohDock.style.display = '';
+      pohDock.classList.remove('is-flyaway');
+      pohDock.classList.add('is-in');
+      pohDock.setAttribute('aria-hidden', 'false');
+      pohBtn.disabled = false;
+    }
+
+    function beginConnectToPohSequence(){
+      if (!walletAccount) return;
+      if (gatePhase !== 'wallet') return;
+      gatePhase = 'transition';
+
+      // Hyperspeed burst
+      startSpeedBoost(3.0, TIMING.CONNECT_HYPER_MS / 1000);
+      // Audio hook: wallet connect speed-up animation
+      audioHub.playSfx('wallet_warp');
+      audioHub.fadeBgmTo(0.26, 220);
+      window.setTimeout(() => audioHub.restoreBgm(700), Math.max(0, TIMING.CONNECT_HYPER_MS - 160));
+      // Fly the wallet button away
+      flyAwayWalletDock();
+
+      // After the boost, fly in the PoH gate and run the check.
+      window.setTimeout(() => {
+        gatePhase = 'poh';
+        showPohGate();
+        checkPoH().catch((e) => {
+          console.error(e);
+          setPohText('Retry');
+          setPohHint('PoH check failed. Try again.');
+          pohBtn.disabled = false;
+        });
+      }, TIMING.CONNECT_HYPER_MS);
+    }
+
+    async function fetchWithTimeout(url, timeoutMs = 9000){
+      const ctrl = new AbortController();
+      const t = window.setTimeout(() => ctrl.abort(), timeoutMs);
+      try {
+        const res = await fetch(url, {
+          method: 'GET',
+          mode: 'cors',
+          credentials: 'omit',
+          cache: 'no-store',
+          headers: { 'accept': 'application/json, text/plain;q=0.9, */*;q=0.1' },
+          signal: ctrl.signal
+        });
+        const rawText = await res.text();
+        let data = rawText;
+        try { data = JSON.parse(rawText); } catch { /* keep text */ }
+        return { ok: res.ok, status: res.status, url, data };
+      } finally {
+        window.clearTimeout(t);
+      }
+    }
+
+    function boolFromAny(v){
+      if (typeof v === 'boolean') return v;
+      if (typeof v === 'number') return v !== 0;
+      if (typeof v !== 'string') return null;
+      const s = v.trim().toLowerCase();
+      if (['true','yes','y','ok','pass','verified','success'].includes(s)) return true;
+      if (['false','no','n','fail','failed','denied','unverified','0'].includes(s)) return false;
+      return null;
+    }
+
+    function readVerified(obj){
+      if (obj == null) return null;
+      if (typeof obj !== 'object') {
+        return boolFromAny(obj);
+      }
+      const keys = ['verified','isVerified','isPoh','poh','human','isHuman','pass','success','ok'];
+      for (const k of keys) {
+        if (Object.prototype.hasOwnProperty.call(obj, k)) {
+          const b = boolFromAny(obj[k]);
+          if (b !== null) return b;
+        }
+      }
+      // Common nesting patterns
+      const nests = ['data','result','payload','response'];
+      for (const n of nests) {
+        if (obj[n] && typeof obj[n] === 'object') {
+          const b = readVerified(obj[n]);
+          if (b !== null) return b;
+        }
+      }
+      return null;
+    }
+
+    function readSignature(obj){
+      if (!obj) return null;
+      if (typeof obj === 'string') {
+        const s = obj.trim();
+        if (s.startsWith('0x') && s.length > 40) return s;
+        return null;
+      }
+      if (typeof obj !== 'object') return null;
+      const keys = ['signature','sig'];
+      for (const k of keys) {
+        const v = obj[k];
+        if (typeof v === 'string' && v.startsWith('0x') && v.length > 40) return v;
+      }
+      const nests = ['data','result','payload','response'];
+      for (const n of nests) {
+        const s = readSignature(obj[n]);
+        if (s) return s;
+      }
+      return null;
+    }
+
+    function pohCacheKey(addr){
+      return `gruesomeArcade.pohCache.${String(addr || '').toLowerCase()}`;
+    }
+
+    function readPohCache(addr){
+      try {
+        const raw = localStorage.getItem(pohCacheKey(addr));
+        if (!raw) return null;
+        const v = JSON.parse(raw);
+        if (!v || typeof v !== 'object') return null;
+        // 7 days TTL
+        if (typeof v.ts === 'number' && (Date.now() - v.ts) > (7 * 24 * 60 * 60 * 1000)) return null;
+        return v;
+      } catch {
+        return null;
+      }
+    }
+
+    function writePohCache(addr, payload){
+      try {
+        localStorage.setItem(pohCacheKey(addr), JSON.stringify({ ...payload, ts: Date.now() }));
+      } catch { /* ignore */ }
+    }
+
+    function scheduleEnterGate(){
+      window.setTimeout(() => {
+        if (gatePhase !== 'verified') return;
+        gatePhase = 'enter';
+        flyAwayPohDock();
+        window.setTimeout(() => {
+          if (gatePhase !== 'enter') return;
+          showEnterGate();
+        }, TIMING.ENTER_IN_DELAY_MS);
+      }, TIMING.POH_RESULT_HOLD_MS);
+    }
+
+    async function checkPoH(){
+      if (!walletAccount) {
+        setPohText('Check PoH');
+        setPohHint('Connect a wallet first.');
+        return;
+      }
+
+      // Keep the flow deterministic:
+      // - Always show the gate
+      // - Always show a "Checking" state for at least POH_MIN_CHECK_MS
+      const started = performance.now();
+      const addr = walletAccount;
+      const cache = readPohCache(addr);
+
+      pohBtn.disabled = true;
+      showPohExtras(false);
+      setPohText('Checking…');
+      setPohHint('Verifying Proof of Humanity…');
+
+      let verifiedA = null;
+      let signature = null;
+      let signerOk = false;
+      let usedCache = false;
+
+      try {
+        const urlA = POH_API.replace('YOUR_ADDRESS', addr);
+        const a = await fetchWithTimeout(urlA, TIMING.POH_TIMEOUT_MS);
+        verifiedA = readVerified(a.data);
+      } catch {
+        verifiedA = null;
+      }
+
+      // Only fall back to cache when the API result is unavailable/ambiguous.
+      if (verifiedA == null && cache && cache.verified === true) {
+        verifiedA = true;
+        usedCache = true;
+      }
+
+      if (verifiedA !== true) {
+        const elapsed = performance.now() - started;
+        if (elapsed < TIMING.POH_MIN_CHECK_MS) await sleep(TIMING.POH_MIN_CHECK_MS - elapsed);
+
+        const explicitFalse = (verifiedA === false);
+        // Audio hook: PoH not found
+        if (explicitFalse) audioHub.playSfx('poh_not_found');
+        gatePhase = explicitFalse ? 'denied' : 'poh';
+        setPohText('Retry');
+        setPohHint(explicitFalse ? 'PoH not found for this wallet.' : 'PoH check unavailable. Retry.');
+        showPohExtras(true);
+        pohBtn.disabled = false;
+
+        window.__GRUESOME_ARCADE__ = window.__GRUESOME_ARCADE__ || {};
+        window.__GRUESOME_ARCADE__.poh = { verified: false, signature: null };
+        if (explicitFalse) writePohCache(addr, { verified: false, signature: null });
+        return;
+      }
+
+      // Fetch signer proof (plain text signature). If it fails, fall back to cached signature.
+      setPohHint('Verified. Fetching signed proof…');
+      try {
+        const urlS = POH_SIGNER_API.replace('YOUR_ADDRESS', addr);
+        const s = await fetchWithTimeout(urlS, TIMING.POH_TIMEOUT_MS);
+        signature = readSignature(s.data) || (typeof s.data === 'string' ? s.data.trim() : null);
+        signerOk = !!(signature && String(signature).startsWith('0x') && String(signature).length > 42);
+      } catch {
+        signerOk = false;
+      }
+
+      if ((!signerOk || !signature) && cache && typeof cache.signature === 'string' && cache.signature.startsWith('0x')) {
+        signature = cache.signature;
+        signerOk = true;
+        usedCache = true;
+      }
+
+      const elapsed = performance.now() - started;
+      if (elapsed < TIMING.POH_MIN_CHECK_MS) await sleep(TIMING.POH_MIN_CHECK_MS - elapsed);
+
+      if (!signerOk) {
+        gatePhase = 'poh';
+        setPohText('Retry');
+        setPohHint('Signer proof unavailable. Retry.');
+        showPohExtras(true);
+        pohBtn.disabled = false;
+        return;
+      }
+
+      gatePhase = 'verified';
+      showPohExtras(false);
+      // Audio hook: PoH access granted
+      audioHub.playSfx('poh_granted');
+      setPohText('Access Granted');
+      setPohHint('PoH verified. Welcome.');
+      pohBtn.disabled = false;
+
+      // Expose results for the next page(s) to consume.
+      window.__GRUESOME_ARCADE__ = window.__GRUESOME_ARCADE__ || {};
+      window.__GRUESOME_ARCADE__.wallet = { address: addr, chainId: LINEA.chainId };
+      window.__GRUESOME_ARCADE__.poh = { verified: true, signature };
+
+      try {
+        sessionStorage.setItem('gruesomeArcade.wallet', JSON.stringify(window.__GRUESOME_ARCADE__.wallet));
+        sessionStorage.setItem('gruesomeArcade.poh', JSON.stringify(window.__GRUESOME_ARCADE__.poh));
+      } catch { /* ignore */ }
+
+      writePohCache(addr, { verified: true, signature });
+
+      // Auto-advance to ENTER without any additional user clicks.
+      // (The user still has to press ENTER to proceed.)
+      scheduleEnterGate();
+    }
+
+    async function refreshWalletState(){
+      const eth = getEth();
+      if (!eth?.request) {
+        walletAccount = null;
+        setWalletConnected(false);
+        setWalletText('Connect Wallet');
+        return;
+      }
+
+      const chainId = await getChainId();
+      if (!chainId || chainId.toLowerCase() !== LINEA.chainId) {
+        walletAccount = null;
+        setWalletConnected(false);
+        setWalletText('Switch to Linea');
+        return;
+      }
+
+      // If already authorized, show connected address
+      const accounts = await eth.request({ method: 'eth_accounts' });
+      walletAccount = accounts?.[0] || null;
+      if (walletAccount) {
+        setWalletConnected(true);
+        setWalletText(shortAddr(walletAccount));
+      } else {
+        setWalletConnected(false);
+        setWalletText('Connect Wallet');
+      }
+    }
+
+    // Button click
+    if (GATE_ENABLED && walletBtn) walletBtn.addEventListener('click', async () => {
+      if (walletBusy) return;
+      // Audio hook: wallet connect press
+      audioHub.unlock();
+      audioHub.playSfx('wallet_press');
+      walletBusy = true;
+      try {
+        const chainId = await getChainId();
+        if (chainId && chainId.toLowerCase() === LINEA.chainId) {
+          const ok = await connectWallet();
+          if (ok) beginConnectToPohSequence();
+        } else {
+          setWalletText('Switching…');
+          await switchToLinea();
+          await refreshWalletState();
+        }
+      } catch (e) {
+        console.error(e);
+        // Keep UI clean: revert to a safe label
+        setWalletConnected(false);
+        setWalletText('Connect Wallet');
+      } finally {
+        walletBusy = false;
+      }
+    }, { passive: true });
+
+    // PoH gate button click (retry / manual check)
+    if (GATE_ENABLED && pohBtn) pohBtn.addEventListener('click', () => {
+      // If verified, you can hook this to route to the next page.
+      // For now, it re-checks (or re-validates) PoH.
+      // Audio hook: Retry pressed (only when the button label is "Retry").
+      // Note: audio will play automatically once the page has been unlocked
+      // by a user gesture (click/tap/keydown).
+      try {
+        audioHub.unlock();
+        const lab = (pohLabel?.textContent || '').trim().toLowerCase();
+        if (lab === 'retry') audioHub.playSfx('retry_press');
+      } catch { /* ignore */ }
+
+      if (gatePhase === 'verified') return;
+      checkPoH().catch(() => void 0);
+    }, { passive: true });
+
+    // ENTER button click (final gate)
+    function safeNextUrl(){
+      try {
+        const p = new URLSearchParams(location.search);
+        const next = p.get('next');
+        if (!next) return null;
+        // Only allow same-origin relative targets to avoid open redirects
+        if (next.startsWith('/') || next.startsWith('./') || next.startsWith('../')) return next;
+        return null;
+      } catch {
+        return null;
+      }
+    }
+
+    if (GATE_ENABLED && enterBtn) enterBtn.addEventListener('click', () => {
+      if (gatePhase !== 'enter') return;
+      gatePhase = 'entering';
+
+      // Audio hook: ENTER pressed
+      audioHub.playSfx('enter_press');
+      audioHub.fadeBgmTo(0.18, 180);
+
+      enterBtn.disabled = true;
+      enterBtn.classList.remove('is-armed');
+      setEnterText('Entering…');
+
+      // One last punch of speed for the "jump"
+      startSpeedBoost(4.2, 1.8);
+      window.setTimeout(() => audioHub.restoreBgm(900), 1500);
+      flyAwayEnterDock();
+
+      // Collapse the scene into the 240x80 dashboard header.
+      // This plays even when auto-advance timers are in use.
+      window.setTimeout(collapseToHeader, 180);
+
+      const detail = {
+        wallet: window.__GRUESOME_ARCADE__?.wallet || null,
+        poh: window.__GRUESOME_ARCADE__?.poh || null
+      };
+      try {
+        window.dispatchEvent(new CustomEvent('gruesomeArcade:enter', { detail }));
+      } catch { /* ignore */ }
+
+      const next = safeNextUrl();
+      if (next) {
+        window.setTimeout(() => {
+          location.href = next;
+        }, 1450);
+      }
+    }, { passive: true });
+
+    // 3D tilt micro-interaction
+    function setup3DTilt(btn){
+      const face = btn?.querySelector?.('.walletBtn__face');
+      if (!btn || !face) return;
+
+      function setTilt(rx, ry){
+        btn.style.setProperty('--rx', rx + 'deg');
+        btn.style.setProperty('--ry', ry + 'deg');
+      }
+
+      btn.addEventListener('pointermove', (e) => {
+        const r = btn.getBoundingClientRect();
+        const nx = (e.clientX - r.left) / Math.max(1, r.width);
+        const ny = (e.clientY - r.top) / Math.max(1, r.height);
+        // Slightly stronger tilt to showcase the thicker 3D chassis.
+        const ry = (nx - 0.5) * 20;
+        const rx = -(ny - 0.5) * 16;
+        setTilt(rx.toFixed(2), ry.toFixed(2));
+      }, { passive: true });
+
+      btn.addEventListener('pointerleave', () => setTilt(0, 0), { passive: true });
+    }
+
+    if (GATE_ENABLED) {
+      setup3DTilt(walletBtn);
+      setup3DTilt(pohBtn);
+      setup3DTilt(verifyBtn);
+      setup3DTilt(enterBtn);
+    }
+
+    // Provider events
+    (function bindProviderEvents(){
+      if (!GATE_ENABLED) return;
+      const eth = getEth();
+      if (!eth?.on) return;
+
+      eth.on('accountsChanged', (accounts) => {
+        walletAccount = accounts?.[0] || null;
+        refreshWalletState().catch(() => void 0);
+      });
+      eth.on('chainChanged', () => {
+        refreshWalletState().catch(() => void 0);
+      });
+    })();
+
+    // Initial state
+    (async function initGateFlow(){
+      if (!GATE_ENABLED) return;
+      await refreshWalletState();
+
+      // If the user is already connected on Linea, don't stall on the wallet screen.
+      // We still show the wallet step and play the full animation sequence.
+      if (walletAccount && gatePhase === 'wallet') {
+        window.setTimeout(() => {
+          if (walletAccount && gatePhase === 'wallet') beginConnectToPohSequence();
+        }, TIMING.WALLET_AUTO_DELAY_MS);
+      }
+    })().catch(() => void 0);
+
+    let webglRunning = true;
+
+    function animate() {
+      if (!webglRunning) return;
+      const dt = Math.min(clock.getDelta(), 0.033);
+      const t = clock.elapsedTime;
+
+      // Hyperspeed burst during wallet->PoH transition
+      updateBoost();
+      starsFar.userData.mat.uniforms.uSpeed.value = STAR_SPEED_FAR_BASE * speedBoost * headerSpeedMult;
+      starsNear.userData.mat.uniforms.uSpeed.value = STAR_SPEED_NEAR_BASE * speedBoost * headerSpeedMult;
+
+      yaw += (targetYaw - yaw) * (1 - Math.pow(0.001, dt));
+      pitch += (targetPitch - pitch) * (1 - Math.pow(0.001, dt));
+      camera.position.z += (targetZoom - camera.position.z) * (1 - Math.pow(0.001, dt));
+
+      if (isHeaderMode) {
+        // Lock the view for readability at 240x80, while still easing zoom.
+        camera.position.x = 0;
+        camera.position.y = 0.20;
+        camera.lookAt(0, 0.08, 0);
+      } else {
+        camera.position.x = Math.sin(yaw) * 0.85;
+        camera.position.y = 0.25 + pitch * 1.2;
+        camera.lookAt(0, 0.05, 0);
+      }
+
+      starsFar.userData.mat.uniforms.uTime.value = t;
+      starsNear.userData.mat.uniforms.uTime.value = t;
+
+      if (isHeaderMode) {
+        // Subtle drift in header mode (keeps it alive without changing composition).
+        starsFar.rotation.y = Math.sin(t * 0.14) * 0.03;
+        starsNear.rotation.y = Math.sin(t * 0.18) * 0.05;
+        starsFar.rotation.x = Math.sin(t * 0.11) * 0.015;
+        starsNear.rotation.x = Math.sin(t * 0.16) * 0.020;
+      } else {
+        starsFar.rotation.y = yaw * 0.05;
+        starsNear.rotation.y = yaw * 0.10;
+        starsFar.rotation.x = pitch * 0.03;
+        starsNear.rotation.x = pitch * 0.05;
+      }
+
+      for (let i = 0; i < streaks.length; i++) {
+        const ln = streaks[i];
+        ln.visible = warpEnabled;
+        if (!warpEnabled) continue;
+
+        ln.userData.z += dt * (WARP_SPEED_BASE * speedBoost);
+        if (ln.userData.z > ln.userData.zSpan * 0.5) {
+          ln.userData.z = -ln.userData.zSpan * 0.5;
+        }
+
+        const arr = ln.geometry.attributes.position.array;
+        arr[2] = ln.userData.z;
+        arr[5] = ln.userData.z - ln.userData.len * (1.0 + pulse * 1.2);
+        ln.geometry.attributes.position.needsUpdate = true;
+
+        ln.position.x = -camera.position.x * 0.15;
+        ln.position.y = -camera.position.y * 0.08;
+      }
+
+      // Title morph: curved -> straight while collapsing into the 240x80 header.
+      if (titleMorph.active) {
+        const p = Math.min(1, (performance.now() - titleMorph.t0) / Math.max(1, titleMorph.dur));
+        // Smoothstep easing for a seamless blend.
+        const e = p * p * (3 - 2 * p);
+        titleFade.curved = 1 - e;
+        titleFade.straight = e;
+        if (p >= 1) finishTitleMorphToStraight();
+      }
+
+      // Keep both variants alive during the blend.
+      // Outside the blend, only the active one renders.
+      if (!titleMorph.active) {
+        titleCurvedGroup.visible = titleFade.curved > 0.001;
+        titleStraightGroup.visible = titleFade.straight > 0.001;
+      }
+
+      const bob = isHeaderMode ? 0 : (Math.sin(t * 1.2) * 0.06);
+      titleGroup.position.y = 0.05 + bob;
+
+      pulse = Math.max(0, pulse - dt * 2.1);
+      const glowPulse = 1.0 + pulse * 0.65;
+      const frontEm = 0.65 * glowPulse;
+      const backEm = 0.45 * (1.0 + pulse * 0.85);
+      const glowOp = 0.16 * (1.0 + pulse * 0.75);
+
+      // Apply pulse + fade to both title variants.
+      for (const k of ['curved','straight']) {
+        const v = titleVariants[k];
+        const mats = v?.mats;
+        if (!mats) continue;
+        const fade = titleFade[k] ?? (k === activeTitleKey ? 1 : 0);
+
+        setMatFade(mats.front, fade);
+        setMatFade(mats.back, fade);
+        setMatFade(mats.outline, fade);
+
+        if (mats.front) mats.front.emissiveIntensity = frontEm;
+        if (mats.back) mats.back.emissiveIntensity = backEm;
+        if (mats.glow) mats.glow.opacity = glowOp * fade;
+      }
+
+      bloomPass.strength = bloomEnabled ? (0.85 * (1.0 + pulse * 0.35)) : 0.0;
+
+      if (bloomEnabled) composer.render();
+      else renderer.render(scene, camera);
+
+      requestAnimationFrame(animate);
+    }
+
+    requestAnimationFrame(animate);
   </script>
 </body>
 </html>
