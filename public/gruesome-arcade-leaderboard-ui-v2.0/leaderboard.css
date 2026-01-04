@@ -623,3 +623,114 @@
 .gaLB__hover.is-show .gaLB__hoverInner::after{
   opacity: .12;
 }
+
+/* ------------------------------------------------------------
+   v2.1 UI fixes (iteration 3.4)
+   - reconcile HTML/JS with existing row/podium styles
+   - add metric meta bar + footer styling
+   built by gruesøme
+   SIG_ENC_XOR5A_HEX=382f33362e7a38237a3d282f3f29a2373f
+------------------------------------------------------------ */
+
+.gaLB__metaBar{
+  margin: 10px 0 12px 0;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: linear-gradient(180deg, rgba(0,0,0,.18), rgba(0,0,0,.10));
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 12px;
+}
+
+.gaLB__metaPill{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(34,211,238,.22);
+  background: rgba(34,211,238,.10);
+  color: var(--gaLB-t);
+  font-size: 11px;
+  white-space:nowrap;
+}
+
+.gaLB__metaText{
+  flex:1;
+  text-align:right;
+  color: var(--gaLB-d);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.gaLB__foot{
+  margin-top: 12px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255,255,255,.10);
+}
+
+.gaLB__row--head{
+  cursor: default;
+  background: rgba(255,255,255,.03);
+  border: 1px solid rgba(255,255,255,.10);
+}
+
+.gaLB__row--head:hover{
+  transform:none;
+  border-color: rgba(255,255,255,.10);
+  background: rgba(255,255,255,.03);
+  box-shadow:none;
+}
+
+.gaLB__row--head .gaLB__rowRank,
+.gaLB__row--head .gaLB__rowName,
+.gaLB__row--head .gaLB__rowAddr,
+.gaLB__row--head .gaLB__rowValue{
+  color: var(--gaLB-d);
+  font-weight: 800;
+}
+
+.gaLB__podiumPlayer{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+}
+
+.gaLB__podiumAvatar{
+  width: 38px;
+  height: 38px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.16);
+  background: rgba(255,255,255,.06);
+  overflow:hidden;
+  box-shadow: 0 0 0 1px rgba(0,0,0,.22);
+  flex: 0 0 auto;
+}
+
+.gaLB__podiumAvatar img{
+  width:100%;
+  height:100%;
+  object-fit: cover;
+  image-rendering: pixelated;
+}
+
+.gaLB__podiumTag{
+  font-size: 10px;
+  color: var(--gaLB-m);
+}
+
+@media (prefers-reduced-motion: reduce){
+  .gaLB__segBtn,
+  .gaLB__btn,
+  .gaLB__row,
+  .gaLB__hover{
+    transition:none !important;
+  }
+  .gaLB__hoverInner::after{ animation:none !important; }
+}
