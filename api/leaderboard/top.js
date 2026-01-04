@@ -6,6 +6,7 @@ import * as K from '../_lib/keys.js';
 import * as Sec from '../_lib/security.js';
 import * as G from '../_lib/games.js';
 import * as U from '../_lib/user.js';
+import * as ME from '../_lib/metricEngine.js';
 
 function intParam(q, k, d) {
   const v = q && q[k] != null ? Number(q[k]) : NaN;
@@ -17,45 +18,95 @@ function sParam(q, k, d) {
   return v || d;
 }
 
+function ymdUtc() {
+  const d = new Date();
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(d.getUTCDate()).padStart(2, '0');
+  return String(y) + m + day;
+}
+
+function weekKeyUtc() {
+  // ISO week approx (UTC). Good enough for leaderboard grouping + weekly epochs.
+  const d = new Date();
+  const date = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+  const dayNum = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  const weekNo = Math.ceil(((date - yearStart) / 86400000 + 1) / 7);
+  const y = date.getUTCFullYear();
+  const w = String(weekNo).padStart(2, '0');
+  return String(y) + 'W' + w;
+}
+
+function resolveGame(gameId) {
+  if (!gameId) return null;
+  if (typeof G.byId === 'function') return G.byId(gameId);
+  if (G.GAMES && typeof G.GAMES === 'object') return G.GAMES[gameId] || null;
+  return null;
+}
+
+function resolveMetric(game, metricId) {
+  const list = Array.isArray(game?.metrics) ? game.metrics : [];
+  const fallback = { id: 'score', label: 'Score', dir: 'desc', format: 'int', src: 'score' };
+
+  if (!list.length) return { meta: fallback, list: [fallback] };
+
+  const want = String(metricId || '').trim();
+  const defId = String(game?.defaultMetric || '').trim();
+  const pick =
+    (want && list.find(m => String(m?.id || '') === want)) ||
+    (defId && list.find(m => String(m?.id || '') === defId)) ||
+    list[0] ||
+    fallback;
+
+  return { meta: pick, list };
+}
+
 export default async function handler(req, res) {
   try {
     if (req.method !== 'GET') return res.status(405).json({ error: 'method_not_allowed' });
 
-    const board = sParam(req.query, 'board', 'skill'); // skill | activity
-    const period = sParam(req.query, 'period', 'daily'); // daily | weekly | all
-    const eligible = intParam(req.query, 'eligible', 0) ? 1 : 0;
-    const limit = Math.min(200, Math.max(1, intParam(req.query, 'limit', 50)));
-    const gameId = sParam(req.query, 'gameId', '');
-    const metricId = sParam(req.query, 'metric', 'score');
+    const q = req.query || {};
+    const board = sParam(q, 'board', 'skill'); // skill|activity
+    const period = sParam(q, 'period', 'daily'); // daily|weekly|all
+    const eligible = String(sParam(q, 'eligible', '0')) === '1';
+    const limit = Math.max(1, Math.min(200, intParam(q, 'limit', 50)));
 
-    // Optional "you" enrichment (requires cookie session)
-    const address = (await Sec.getSessionAddress(req)).toLowerCase();
+    const address = String((await Sec.getSessionAddress(req)) || '').toLowerCase();
+    const canYou = Sec.isAddress(address);
 
     let key = '';
     let metricMeta = null;
-    let desc = true; // true -> higher is better
-    let canYou = Sec.isAddress(address);
 
     if (board === 'activity') {
-      if (period === 'weekly') key = K.actWeekly(K.utcWeekKey());
+      const ymd = ymdUtc();
+      const wk = weekKeyUtc();
+      if (period === 'weekly') key = K.actWeekly(wk);
       else if (period === 'all') key = K.actAll();
-      else key = K.actDaily(K.utcYmd());
+      else key = K.actDaily(ymd);
     } else {
-      const game = G.byId(gameId);
+      const gameId = String(sParam(q, 'gameId', '')).trim();
+      if (!gameId) return res.status(400).json({ error: 'missing_gameId' });
+
+      const game = resolveGame(gameId);
       if (!game) return res.status(400).json({ error: 'bad_game' });
 
-      const metric = (game.metrics || []).find(m => m.id === metricId) || (game.metrics || [])[0];
-      if (!metric) return res.status(400).json({ error: 'bad_metric' });
-      metricMeta = metric;
-      desc = metric.kind !== 'asc'; // asc => lower is better
+      const metricId = String(sParam(q, 'metric', '')).trim();
+      const resolved = resolveMetric(game, metricId);
+      metricMeta = resolved.meta;
 
-      if (period === 'weekly') key = K.lbWeeklyMetric(gameId, K.utcWeekKey(), metric.id, eligible);
-      else if (period === 'all') key = K.lbAllMetric(gameId, metric.id, eligible);
-      else key = K.lbDailyMetric(gameId, K.utcYmd(), metric.id, eligible);
+      const ymd = ymdUtc();
+      const wk = weekKeyUtc();
+      const mid = String(metricMeta?.id || 'score').trim() || 'score';
+
+      if (period === 'weekly') key = eligible ? K.lbWeeklyPaidMetric(gameId, mid, wk) : K.lbWeeklyMetric(gameId, mid, wk);
+      else if (period === 'all') key = eligible ? K.lbAllPaidMetric(gameId, mid) : K.lbAllMetric(gameId, mid);
+      else key = eligible ? K.lbDailyPaidMetric(gameId, mid, ymd) : K.lbDailyMetric(gameId, mid, ymd);
     }
 
-    // Fetch ZSET range
-    const range = desc ? await R.zrevrangeWithScores(key, 0, limit - 1) : await R.zrangeWithScores(key, 0, limit - 1);
+    // Fetch ZSET range (values are always stored "higher-is-better")
+    const range = await R.zrevrangeWithScores(key, 0, limit - 1);
 
     const entries = [];
     for (let i = 0; i < range.length; i++) {
@@ -65,19 +116,21 @@ export default async function handler(req, res) {
 
       let value = scoreEnc;
       if (board !== 'activity') {
-        // Decode values for asc metrics (stored as 1e15 - value)
-        if (metricMeta && metricMeta.kind === 'asc') value = 1e15 - scoreEnc;
+        value = ME.decode(metricMeta || { id: 'score', dir: 'desc' }, scoreEnc);
       }
 
       entries.push({
         rank: i + 1,
         address: addr,
-        score: Math.max(0, value),
+        score: Math.max(0, Math.floor(Number(value || 0))),
       });
     }
 
     // Enrich entries with public identity (nickname/avatar gated by PRO active + SBT locked)
-    const idMap = await U.getPublicIdentityMany(entries.map(e => e.address).concat(canYou ? [address] : []));
+    const wantAddrs = entries.map(e => e.address);
+    if (canYou) wantAddrs.push(address);
+    const idMap = await U.getPublicIdentityMany(wantAddrs);
+
     const entriesOut = entries.map(e => {
       const id = idMap[e.address] || {};
       return {
@@ -91,21 +144,19 @@ export default async function handler(req, res) {
 
     let you = null;
     if (canYou) {
-      let youEnc = desc ? await R.zrevrank(key, address) : await R.zrank(key, address);
+      const youEnc = await R.zrevrank(key, address);
       if (youEnc != null) {
         let youScoreEnc = await R.zscore(key, address);
         youScoreEnc = Number(youScoreEnc || 0);
 
         let youScore = youScoreEnc;
-        if (board !== 'activity') {
-          if (metricMeta && metricMeta.kind === 'asc') youScore = 1e15 - youScoreEnc;
-        }
+        if (board !== 'activity') youScore = ME.decode(metricMeta || { id: 'score', dir: 'desc' }, youScoreEnc);
 
         const id = idMap[address] || {};
         you = {
           rank: Number(youEnc) + 1,
           address,
-          score: Math.max(0, youScore),
+          score: Math.max(0, Math.floor(Number(youScore || 0))),
           displayName: id.displayName || U.shortAddr(address),
           nickname: id.nickname || null,
           avatarPng: id.avatarPng || null,

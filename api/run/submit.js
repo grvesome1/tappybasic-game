@@ -10,6 +10,7 @@ import { GAMES } from '../_lib/games.js';
 import { ipFromReq, enforce, rlKey } from '../_lib/rate.js';
 import { sameOrigin } from '../_lib/security.js';
 import { bump } from '../_lib/metrics.js';
+import * as ME from '../_lib/metricEngine.js';
 
 function calcXpEarned(score, runType) {
   const s = Math.max(0, Number(score || 0));
@@ -35,28 +36,6 @@ function weekKeyUtc() {
   return String(y) + 'W' + w;
 }
 
-function getMetricCfg(cfg, metricId) {
-  const list = Array.isArray(cfg?.metrics) ? cfg.metrics : [];
-  if (!metricId) return null;
-  return list.find((m) => String(m?.id || '') === String(metricId)) || null;
-}
-
-function normalizeMetrics(cfg) {
-  const list = Array.isArray(cfg?.metrics) ? cfg.metrics : [];
-  if (list.length) return list;
-  return [{ id: 'score', label: 'Score', kind: 'score', dir: 'desc', format: 'int', src: 'score', payoutWeight: 1.0 }];
-}
-
-function metricEncValue(metricCfg, { score, durationMs }) {
-  const src = String(metricCfg?.src || 'score');
-  let v = 0;
-  if (src === 'durationMs') v = Math.max(0, Math.floor(Number(durationMs || 0)));
-  else v = Math.max(0, Math.floor(Number(score || 0)));
-
-  const dir = String(metricCfg?.dir || 'desc');
-  const enc = dir === 'asc' ? -v : v;
-  return { value: v, enc };
-}
 
 export default async function handler(req, res) {
   try {
@@ -94,6 +73,15 @@ export default async function handler(req, res) {
     if (durationMs < Number(cfg.minDurationMs || 0)) return res.status(400).json({ error: 'duration_too_short' });
     if (durationMs > 60 * 60 * 1000) return res.status(400).json({ error: 'duration_too_long' });
 
+    // --- Metrics payload (optional) ---
+    // Games may submit a flexible `metrics` object; we validate/derive/clamp per game cfg.
+    const baseRun = { score, durationMs };
+    const metricsRaw = ME.parseIncomingMetrics(body, baseRun);
+    const metricsAll = ME.computeDerivedMetrics(metricsRaw, baseRun);
+    const projectedMetrics = ME.projectMetricsForGame(cfg, metricsAll, baseRun);
+    const metricsStored = ME.toValueMap(projectedMetrics);
+
+
     await U.ensureUser(address);
 
     const runKey = K.run(address, runId);
@@ -121,6 +109,7 @@ export default async function handler(req, res) {
     runRec.status = 'submitted';
     runRec.score = score;
     runRec.durationMs = durationMs;
+    runRec.metrics = metricsStored;
     runRec.submittedAt = new Date().toISOString();
     runRec.runType = finalRunType;
 
@@ -149,8 +138,7 @@ export default async function handler(req, res) {
 
     // --- Build leaderboard targets (best-of write) ---
     // We encode metric values so higher-is-better. For asc metrics, enc is negative.
-    const metrics = normalizeMetrics(cfg);
-
+    
     /** @type {{key:string, score:number, expireSec:number}} */
     const targets = [];
 
@@ -168,11 +156,12 @@ export default async function handler(req, res) {
       addTarget(K.lbWeeklyPaid(gameId, wk), score, EXP_WEEKLY);
     }
 
-    // Metric leaderboards
-    for (const m of metrics) {
+    // Metric leaderboards (encoded so higher-is-better; asc metrics are stored as negative)
+    for (const m of projectedMetrics) {
       const mid = String(m?.id || '').trim();
       if (!mid) continue;
-      const { enc } = metricEncValue(m, { score, durationMs });
+      const enc = Number(m?.enc || 0);
+      if (!Number.isFinite(enc)) continue;
 
       addTarget(K.lbAllMetric(gameId, mid), enc, 0);
       addTarget(K.lbDailyMetric(gameId, mid, ymd), enc, EXP_DAILY);
@@ -184,6 +173,7 @@ export default async function handler(req, res) {
         addTarget(K.lbWeeklyPaidMetric(gameId, mid, wk), enc, EXP_WEEKLY);
       }
     }
+
 
     // Fetch existing scores to do best-of updates without requiring Redis ZADD GT support.
     const existing = targets.length ? await R.pipeline(targets.map((t) => ['ZSCORE', t.key, addrLc])) : [];
@@ -211,6 +201,7 @@ export default async function handler(req, res) {
       durationMs,
       runType: finalRunType,
       xpEarned,
+      metrics: metricsStored,
     });
 
     const cmds = [
