@@ -20,8 +20,83 @@
   const getSession = typeof AD.getSession === 'function' ? AD.getSession : (() => ({ connected: false, address: null, pohVerified: false }));
   const getEpoch = typeof AD.getEpoch === 'function' ? AD.getEpoch : (() => ({}));
   const getCatalog = typeof AD.getCatalog === 'function' ? AD.getCatalog : (async () => null);
-  const claimDaily = typeof AD.claimDaily === 'function' ? AD.claimDaily : null;
-  const claimWeekly = typeof AD.claimWeekly === 'function' ? AD.claimWeekly : null;
+  const claimDaily = typeof AD.claimDaily === 'function' ? AD.claimDaily : fallbackClaimDaily;
+  const claimWeekly = typeof AD.claimWeekly === 'function' ? AD.claimWeekly : fallbackClaimWeekly;
+
+
+  // ---- claims (adapter optional) ----
+  async function postJson(url, body) {
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(body || {}),
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      const err = new Error(String((data && data.error) || `http_${r.status}`));
+      err.status = r.status;
+      err.data = data;
+      throw err;
+    }
+    return data;
+  }
+
+  async function fallbackClaim(kind) {
+    const isDaily = kind === 'daily';
+    const url = isDaily ? '/api/epoch/claim' : '/api/week/claim';
+    const label = isDaily ? 'Daily Claim' : 'Weekly Claim';
+
+    try {
+      if (isDaily) state._claimBusyDaily = true;
+      else state._claimBusyWeekly = true;
+      renderPayouts();
+      toast('Payouts', `${label}…`);
+
+      const data = await postJson(url, {});
+
+      if (isDaily) {
+        state._claimedOverrideDaily = true;
+        state._lastClaimYmd = String(data.ymd || state._lastClaimYmd || '');
+      } else {
+        state._claimedOverrideWeekly = true;
+        state._lastClaimYw = String(data.yw || state._lastClaimYw || '');
+      }
+
+      renderPayouts();
+
+      const amt = Number(data.amountUsd || 0) || 0;
+      if (amt > 0) toast('Payouts', `${label} success: ${fmtUsd(amt)}`);
+      else toast('Payouts', `${label}: nothing to claim`);
+      return data;
+    } catch (e) {
+      const status = Number(e && e.status) || 0;
+      const code = String((e && e.data && e.data.error) || (e && e.message) || 'error');
+
+      if (status === 401) toast('Payouts', 'Connect wallet to claim.');
+      else if (code === 'poh_required') toast('Payouts', 'POH verification required to claim.');
+      else if (status === 409 || code === 'already_claimed') {
+        if (isDaily) state._claimedOverrideDaily = true;
+        else state._claimedOverrideWeekly = true;
+        toast('Payouts', `${label}: already claimed.`);
+      } else if (status === 403 && code === 'bad_origin') toast('Payouts', 'Blocked by origin policy. Open the Arcade normally (no embedded cross-site).');
+      else toast('Payouts', `${label} failed (${code}).`);
+
+      renderPayouts();
+      return null;
+    } finally {
+      if (isDaily) state._claimBusyDaily = false;
+      else state._claimBusyWeekly = false;
+      renderPayouts();
+    }
+  }
+
+  async function fallbackClaimDaily() {
+    return fallbackClaim('daily');
+  }
+  async function fallbackClaimWeekly() {
+    return fallbackClaim('weekly');
+  }
 
   const root = document.querySelector('[data-ga-lb]');
   if (!root) {
@@ -243,6 +318,12 @@
 
   // ---------- state ----------
   const state = {
+    _claimedOverrideDaily: false,
+    _claimedOverrideWeekly: false,
+    _claimBusyDaily: false,
+    _claimBusyWeekly: false,
+    _lastClaimYmd: '',
+    _lastClaimYw: '',
     catalog: null,
     metricsLib: null,
 
@@ -608,6 +689,21 @@
   function renderPayouts() {
     const e = getEpoch() || {};
 
+    // Reset optimistic claim overrides when the target epoch changes (new day/week).
+    const curYmd = String((e.claimable && e.claimable.ymd) || e.lastSettledYmd || '');
+    const curYw = String((e.weekClaimable && e.weekClaimable.yw) || e.lastSettledYw || '');
+    if (curYmd && curYmd !== state._lastClaimYmd) {
+      state._lastClaimYmd = curYmd;
+      state._claimedOverrideDaily = false;
+      state._claimBusyDaily = false;
+    }
+    if (curYw && curYw !== state._lastClaimYw) {
+      state._lastClaimYw = curYw;
+      state._claimedOverrideWeekly = false;
+      state._claimBusyWeekly = false;
+    }
+
+
     // Next countdown based on selected period (weekly shows weekly countdown)
     const nextDailyMs = Number(e.nextPayoutAt || e.nextDailyPayoutAt || 0) || parseIsoMs(e.nextEpochAtUtc) || nextUtcMidnightMs();
     const nextWeeklyMs = Number(e.nextWeeklyPayoutAt || 0) || parseIsoMs(e.nextWeekAtUtc) || nextUtcMondayMs();
@@ -633,12 +729,12 @@
 
     // Button enablement based on claim state
     if (elClaimDailyBtn) {
-      const claimed = claimedFlag(e.claimable);
-      elClaimDailyBtn.disabled = !getSession().connected || claimed || dailyUsd <= 0 || !claimDaily;
+      const claimed = claimedFlag(e.claimable) || state._claimedOverrideDaily;
+      elClaimDailyBtn.disabled = !getSession().connected || claimed || state._claimBusyDaily || dailyUsd <= 0 || !claimDaily;
     }
     if (elClaimWeeklyBtn) {
-      const claimed = claimedFlag(e.weekClaimable);
-      elClaimWeeklyBtn.disabled = !getSession().connected || claimed || weeklyUsd <= 0 || !claimWeekly;
+      const claimed = claimedFlag(e.weekClaimable) || state._claimedOverrideWeekly;
+      elClaimWeeklyBtn.disabled = !getSession().connected || claimed || state._claimBusyWeekly || weeklyUsd <= 0 || !claimWeekly;
     }
   }
 
