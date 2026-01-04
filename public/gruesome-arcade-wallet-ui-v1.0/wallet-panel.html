@@ -58,6 +58,74 @@
       </div>
     </section>
 
+    <!-- Payouts -->
+    <section class="ga-card ga-span2" aria-label="Payouts">
+      <div class="ga-card__head">
+        <div class="ga-card__titleRow">
+          <h2 class="ga-h2">Payouts</h2>
+          <div class="ga-badge ga-badge--icon">
+            <svg class="ga-ico" aria-hidden="true"><use href="./assets/icons.svg#i-bolt"></use></svg>
+            <span>Daily + Weekly</span>
+          </div>
+        </div>
+        <p class="muted">Payouts are claim-based (mUSD). Daily resets at 00:00 UTC; weekly resets Monday 00:00 UTC.</p>
+      </div>
+
+      <div class="ga-payoutGrid" aria-label="Payout cards">
+        <article class="ga-payoutCard" aria-label="Daily payout">
+          <div class="ga-payoutCard__top">
+            <div>
+              <div class="ga-payoutCard__title">Daily</div>
+              <div class="ga-mini muted">Next: <span id="gaDailyNext">—</span></div>
+            </div>
+            <button class="ga-btn ga-btn--primary" id="gaBtnClaimDaily" type="button">Claim (Tx)</button>
+          </div>
+
+          <div class="ga-payoutCard__amtRow">
+            <div class="ga-mini muted">Claimable</div>
+            <div class="ga-payoutCard__amt"><span id="gaDailyAmount">—</span> <span class="muted">mUSD</span></div>
+            <div class="ga-mini muted" id="gaDailyKey">—</div>
+          </div>
+
+          <div class="ga-payoutCard__break" aria-label="Daily payout breakdown">
+            <div class="ga-break"><span class="muted">Total</span><span id="gaDailyTotal">—</span></div>
+            <div class="ga-break"><span class="muted">Skill</span><span id="gaDailySkill">—</span></div>
+            <div class="ga-break"><span class="muted">Activity</span><span id="gaDailyActivity">—</span></div>
+            <div class="ga-break"><span class="muted">PRO</span><span id="gaDailyPro">—</span></div>
+            <div class="ga-break"><span class="muted">Lottery</span><span id="gaDailyLottery">—</span></div>
+          </div>
+
+          <div class="ga-mini muted" id="gaDailyStatus">—</div>
+        </article>
+
+        <article class="ga-payoutCard" aria-label="Weekly payout">
+          <div class="ga-payoutCard__top">
+            <div>
+              <div class="ga-payoutCard__title">Weekly</div>
+              <div class="ga-mini muted">Next: <span id="gaWeeklyNext">—</span></div>
+            </div>
+            <button class="ga-btn ga-btn--primary" id="gaBtnClaimWeekly" type="button">Claim (Tx)</button>
+          </div>
+
+          <div class="ga-payoutCard__amtRow">
+            <div class="ga-mini muted">Claimable</div>
+            <div class="ga-payoutCard__amt"><span id="gaWeeklyAmount">—</span> <span class="muted">mUSD</span></div>
+            <div class="ga-mini muted" id="gaWeeklyKey">—</div>
+          </div>
+
+          <div class="ga-payoutCard__break" aria-label="Weekly payout breakdown">
+            <div class="ga-break"><span class="muted">Total</span><span id="gaWeeklyTotal">—</span></div>
+            <div class="ga-break"><span class="muted">Skill</span><span id="gaWeeklySkill">—</span></div>
+            <div class="ga-break"><span class="muted">Activity</span><span id="gaWeeklyActivity">—</span></div>
+            <div class="ga-break"><span class="muted">PRO</span><span id="gaWeeklyPro">—</span></div>
+            <div class="ga-break"><span class="muted">Lottery</span><span id="gaWeeklyLottery">—</span></div>
+          </div>
+
+          <div class="ga-mini muted" id="gaWeeklyStatus">—</div>
+        </article>
+      </div>
+    </section>
+
     <!-- Buy Credits -->
     <section class="ga-card ga-span1" aria-label="Buy Credits">
       <div class="ga-card__head">

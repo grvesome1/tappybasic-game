@@ -442,6 +442,14 @@
 
             <div class="card">
               <div class="inner">
+                <h3>Metrics</h3>
+                <div class="muted" id="playMetricsHint">This game’s payout-eligible metrics are defined in <span class="mono">arcade-games.json</span>.</div>
+                <div class="kv" id="playMetricsKv" aria-label="Game metrics"></div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="inner">
                 <h3>Economy Snapshot</h3>
                 <div class="kv">
                   <div class="k">Paid Credits</div><div class="v" id="statPaid">0</div>
@@ -2233,6 +2241,8 @@
     const playTitle = document.getElementById('playTitle');
     const playDesc = document.getElementById('playDesc');
     const pillRunCost = document.getElementById('pillRunCost');
+    const playMetricsKv = document.getElementById('playMetricsKv');
+    const playMetricsHint = document.getElementById('playMetricsHint');
 
     btnOpenWallet.addEventListener('click', ()=>setView('wallet'));
     btnOpenSuggestions.addEventListener('click', ()=>setView('proposals'));
@@ -2299,6 +2309,8 @@
         playDesc.textContent = 'Select a live game from the library.';
         pillRunCost.textContent = 'Loading · -- Credits/run';
         btnClaimPromo.textContent = 'Claim promo (Tx)';
+        if (playMetricsKv) playMetricsKv.innerHTML = '';
+        if (playMetricsHint) playMetricsHint.textContent = 'Select a game to view its metrics.';
         return;
       }
       playTitle.textContent = g.name;
@@ -2308,6 +2320,39 @@
       const claimed = getBool(K.promoClaimed(currentGameId));
       btnClaimPromo.textContent = claimed ? 'Promo claimed' : 'Claim promo (Tx)';
       btnClaimPromo.disabled = claimed || !(g.promoRuns > 0);
+
+      // Metrics block
+      if (playMetricsKv) {
+        const metrics = Array.isArray(g.metrics) ? g.metrics : [];
+        const defaultMetric = g.defaultMetric ? String(g.defaultMetric) : '';
+        const usesCreditsInRun = (g.usesCreditsInRun != null) ? !!g.usesCreditsInRun : (Number(g.runCostAC || 0) > 0);
+
+        const eligible = metrics.filter(m => m && m.eligible !== false);
+        const defaultLabel = metrics.find(m => m && String(m.id) === defaultMetric)?.label || defaultMetric || '—';
+
+        const rows = [];
+        rows.push(['Run uses Credits', usesCreditsInRun ? 'Yes' : 'No']);
+        rows.push(['Default metric', defaultLabel || '—']);
+        rows.push(['Eligible metrics', eligible.length ? eligible.map(m => m.label || m.id).join(', ') : '—']);
+
+        if (metrics.length) {
+          rows.push(['All metrics', metrics.map(m => {
+            const label = m.label || m.id || 'metric';
+            const kind = m.kind ? String(m.kind) : '';
+            const dir = m.direction ? String(m.direction) : '';
+            const unit = m.unit ? String(m.unit) : '';
+            const tag = [kind, dir, unit].filter(Boolean).join(' · ');
+            const elig = (m.eligible === false) ? 'ineligible' : 'eligible';
+            return tag ? `${label} (${tag}, ${elig})` : `${label} (${elig})`;
+          }).join(' | ') ]);
+        }
+
+        playMetricsKv.innerHTML = rows.map(([k,v]) => `<div class="k">${escapeHtml(String(k))}</div><div class="v">${escapeHtml(String(v))}</div>`).join('');
+      }
+
+      if (playMetricsHint) {
+        playMetricsHint.textContent = 'Metrics are read from the game catalog.';
+      }
     }
 
     function selectGame(id) {

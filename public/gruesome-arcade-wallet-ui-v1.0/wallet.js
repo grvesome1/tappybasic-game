@@ -37,6 +37,28 @@
     proStatus: root.querySelector("#gaProStatus"),
     proExp: root.querySelector("#gaProExp"),
 
+    // Payouts
+    dailyNext: root.querySelector("#gaDailyNext"),
+    weeklyNext: root.querySelector("#gaWeeklyNext"),
+    dailyAmount: root.querySelector("#gaDailyAmount"),
+    weeklyAmount: root.querySelector("#gaWeeklyAmount"),
+    dailyKey: root.querySelector("#gaDailyKey"),
+    weeklyKey: root.querySelector("#gaWeeklyKey"),
+    dailyTotal: root.querySelector("#gaDailyTotal"),
+    dailySkill: root.querySelector("#gaDailySkill"),
+    dailyActivity: root.querySelector("#gaDailyActivity"),
+    dailyPro: root.querySelector("#gaDailyPro"),
+    dailyLottery: root.querySelector("#gaDailyLottery"),
+    weeklyTotal: root.querySelector("#gaWeeklyTotal"),
+    weeklySkill: root.querySelector("#gaWeeklySkill"),
+    weeklyActivity: root.querySelector("#gaWeeklyActivity"),
+    weeklyPro: root.querySelector("#gaWeeklyPro"),
+    weeklyLottery: root.querySelector("#gaWeeklyLottery"),
+    dailyStatus: root.querySelector("#gaDailyStatus"),
+    weeklyStatus: root.querySelector("#gaWeeklyStatus"),
+    btnClaimDaily: root.querySelector("#gaBtnClaimDaily"),
+    btnClaimWeekly: root.querySelector("#gaBtnClaimWeekly"),
+
     btnConnect: root.querySelector("#gaBtnConnect"),
     btnTutorial: root.querySelector("#gaBtnTutorial"),
 
@@ -82,6 +104,14 @@
     paidCredits: 0,
     promoCredits: 0,
     nextPayoutAt: null, // ms
+
+    // Payouts (server status)
+    nextEpochAt: null, // ms
+    nextWeekAt: null, // ms
+    daily: { ymd: null, claimed: false, usd: 0, record: null },
+    weekly: { yw: null, claimed: false, usd: 0, record: null },
+    claimBusyDaily: false,
+    claimBusyWeekly: false,
 
     gpToday: 0,
 
@@ -129,6 +159,11 @@
     return x.toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits });
   }
 
+  function fmtUsd(n){
+    const x = Number(n) || 0;
+    return x.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
   function fmtPct(n, digits=1){
     const x = Number(n) || 0;
     return `${(x*100).toFixed(digits)}%`;
@@ -149,6 +184,164 @@
     const h = Math.floor((s%86400)/3600);
     const m = Math.floor((s%3600)/60);
     return `${d}d ${h}h ${m}m`;
+  }
+
+  function msToCountdown(ms){
+    if (!Number.isFinite(ms) || ms <= 0) return "—";
+    if (ms >= 24*3600*1000) return msToHuman(ms);
+    return msToClock(ms);
+  }
+
+  function parseIsoMs(iso){
+    const t = Date.parse(String(iso || ""));
+    return Number.isFinite(t) ? t : null;
+  }
+
+  function recordFromClaimable(cl){
+    if (!cl) return null;
+    if (cl.record && typeof cl.record === "object") return cl.record;
+    if (Number.isFinite(cl.totalCents) || Number.isFinite(cl.skillCents) || Number.isFinite(cl.activityCents) || Number.isFinite(cl.proCents) || Number.isFinite(cl.lotteryCents)) return cl;
+    return null;
+  }
+
+  function recordUsd(rec){
+    const cents = rec ? Math.max(0, Number(rec.totalCents || 0)) : 0;
+    return Number((cents / 100).toFixed(2));
+  }
+
+  function renderPayouts(){
+    if (!els.dailyAmount || !els.weeklyAmount) return;
+
+    const dailyUsd = Math.max(0, Number(state.daily.usd || 0));
+    const weeklyUsd = Math.max(0, Number(state.weekly.usd || 0));
+
+    els.dailyAmount.textContent = dailyUsd > 0 ? fmtUsd(dailyUsd) : "0.00";
+    els.weeklyAmount.textContent = weeklyUsd > 0 ? fmtUsd(weeklyUsd) : "0.00";
+
+    els.dailyKey.textContent = state.daily.ymd ? `Day: ${state.daily.ymd}` : "Day: —";
+    els.weeklyKey.textContent = state.weekly.yw ? `Week: ${state.weekly.yw}` : "Week: —";
+
+    const dRec = state.daily.record;
+    const wRec = state.weekly.record;
+
+    els.dailyTotal.textContent = dRec ? fmtUsd(recordUsd(dRec)) : "—";
+    els.dailySkill.textContent = dRec ? fmtUsd((Number(dRec.skillCents || 0) / 100)) : "—";
+    els.dailyActivity.textContent = dRec ? fmtUsd((Number(dRec.activityCents || 0) / 100)) : "—";
+    els.dailyPro.textContent = dRec ? fmtUsd((Number(dRec.proCents || 0) / 100)) : "—";
+    els.dailyLottery.textContent = dRec ? fmtUsd((Number(dRec.lotteryCents || 0) / 100)) : "—";
+
+    els.weeklyTotal.textContent = wRec ? fmtUsd(recordUsd(wRec)) : "—";
+    els.weeklySkill.textContent = wRec ? fmtUsd((Number(wRec.skillCents || 0) / 100)) : "—";
+    els.weeklyActivity.textContent = wRec ? fmtUsd((Number(wRec.activityCents || 0) / 100)) : "—";
+    els.weeklyPro.textContent = wRec ? fmtUsd((Number(wRec.proCents || 0) / 100)) : "—";
+    els.weeklyLottery.textContent = wRec ? fmtUsd((Number(wRec.lotteryCents || 0) / 100)) : "—";
+
+    if (els.dailyStatus){
+      if (!state.connected) els.dailyStatus.textContent = "Connect wallet to claim.";
+      else if (state.daily.claimed) els.dailyStatus.textContent = "Already claimed.";
+      else if (dailyUsd <= 0) els.dailyStatus.textContent = "Nothing to claim.";
+      else els.dailyStatus.textContent = "Ready to claim.";
+    }
+    if (els.weeklyStatus){
+      if (!state.connected) els.weeklyStatus.textContent = "Connect wallet to claim.";
+      else if (state.weekly.claimed) els.weeklyStatus.textContent = "Already claimed.";
+      else if (weeklyUsd <= 0) els.weeklyStatus.textContent = "Nothing to claim.";
+      else els.weeklyStatus.textContent = "Ready to claim.";
+    }
+
+    if (els.btnClaimDaily){
+      const disabled = !state.connected || state.claimBusyDaily || state.daily.claimed || dailyUsd <= 0;
+      els.btnClaimDaily.disabled = disabled;
+      els.btnClaimDaily.textContent = state.claimBusyDaily ? "Claiming…" : "Claim (Tx)";
+    }
+    if (els.btnClaimWeekly){
+      const disabled = !state.connected || state.claimBusyWeekly || state.weekly.claimed || weeklyUsd <= 0;
+      els.btnClaimWeekly.disabled = disabled;
+      els.btnClaimWeekly.textContent = state.claimBusyWeekly ? "Claiming…" : "Claim (Tx)";
+    }
+  }
+
+  async function apiGet(url){
+    const r = await fetch(url, { method: "GET", credentials: "include", cache: "no-store" });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      const err = new Error(String((data && data.error) || `http_${r.status}`));
+      err.status = r.status;
+      err.data = data;
+      throw err;
+    }
+    return data;
+  }
+
+  async function apiPost(url, body){
+    const r = await fetch(url, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(body || {}),
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      const err = new Error(String((data && data.error) || `http_${r.status}`));
+      err.status = r.status;
+      err.data = data;
+      throw err;
+    }
+    return data;
+  }
+
+  function applyEpochFromApi(data){
+    if (!data || typeof data !== "object") return;
+
+    if (data.nextEpochAtUtc) state.nextEpochAt = parseIsoMs(data.nextEpochAtUtc);
+    if (data.nextWeekAtUtc) state.nextWeekAt = parseIsoMs(data.nextWeekAtUtc);
+
+    const cl = data.claimable || null;
+    const wcl = data.weekClaimable || null;
+
+    state.daily.ymd = cl && cl.ymd ? String(cl.ymd) : null;
+    state.daily.claimed = !!(cl && cl.claimed);
+    state.daily.record = recordFromClaimable(cl);
+    state.daily.usd = state.daily.record ? recordUsd(state.daily.record) : 0;
+
+    state.weekly.yw = wcl && wcl.yw ? String(wcl.yw) : null;
+    state.weekly.claimed = !!(wcl && wcl.claimed);
+    state.weekly.record = recordFromClaimable(wcl);
+    state.weekly.usd = state.weekly.record ? recordUsd(state.weekly.record) : 0;
+  }
+
+  function applyWeekFromApi(data){
+    if (!data || typeof data !== "object") return;
+    if (data.nextWeekAtUtc) state.nextWeekAt = parseIsoMs(data.nextWeekAtUtc);
+    const wcl = data.weekClaimable || null;
+    state.weekly.yw = wcl && wcl.yw ? String(wcl.yw) : (state.weekly.yw || null);
+    state.weekly.claimed = !!(wcl && wcl.claimed);
+    state.weekly.record = recordFromClaimable(wcl);
+    state.weekly.usd = state.weekly.record ? recordUsd(state.weekly.record) : 0;
+  }
+
+  async function fetchEpochStatus(){
+    const data = await apiGet("/api/epoch/status");
+    applyEpochFromApi(data);
+    return data;
+  }
+
+  async function fetchWeekStatus(){
+    const data = await apiGet("/api/week/status");
+    applyWeekFromApi(data);
+    return data;
+  }
+
+  async function refreshPayoutStatus(){
+    try{
+      const data = await fetchEpochStatus();
+      if (!data || !data.weekClaimable) {
+        await fetchWeekStatus();
+      }
+      renderPayouts();
+    } catch {
+      // best-effort; keep UI stable
+    }
   }
 
   function computeBonusPct(usd){
@@ -400,15 +593,27 @@
     }
 
     renderPurchase();
+    renderPayouts();
   }
 
   function tick(){
-    // Next payout countdown
-    if (state.nextPayoutAt){
-      const ms = state.nextPayoutAt - Date.now();
+    // Next payout countdown (prefer server epoch clock)
+    const next = state.nextEpochAt || state.nextPayoutAt;
+    if (next){
+      const ms = next - Date.now();
       els.nextPayout.textContent = ms > 0 ? msToClock(ms) : "Soon";
     } else {
       els.nextPayout.textContent = "—";
+    }
+
+    // Payout cards countdowns
+    if (els.dailyNext){
+      const ms = state.nextEpochAt ? (state.nextEpochAt - Date.now()) : NaN;
+      els.dailyNext.textContent = Number.isFinite(ms) && ms > 0 ? msToClock(ms) : "—";
+    }
+    if (els.weeklyNext){
+      const ms = state.nextWeekAt ? (state.nextWeekAt - Date.now()) : NaN;
+      els.weeklyNext.textContent = Number.isFinite(ms) && ms > 0 ? msToCountdown(ms) : "—";
     }
 
     // Lifetime window
@@ -480,9 +685,50 @@
       const snap = await adapter.getSnapshot(state.address);
       applySnapshot(snap);
       toast("Connected", "Wallet session established.", "ok");
+      refreshPayoutStatus();
       render();
     } catch (e){
       toast("Connect failed", (e && e.message) ? e.message : "Wallet connection was rejected.", "bad");
+    }
+  }
+
+  async function onClaim(kind){
+    const isDaily = kind === "daily";
+    if (!state.connected) return toast("Not connected", "Connect your wallet first.", "bad");
+
+    const url = isDaily ? "/api/epoch/claim" : "/api/week/claim";
+    const label = isDaily ? "Daily claim" : "Weekly claim";
+
+    try{
+      if (isDaily) state.claimBusyDaily = true;
+      else state.claimBusyWeekly = true;
+      renderPayouts();
+      toast("Payouts", `${label}…`);
+
+      let data = null;
+      if (isDaily && adapter && typeof adapter.claimDaily === "function") data = await adapter.claimDaily();
+      else if (!isDaily && adapter && typeof adapter.claimWeekly === "function") data = await adapter.claimWeekly();
+      else data = await apiPost(url, {});
+
+      const amt = Number((data && data.amountUsd) || 0) || 0;
+      if (amt > 0) toast("Payouts", `${label} success: ${fmtUsd(amt)} mUSD`, "ok");
+      else toast("Payouts", `${label}: nothing to claim`, "info");
+
+      await refreshPayoutStatus();
+      return;
+    } catch (e){
+      const status = Number(e && e.status) || 0;
+      const code = String((e && e.data && e.data.error) || (e && e.message) || "error");
+
+      if (status === 401) toast("Payouts", "Connect wallet to claim.", "bad");
+      else if (code === "poh_required") toast("Payouts", "POH verification required to claim.", "bad");
+      else if (status === 409 || code === "already_claimed") toast("Payouts", "Already claimed.", "info");
+      else if (status === 403 && code === "bad_origin") toast("Payouts", "Blocked by origin policy. Open the Arcade normally.", "bad");
+      else toast("Payouts", `${label} failed (${code}).`, "bad");
+    } finally {
+      if (isDaily) state.claimBusyDaily = false;
+      else state.claimBusyWeekly = false;
+      renderPayouts();
     }
   }
 
@@ -651,6 +897,9 @@
   els.btnConnect.addEventListener("click", onConnect);
   els.btnTutorial.addEventListener("click", openModal);
 
+  if (els.btnClaimDaily) els.btnClaimDaily.addEventListener("click", () => onClaim("daily"));
+  if (els.btnClaimWeekly) els.btnClaimWeekly.addEventListener("click", () => onClaim("weekly"));
+
   // Never navigate away from the arcade dashboard; open explorer in the dashboard's embed modal.
   if (els.avatarLink){
     els.avatarLink.addEventListener("click", (e) => {
@@ -759,5 +1008,6 @@
   setMode("usd");
   render();
   tick();
+  refreshPayoutStatus();
   setInterval(tick, 1000);
 })();
