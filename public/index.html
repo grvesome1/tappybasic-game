@@ -365,6 +365,7 @@
         <button data-nav="leaderboard"><span>Leaderboard</span><span>⌁</span></button>
         <button data-nav="proposals"><span>Suggestions</span><span>✦</span></button>
         <button data-nav="settings"><span>Settings</span><span>⚙</span></button>
+        <button data-nav="admin" id="navAdmin" hidden><span>Admin</span><span>⛭</span></button>
         <div class="hint">
           Locked v1.5 numbers: 50/35/10 splits · PRO $2/$25/$100. Game config now loads from arcade-games.json.
         </div>
@@ -626,6 +627,18 @@
             </div>
           </div>
         </div>
+      </section>
+
+      <!-- ADMIN (lazy-loaded bundle) -->
+      <section class="view" id="view-admin" aria-label="Admin view">
+        <div class="viewHeader">
+          <div>
+            <p class="h">Admin</p>
+            <p class="p">Admin Console v1.0 (restricted to admin wallet).</p>
+          </div>
+          <span class="pill"><strong>Admin</strong> · v1.0</span>
+        </div>
+        <div id="adminV1Host"></div>
       </section>
     </main>
   </div>
@@ -1157,6 +1170,10 @@
       lbGame: 'arcade.ui.lbGame',
       lbPeriod: 'arcade.ui.lbPeriod'
     };
+
+    // Admin Console (Iteration 4.1)
+    // NOTE: Set to your wallet to unlock the Admin tab.
+    window.__GA_ADMIN_WALLET__ = '0x3100fF9597B87E791E5bB8C0d57C94336A432089';
 
     function lsGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
     function lsSet(k, v) { try { localStorage.setItem(k, String(v)); } catch {} }
@@ -1915,12 +1932,38 @@
       wallet: document.getElementById('view-wallet'),
       leaderboard: document.getElementById('view-leaderboard'),
       proposals: document.getElementById('view-proposals'),
-      settings: document.getElementById('view-settings')
+      settings: document.getElementById('view-settings'),
+      admin: document.getElementById('view-admin')
     };
     const topTitle = document.getElementById('topTitle');
     const topSub = document.getElementById('topSub');
 
+    function normalizeAddr(a) {
+      return String(a || '').trim().toLowerCase();
+    }
+
+    function isAdminSession() {
+      const admin = normalizeAddr(window.__GA_ADMIN_WALLET__);
+      if (!admin) return false;
+      const addr = normalizeAddr((SESSION && SESSION.address) ? SESSION.address : (lsGet(K.address) || ''));
+      return !!(addr && admin && addr === admin);
+    }
+
+    function updateAdminNavVisibility() {
+      const btn = document.getElementById('navAdmin');
+      if (!btn) return;
+      const ok = isAdminSession();
+      btn.hidden = !ok;
+      if (!ok && document.body.dataset.view === 'admin') {
+        try { setView('play'); } catch {}
+      }
+    }
+
     function setView(name) {
+      if (name === 'admin' && !isAdminSession()) {
+        try { toast('Admin', 'Not authorized for Admin Console.'); } catch {}
+        name = 'play';
+      }
       document.body.dataset.view = name;
       navBtns.forEach(b => b.classList.toggle('active', b.dataset.nav === name));
       Object.entries(views).forEach(([k, el]) => el.classList.toggle('active', k === name));
@@ -1929,6 +1972,7 @@
         : (name === 'wallet') ? 'Wallet UI v1.0 (authoritative).'
         : (name === 'leaderboard') ? 'Ranks, payouts, and daily epochs.'
         : (name === 'proposals') ? 'Pay gas to submit ideas. Earn if accepted.'
+        : (name === 'admin') ? 'Admin Console v1.0 (restricted).'
         : 'Preferences + utilities.';
 
       // Wallet view loads its UI on demand (keeps other tabs untouched)
@@ -1942,6 +1986,11 @@
       // Leaderboard v2 loader
       if (name === 'leaderboard') {
         try { ensureLeaderboardV2Loaded(); } catch {}
+      }
+
+      // Admin v1 loader
+      if (name === 'admin') {
+        try { ensureAdminV1Loaded(); } catch {}
       }
 
       // Update 3D accent
@@ -1980,6 +2029,25 @@
         s.onerror = () => reject(new Error('script_load_failed'));
         document.head.appendChild(s);
       });
+    }
+
+    // ----- Admin Console v1 (drop-in bundle) -----
+    let GA_ADMIN_V1_LOADED = false;
+
+    async function ensureAdminV1Loaded() {
+      const host = document.getElementById('adminV1Host');
+      if (!host) return;
+
+      if (GA_ADMIN_V1_LOADED) {
+        // Admin bundle handles its own connect/refresh.
+        return;
+      }
+      GA_ADMIN_V1_LOADED = true;
+
+      gaLoadCssOnce('/gruesome-arcade-admin-ui-v1.0/admin.css?v=1.0', 'ga-admin-v1-css');
+      const html = await gaFetchText('/gruesome-arcade-admin-ui-v1.0/admin-panel.html?v=1.0');
+      host.innerHTML = html;
+      await gaLoadScriptOnce('/gruesome-arcade-admin-ui-v1.0/admin.js?v=1.0', 'ga-admin-v1-js');
     }
 
     async function serverWeekClaim(yw) {
@@ -4142,6 +4210,7 @@ async function recordRunResult(gameId, runId, score, durationMs) {
 
     // ----- Global render loop -----
     function renderAll() {
+      updateAdminNavVisibility();
       renderTopChips();
       renderSplitBars();
       renderStats();

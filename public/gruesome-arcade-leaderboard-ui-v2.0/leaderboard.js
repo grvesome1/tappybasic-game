@@ -75,6 +75,7 @@
 
       if (status === 401) toast('Payouts', 'Connect wallet to claim.');
       else if (code === 'poh_required') toast('Payouts', 'POH verification required to claim.');
+      else if (code === 'excluded_from_payouts') toast('Payouts', 'This wallet is excluded from payouts.');
       else if (status === 409 || code === 'already_claimed') {
         if (isDaily) state._claimedOverrideDaily = true;
         else state._claimedOverrideWeekly = true;
@@ -638,7 +639,8 @@
 
       const badges = [
         me ? '<span class="gaLB__badge gaLB__badge--me">You</span>' : '',
-        e.nickname ? '<span class="gaLB__badge gaLB__badge--pro">PRO</span>' : ''
+        e.nickname ? '<span class="gaLB__badge gaLB__badge--pro">PRO</span>' : '',
+        (e.payoutEligible === false) ? '<span class="gaLB__badge gaLB__badge--admin">ADMIN • no payouts</span>' : ''
       ].join('');
 
       const unit = unitOf(metric);

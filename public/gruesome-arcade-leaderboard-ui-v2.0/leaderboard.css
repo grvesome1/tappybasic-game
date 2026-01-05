@@ -532,6 +532,7 @@
 
 .gaLB__badge--pro{ border-color: rgba(34,211,238,.38); background: rgba(34,211,238,.12); }
 .gaLB__badge--me{ border-color: rgba(255,255,255,.22); background: rgba(255,255,255,.08); }
+.gaLB__badge--admin{ border-color: var(--gaLB-warn); background: rgba(255,180,60,.10); }
 
 .gaLB__side{
   display:flex;

@@ -9,6 +9,7 @@ import * as K from '../_lib/keys.js';
 import { ipFromReq, enforce, rlKey } from '../_lib/rate.js';
 import { sameOrigin } from '../_lib/security.js';
 import { bump } from '../_lib/metrics.js';
+import { isPayoutExcluded } from '../_lib/payoutExclusion.js';
 
 async function getLastSettledYw() {
   const arr = await R.cmd('LRANGE', K.weeksList(), 0, 0);
@@ -36,6 +37,11 @@ export default async function handler(req, res) {
     const address = String(s.address);
     await enforce({ key: rlKey('week:claim:addr', address.toLowerCase()), limit: 15, windowSec: 3600 });
     const addrLc = address.toLowerCase();
+
+    if (isPayoutExcluded(addrLc)) {
+      await bump('week_claim', 403);
+      return res.status(403).json({ error: 'excluded_from_payouts' });
+    }
 
     if (!s.demo) {
       let ok = false;

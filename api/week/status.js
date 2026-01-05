@@ -6,6 +6,7 @@ import { readSession } from '../_lib/session.js';
 import { checkPoh } from '../_lib/poh.js';
 import * as R from '../_lib/redis.js';
 import * as K from '../_lib/keys.js';
+import { isPayoutExcluded } from '../_lib/payoutExclusion.js';
 
 function weekKeyUtc(d = new Date()) {
   const date = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
@@ -65,6 +66,7 @@ export default async function handler(req, res) {
     const authenticated = !!(s && s.address);
     const address = authenticated ? String(s.address) : '';
     const addrLc = address ? address.toLowerCase() : '';
+    const payoutExcluded = authenticated ? isPayoutExcluded(addrLc) : false;
 
     let pohVerified = false;
     if (authenticated && !s.demo) {
@@ -113,6 +115,7 @@ export default async function handler(req, res) {
       authenticated,
       address,
       pohVerified,
+      payoutExcluded,
     });
   } catch {
     return res.status(500).json({ error: 'server_error' });

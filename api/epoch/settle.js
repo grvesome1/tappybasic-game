@@ -8,6 +8,7 @@ import * as K from '../_lib/keys.js';
 import { GAMES, DEFAULTS } from '../_lib/games.js';
 import { bearerToken, isVercelCron, queryParam } from '../_lib/security.js';
 import { bump } from '../_lib/metrics.js';
+import { getExcludedPayoutAddrs } from '../_lib/payoutExclusion.js';
 
 function clamp(n, a, b) {
   n = Number(n);
@@ -331,6 +332,8 @@ export default async function handler(req, res) {
 
     const claims = {};
 
+    const excluded = getExcludedPayoutAddrs();
+
     const skillTopN = clamp(process.env.ECON_SKILL_TOP || 25, 5, 100);
     const pow = clamp(process.env.ECON_RANK_POW || 1.25, 1.05, 1.8);
 
@@ -355,15 +358,18 @@ export default async function handler(req, res) {
 
         const metricId = String(m.id || 'score');
         let lbKey = K.lbDailyPaidMetric(gid, metricId, ymd);
-        let raw = await R.cmd('ZREVRANGE', lbKey, 0, skillTopN - 1, 'WITHSCORES');
-        let top = parseZWithScores(raw);
+        const fetchN = Math.min(1000, Math.max(skillTopN, skillTopN * 10));
+        let raw = await R.cmd('ZREVRANGE', lbKey, 0, fetchN - 1, 'WITHSCORES');
+        let topAll = parseZWithScores(raw);
+        let top = topAll.filter((e) => !excluded.has(e.member)).slice(0, skillTopN);
 
         // Backward-compatible fallback for the default metric (old leaderboard key)
         const defId = String(gameCfg.defaultMetric || 'score');
         if (!top.length && metricId === defId) {
           lbKey = K.lbDailyPaid(gid, ymd);
-          raw = await R.cmd('ZREVRANGE', lbKey, 0, skillTopN - 1, 'WITHSCORES');
-          top = parseZWithScores(raw);
+          raw = await R.cmd('ZREVRANGE', lbKey, 0, fetchN - 1, 'WITHSCORES');
+          topAll = parseZWithScores(raw);
+          top = topAll.filter((e) => !excluded.has(e.member)).slice(0, skillTopN);
         }
 
         if (!top.length) continue;
@@ -376,7 +382,9 @@ export default async function handler(req, res) {
     const actTopN = clamp(process.env.ECON_ACT_TOP || 2000, 25, 5000);
     const actKey = K.actDaily(ymd);
     const actRaw = await R.cmd('ZREVRANGE', actKey, 0, actTopN - 1, 'WITHSCORES');
-    const actTop = parseZWithScores(actRaw).filter((e) => (e.score || 0) > 0);
+    const actTop = parseZWithScores(actRaw)
+      .filter((e) => (e.score || 0) > 0)
+      .filter((e) => !excluded.has(e.member));
 
     const actPayouts = distribute(activityPool, actTop, (e) => Math.sqrt(Math.max(0, e.score || 0)));
     for (const [addr, cents] of Object.entries(actPayouts)) addClaim(claims, addr, 'activityCents', cents);
