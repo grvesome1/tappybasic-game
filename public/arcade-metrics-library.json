@@ -654,6 +654,12 @@
       },
       "telemetryOnly": true,
       "notes": "Computed: 1 / (mistakes + deaths + 1)."
+    },
+    {
+      "id": "inRunSpendAC",
+      "kind": "currency",
+      "format": "int",
+      "desc": "Credits spent inside the run economy (paid-only in ranked mode)."
     }
   ]
 }

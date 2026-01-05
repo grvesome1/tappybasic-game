@@ -1,0 +1,115 @@
+{
+  "profileId": "defense_econ_sth2",
+  "title": "Storm the House 2 (Remaster)",
+  "path": "/games/stormhouse2/index.html",
+  "defaults": {
+    "gameType": "defense",
+    "usesCreditsInRun": true,
+    "rankedSpendCapAC": 200,
+    "defaultMetric": "waves",
+    "notes": "Defense economy game: uses in-run Credits. Skill payouts weight waves + efficiency to reduce pay-to-win.",
+    "metrics": [
+      {
+        "id": "waves",
+        "label": "Waves",
+        "format": "int",
+        "dir": "desc",
+        "payoutEligible": true,
+        "payoutWeight": 0.55,
+        "clamp": {
+          "min": 0,
+          "max": 999
+        }
+      },
+      {
+        "id": "efficiency",
+        "label": "Efficiency",
+        "format": "int",
+        "dir": "desc",
+        "payoutEligible": true,
+        "payoutWeight": 0.3,
+        "clamp": {
+          "min": 0,
+          "max": 999999999
+        }
+      },
+      {
+        "id": "durationMs",
+        "label": "Survival Time",
+        "format": "ms",
+        "dir": "desc",
+        "payoutEligible": true,
+        "payoutWeight": 0.15,
+        "clamp": {
+          "min": 0,
+          "max": 86400000
+        }
+      },
+      {
+        "id": "inRunSpendAC",
+        "label": "In\u2011run Credits Spent",
+        "format": "int",
+        "dir": "asc",
+        "payoutEligible": false,
+        "clamp": {
+          "min": 0,
+          "max": 999999
+        }
+      },
+      {
+        "id": "kills",
+        "label": "Kills",
+        "format": "int",
+        "dir": "desc",
+        "payoutEligible": false,
+        "clamp": {
+          "min": 0,
+          "max": 9999999
+        }
+      },
+      {
+        "id": "accuracyBp",
+        "label": "Accuracy",
+        "format": "bp",
+        "dir": "desc",
+        "payoutEligible": false,
+        "clamp": {
+          "min": 0,
+          "max": 10000
+        }
+      }
+    ]
+  },
+  "libraryAdditions": {
+    "waves": {
+      "kind": "counter",
+      "format": "int",
+      "desc": "Waves survived/cleared. Higher is better."
+    },
+    "durationMs": {
+      "kind": "duration",
+      "format": "ms",
+      "desc": "Run duration. Direction depends on game (survival uses desc; speedruns use asc)."
+    },
+    "inRunSpendAC": {
+      "kind": "currency",
+      "format": "int",
+      "desc": "Credits spent inside the run economy (paid-only in ranked mode)."
+    },
+    "efficiency": {
+      "kind": "composite",
+      "format": "int",
+      "desc": "Performance per in-run spend: floor(primary*1000/(spent+1)). Higher is better."
+    },
+    "kills": {
+      "kind": "counter",
+      "format": "int",
+      "desc": "Enemies killed during the run."
+    },
+    "accuracyBp": {
+      "kind": "ratio",
+      "format": "bp",
+      "desc": "Accuracy in basis points (0..10000). Derived from hits/attempts when provided."
+    }
+  }
+}
