@@ -1214,6 +1214,9 @@ canvas{display:block;width:100%;height:100%}
       const gl = c.getContext('webgl') || c.getContext('experimental-webgl');
       if (!gl) {
         showBootError('WebGL is not available in this browser/profile.\nTry disabling “Use hardware acceleration” restrictions, or test in Chrome/Edge.');
+      } else {
+        // Avoid leaking a throwaway WebGL context (repeated iframe loads can hit the browser limit).
+        try { gl.getExtension('WEBGL_lose_context')?.loseContext?.(); } catch {}
       }
     } catch (e) {
       showBootError('WebGL initialization failed: ' + (e?.message || String(e)));
@@ -2186,6 +2189,10 @@ canvas{display:block;width:100%;height:100%}
       const merge = BufferGeometryUtils.mergeGeometries || BufferGeometryUtils.mergeBufferGeometries;
       if (!merge) throw new Error("BufferGeometryUtils merge function unavailable.");
 
+      const toNonIndexedSafe = (g) => {
+        try { return (g && g.index) ? g.toNonIndexed() : g; } catch { return g; }
+      };
+
       // 4x thicker visual outline (requested)
       const outlineRadius = Math.max(0.03, size * 0.03);
       const tubeGeo = new THREE.CylinderGeometry(outlineRadius, outlineRadius, 1, 6, 1, true);
@@ -2278,10 +2285,10 @@ canvas{display:block;width:100%;height:100%}
         }
 
         const merged = merge([
-          leftGeo.toNonIndexed(),
-          oGeo.toNonIndexed(),
-          rightGeo.toNonIndexed(),
-          slashGeo.toNonIndexed()
+          toNonIndexedSafe(leftGeo),
+          toNonIndexedSafe(oGeo),
+          toNonIndexedSafe(rightGeo),
+          toNonIndexedSafe(slashGeo)
         ], false);
 
         // Center the title geometry.
@@ -3604,6 +3611,30 @@ Search terms: dead internet theory • rational privacy in crypto`;
 
     window.addEventListener('pagehide', disposeWebGL, { capture: true });
     window.addEventListener('beforeunload', disposeWebGL, { capture: true });
+
+    // If the GPU drops our context (e.g., too many contexts overall), stop rendering to avoid log spam.
+    try {
+      const canvas = renderer && renderer.domElement;
+      if (canvas && canvas.addEventListener) {
+        canvas.addEventListener('webglcontextlost', (e) => {
+          try { e.preventDefault(); } catch {}
+          try { pauseWebGL(); } catch {}
+        }, { passive: false });
+        canvas.addEventListener('webglcontextrestored', () => {
+          try { resumeWebGL(); } catch {}
+        }, { passive: true });
+      }
+    } catch {}
+
+    // Allow the parent (dashboard) to pause/resume/dispose when the iframe is hidden/unloaded.
+    window.addEventListener('message', (ev) => {
+      const m = ev && ev.data;
+      if (!m || typeof m !== 'object') return;
+      const t = String(m.type || '');
+      if (t === 'GA_WEBGL_PAUSE') { try { pauseWebGL(); } catch {} }
+      if (t === 'GA_WEBGL_RESUME') { try { resumeWebGL(); } catch {} }
+      if (t === 'GA_WEBGL_DISPOSE') { try { disposeWebGL(); } catch {} }
+    });
 
     function animate() {
       if (!webglRunning) return;

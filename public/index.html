@@ -811,7 +811,47 @@
     window.addEventListener('resize', onResize);
 
     let t0 = performance.now();
+    let backdropRafId = 0;
+    let backdropRunning = true;
+
+    function pauseBackdrop() {
+      backdropRunning = false;
+      if (backdropRafId) {
+        try { cancelAnimationFrame(backdropRafId); } catch {}
+      }
+      backdropRafId = 0;
+    }
+
+    function resumeBackdrop() {
+      if (backdropRunning) return;
+      backdropRunning = true;
+      try { t0 = performance.now(); } catch {}
+      backdropRafId = requestAnimationFrame(animate);
+    }
+
+    // If the GPU drops our context (e.g., too many contexts overall), stop rendering to avoid log spam.
+    try {
+      const canvas = renderer && renderer.domElement;
+      if (canvas && canvas.addEventListener) {
+        canvas.addEventListener('webglcontextlost', (e) => {
+          try { e.preventDefault(); } catch {}
+          pauseBackdrop();
+        }, { passive: false });
+        canvas.addEventListener('webglcontextrestored', () => {
+          resumeBackdrop();
+        }, { passive: true });
+      }
+    } catch {}
+
+    document.addEventListener('visibilitychange', () => {
+      try {
+        if (document.hidden) pauseBackdrop();
+        else resumeBackdrop();
+      } catch {}
+    }, { passive: true });
+
     function animate() {
+      if (!backdropRunning) return;
       const t = (performance.now() - t0) * 0.001;
       stars.rotation.y = t * 0.02;
       ringGroup.rotation.y = t * 0.08;
@@ -820,7 +860,7 @@
       camera.position.y = Math.cos(t*0.20) * 0.10;
       camera.lookAt(0,0,0);
       renderer.render(scene, camera);
-      requestAnimationFrame(animate);
+      backdropRafId = requestAnimationFrame(animate);
     }
     animate();
 
