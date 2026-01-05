@@ -20,456 +20,153 @@
     :root{
       color-scheme: dark;
       --bg0: #020617;
-      --bg1: rgba(2, 6, 23, 0.74);
-      --panel: rgba(15, 23, 42, 0.62);
-      --panel2: rgba(15, 23, 42, 0.78);
+      --panel: rgba(15, 23, 42, 0.78);
       --border: rgba(255,255,255,0.10);
       --muted: rgba(229,231,235,0.70);
       --text: rgba(229,231,235,0.96);
       --cyan: #22d3ee;
       --cyan2: rgba(34,211,238,0.22);
-      --yellow: #ffdd55;
-      --green: #22c55e;
-      --red: #ff4444;
       --shadow: 0 24px 70px rgba(0,0,0,0.85);
-      --ease: cubic-bezier(0.16, 1, 0.3, 1);
       --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     }
 
-    <!DOCTYPE html>
-    <html lang="en" data-game-id="moonshot" data-game-mode="3d">
-    <head>
-      <meta charset="UTF-8" />
-      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      <title>Moonshot 3D</title>
-      <style>
-        html, body {
-          margin: 0;
-          padding: 0;
-          width: 100%;
-          height: 100%;
-          overflow: hidden;
-          background: radial-gradient(circle at top, #020617 0%, #020617 40%, #000 100%);
-          font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Barlow', sans-serif;
-          color: #e5e7eb;
-        }
-        #moonshot-root {
-          position: fixed;
-          inset: 0;
-          display: flex;
-          align-items: stretch;
-          justify-content: center;
-        }
-        #moonshot-canvas-container {
-          position: relative;
-          flex: 1;
-        }
-        #moonshot-hud {
-          position: absolute;
-          top: 10px;
-          left: 10px;
-          right: 10px;
-          display: flex;
-          justify-content: space-between;
-          font-size: 16px;
-          text-shadow: 0 0 8px rgba(56, 189, 248, 0.8);
-          pointer-events: none;
-          z-index: 10;
-        }
-        #moonshot-powerups-bar {
-          position: absolute;
-          top: 64px;
-          left: 50%;
-          transform: translateX(-50%);
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          padding: 4px 10px;
-          border-radius: 999px;
-          background: rgba(15, 23, 42, 0.8);
-          border: 1px solid rgba(56, 189, 248, 0.6);
-          box-shadow: 0 0 12px rgba(56, 189, 248, 0.75);
-          font-size: 11px;
-          pointer-events: none;
-          z-index: 9;
-        }
-        .moonshot-powerups-list { display: flex; gap: 6px; }
-        .moonshot-powerup-chip {
-          padding: 2px 8px;
-          border-radius: 999px;
-          background: rgba(15, 118, 110, 0.8);
-          border: 1px solid rgba(45, 212, 191, 0.8);
-          font-size: 11px;
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
-          color: #a5f3fc;
-          text-shadow: 0 0 6px rgba(34, 211, 238, 0.9);
-        }
-        .moonshot-hud-block { display: flex; flex-direction: column; gap: 4px; }
-        .moonshot-label { font-size: 11px; text-transform: uppercase; opacity: 0.7; letter-spacing: 0.08em; }
-        .moonshot-value { font-size: 20px; font-weight: 700; }
-        #moonshot-center-message {
-          position: absolute;
-          left: 50%;
-          top: 50%;
-          transform: translate(-50%, -50%);
-          font-size: 18px;
-          color: #e5e7eb;
-          text-align: center;
-          text-shadow: 0 0 16px rgba(56, 189, 248, 0.9);
-          pointer-events: none;
-          z-index: 10;
-        }
-        #moonshot-tutorial {
-          position: absolute;
-          inset: 0;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: radial-gradient(circle at top, rgba(15,23,42,0.96) 0%, rgba(15,23,42,0.94) 45%, rgba(15,23,42,0.9) 100%);
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
-          z-index: 20;
-        }
-        .moonshot-tutorial-inner {
-          max-width: 420px;
-          padding: 18px 20px 16px;
-          border-radius: 18px;
-          border: 1px solid rgba(55,65,81,0.95);
-          box-shadow: 0 22px 60px rgba(0,0,0,0.95);
-          background: radial-gradient(circle at top, rgba(17,24,39,1) 0%, rgba(15,23,42,0.96) 55%, rgba(15,23,42,0.94) 100%);
-          font-size: 13px;
-        }
-        .moonshot-tutorial-title {
-          font-size: 16px;
-          font-weight: 600;
-          margin-bottom: 8px;
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
-          color: #f9fafb;
-        }
-        .moonshot-tutorial-body { color: #e5e7eb; margin-bottom: 10px; line-height: 1.45; }
-        .moonshot-tutorial-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 14px; margin-bottom: 10px; }
-        .moonshot-tutorial-item { font-size: 12px; color: #d1d5db; }
-        .moonshot-tutorial-item span.label {
-          display: block;
-          font-weight: 600;
-          color: #a5f3fc;
-          margin-bottom: 2px;
-          text-transform: uppercase;
-          letter-spacing: 0.06em;
-        }
-        .moonshot-tutorial-footer { font-size: 12px; color: #9ca3af; margin-top: 4px; }
-        #moonshot-slow-overlay {
-          position: absolute;
-          inset: 0;
-          pointer-events: none;
-          background:
-            radial-gradient(circle at center, rgba(56, 189, 248, 0.18) 0%, transparent 55%),
-            radial-gradient(circle at top, rgba(8, 47, 73, 0.65) 0%, transparent 70%);
-          mix-blend-mode: screen;
-          opacity: 0;
-          transition: opacity 0.18s ease-out;
-          z-index: 8;
-        }
-        #moonshot-wagmi-toast {
-          position: absolute;
-          left: 14px;
-          bottom: 20px;
-          padding: 4px 10px;
-          border-radius: 999px;
-          background: rgba(22, 163, 74, 0.18);
-          border: 1px solid rgba(52, 211, 153, 0.9);
-          color: #bbf7d0;
-          font-size: 12px;
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
-          text-shadow: 0 0 8px rgba(34, 197, 94, 0.9);
-          pointer-events: none;
-          opacity: 0;
-          transform: translateY(8px);
-          transition: opacity 0.15s ease-out, transform 0.15s ease-out;
-          z-index: 11;
-        }
-        #moonshot-wagmi-toast.visible { opacity: 1; transform: translateY(0); }
-        #moonshot-gameover-panel {
-          position: absolute;
-          left: 50%;
-          top: 60%;
-          transform: translate(-50%, -50%);
-          min-width: 260px;
-          padding: 14px 18px 12px;
-          border-radius: 16px;
-          background: radial-gradient(circle at top, rgba(15,23,42,0.98) 0%, rgba(15,23,42,0.94) 55%, rgba(15,23,42,0.9) 100%);
-          border: 1px solid rgba(55, 65, 81, 0.9);
-          box-shadow: 0 22px 60px rgba(0, 0, 0, 0.9);
-          font-size: 13px;
-          display: none;
-          z-index: 11;
-          text-align: left;
-        }
-        #moonshot-gameover-panel h2 {
-          margin: 0 0 6px;
-          font-size: 16px;
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
-          color: #f9fafb;
-        }
-        .moonshot-summary-row { display: flex; justify-content: space-between; margin-bottom: 2px; }
-        .moonshot-summary-label { color: #9ca3af; }
-        .moonshot-summary-value { color: #e5e7eb; font-weight: 600; }
-        .moonshot-summary-hint { margin-top: 6px; font-size: 11px; color: #6b7280; }
-        #moonshot-speed-meter {
-          position: absolute;
-          left: 14px;
-          right: 14px;
-          bottom: 60px;
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-          font-size: 12px;
-          color: #d1d5db;
-          pointer-events: none;
-          z-index: 30;
-        }
-        .moonshot-speed-label {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          text-transform: uppercase;
-          letter-spacing: 0.08em;
-          opacity: 0.9;
-        }
-        .moonshot-speed-bar {
-          width: 100%;
-          height: 14px;
-          border-radius: 999px;
-          background: rgba(15, 23, 42, 0.92);
-          box-shadow: 0 0 10px rgba(15, 23, 42, 0.98) inset;
-          overflow: hidden;
-        }
-        .moonshot-speed-bar-fill {
-          width: 0%;
-          height: 100%;
-          background: linear-gradient(90deg, #22c55e, #22d3ee, #f97316);
-          box-shadow: 0 0 16px rgba(56, 189, 248, 0.95);
-          transition: width 0.08s linear;
-        }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: radial-gradient(circle at top, #020617 0%, #020617 40%, #000 100%);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Barlow', sans-serif;
+      color: var(--text);
+    }
 
-        /* ArcadeBridge run request gate (iframe only) */
-        #arcadeRunGate {
-          position: fixed;
-          inset: 0;
-          display: none;
-          align-items: center;
-          justify-content: center;
-          z-index: 9999;
-          background: linear-gradient(180deg, rgba(2,6,23,0.25) 0%, rgba(0,0,0,0.75) 100%);
-          backdrop-filter: blur(10px);
-          -webkit-backdrop-filter: blur(10px);
-        }
-        #arcadeRunGate.show { display: flex; }
-        .arcadeCard {
-          width: min(540px, calc(100% - 28px));
-          border-radius: 18px;
-          border: 1px solid rgba(255,255,255,0.12);
-          background: rgba(2,6,23,0.82);
-          box-shadow: 0 22px 60px rgba(0,0,0,0.90);
-          padding: 14px 14px 12px;
-          text-align: center;
-        }
-        .arcadeTitle {
-          font-size: 12px;
-          font-weight: 900;
-          letter-spacing: 0.14em;
-          text-transform: uppercase;
-        }
-        .arcadeBody {
-          margin-top: 8px;
-          font-size: 12px;
-          color: rgba(229,231,235,0.75);
-          line-height: 1.45;
-        }
-        .arcadeBtn {
-          margin-top: 10px;
-          cursor: pointer;
-          border-radius: 999px;
-          border: 1px solid rgba(56,189,248,0.30);
-          background: rgba(56,189,248,0.14);
-          color: rgba(229,231,235,0.92);
-          font-size: 12px;
-          letter-spacing: 0.10em;
-          text-transform: uppercase;
-          padding: 10px 14px;
-        }
-        .arcadeHint {
-          margin-top: 10px;
-          font-size: 11px;
-          color: rgba(229,231,235,0.62);
-          min-height: 1.2em;
-        }
-      </style>
-    </head>
-    <body>
-      <div id="arcadeRunGate" aria-label="Start run" role="dialog" aria-modal="true">
-        <div class="arcadeCard">
-          <div class="arcadeTitle">Moonshot Run</div>
-          <div class="arcadeBody">Start a run to sync credits + scoring with the dashboard.</div>
-          <button class="arcadeBtn" id="btnStartRun" type="button">Start Run</button>
-          <div class="arcadeHint" id="arcadeHint"></div>
-        </div>
-      </div>
+    #root { position: fixed; inset: 0; }
+    #canvas { width: 100%; height: 100%; display: block; background: #000; }
 
-      <div id="moonshot-root">
-        <div id="moonshot-canvas-container"></div>
-        <div id="moonshot-slow-overlay"></div>
-        <div id="moonshot-hud">
-          <div class="moonshot-hud-block" id="moonshot-hud-score">
-            <div class="moonshot-label">Score</div>
-            <div class="moonshot-value" id="moonshot-score">0</div>
-          </div>
-          <div class="moonshot-hud-block" id="moonshot-hud-high">
-            <div class="moonshot-label">High Score</div>
-            <div class="moonshot-value" id="moonshot-high-score">0</div>
-          </div>
-          <div class="moonshot-hud-block" id="moonshot-speed-block" style="display: none;">
-            <div class="moonshot-label">Speed</div>
-            <div class="moonshot-value" id="moonshot-speed">1.0x</div>
-          </div>
-          <div class="moonshot-hud-block" id="moonshot-hud-combo">
-            <div class="moonshot-label">Combo</div>
-            <div class="moonshot-value" id="moonshot-combo">x1</div>
-          </div>
-          <div class="moonshot-hud-block">
-            <div class="moonshot-label">WAGMI</div>
-            <div class="moonshot-value" id="moonshot-wagmi">0</div>
-          </div>
-          <div class="moonshot-hud-block" id="moonshot-axis-block">
-            <div class="moonshot-label">Axis</div>
-            <div class="moonshot-value" id="moonshot-axis-mode">V</div>
-          </div>
-        </div>
-        <div id="moonshot-powerups-bar">
-          <span class="moonshot-label">Powerups</span>
-          <div class="moonshot-powerups-list" id="moonshot-powerups"></div>
-        </div>
-        <div id="moonshot-center-message">Tap / Space to ignite engines</div>
-        <div id="moonshot-wagmi-toast">+1 WAGMI</div>
-        <div id="moonshot-gameover-panel">
-          <h2>Run Summary</h2>
-          <div class="moonshot-summary-row">
-            <span class="moonshot-summary-label">Score</span>
-            <span class="moonshot-summary-value" id="moonshot-final-score">0</span>
-          </div>
-          <div class="moonshot-summary-row">
-            <span class="moonshot-summary-label">High Score</span>
-            <span class="moonshot-summary-value" id="moonshot-final-high-score">0</span>
-          </div>
-          <div class="moonshot-summary-row">
-            <span class="moonshot-summary-label">WAGMI</span>
-            <span class="moonshot-summary-value" id="moonshot-final-wagmi">0</span>
-          </div>
-          <div class="moonshot-summary-row">
-            <span class="moonshot-summary-label">Best WAGMI</span>
-            <span class="moonshot-summary-value" id="moonshot-final-wagmi-best">0</span>
-          </div>
-          <div class="moonshot-summary-row">
-            <span class="moonshot-summary-label">Best Combo</span>
-            <span class="moonshot-summary-value" id="moonshot-final-combo">x1</span>
-          </div>
-          <div class="moonshot-summary-hint">Tap / click / Space to launch again.</div>
-        </div>
-        <div id="moonshot-tutorial" style="display: none;">
-          <div class="moonshot-tutorial-inner">
-            <div class="moonshot-tutorial-title">Moonshot 3D</div>
-            <div class="moonshot-tutorial-body">
-              Tap / click / Space to thrust. Thread the rocket through the gaps, grab powerups, and stack WAGMI.
-            </div>
-            <div class="moonshot-tutorial-grid">
-              <div class="moonshot-tutorial-item">
-                <span class="label">Controls</span>
-                Tap / click / Space to flap. P or Esc to pause.
-              </div>
-              <div class="moonshot-tutorial-item">
-                <span class="label">Near-miss</span>
-                Skim the candle edges to earn extra WAGMI.
-              </div>
-              <div class="moonshot-tutorial-item">
-                <span class="label">Powerups</span>
-                GUN, SLOW, DOUBLE, CECE and INVINC show up as glowing shards.
-              </div>
-              <div class="moonshot-tutorial-item">
-                <span class="label">Goal</span>
-                Climb score, combo and WAGMI. Leaderboard tracks your best runs.
-              </div>
-            </div>
-            <div class="moonshot-tutorial-footer">Tap / click / Space anywhere to launch.</div>
-          </div>
-        </div>
+    .hud {
+      position: fixed;
+      top: 12px;
+      left: 12px;
+      display: flex;
+      gap: 10px;
+      z-index: 5;
+      pointer-events: none;
+    }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      background: rgba(2, 6, 23, 0.62);
+      border: 1px solid var(--border);
+      box-shadow: 0 18px 40px rgba(0,0,0,0.60);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      font-size: 12px;
+      letter-spacing: 0.02em;
+    }
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--cyan);
+      box-shadow: 0 0 12px rgba(34,211,238,0.55);
+    }
+    .mono { font-family: var(--mono); opacity: 0.88; }
 
-        <div id="moonshot-speed-meter">
-          <div class="moonshot-speed-label">
-            <span>Speed</span>
-            <span id="moonshot-speed-value">1.0x</span>
-          </div>
-          <div class="moonshot-speed-bar">
-            <div class="moonshot-speed-bar-fill" id="moonshot-speed-bar-fill"></div>
-          </div>
-        </div>
-      </div>
+    .pop { animation: pop 240ms ease-out; }
+    @keyframes pop { 0%{ transform: scale(1); } 55%{ transform: scale(1.06); } 100%{ transform: scale(1); } }
 
-      <script>
-        (function () {
-          const gate = document.getElementById('arcadeRunGate');
-          const btn = document.getElementById('btnStartRun');
-          const hint = document.getElementById('arcadeHint');
+    #toast {
+      position: fixed;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%) translateY(10px);
+      opacity: 0;
+      z-index: 20;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 10px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(34,211,238,0.25);
+      background: rgba(2, 6, 23, 0.78);
+      box-shadow: 0 18px 45px rgba(0,0,0,0.80);
+      transition: opacity 140ms ease-out, transform 140ms ease-out;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-          const embedded = !!(window.parent && window.parent !== window);
-          let waiting = false;
+    .overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+      background: linear-gradient(180deg, rgba(2,6,23,0.18) 0%, rgba(0,0,0,0.78) 100%);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+    .card {
+      width: min(860px, calc(100% - 26px));
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(2, 6, 23, 0.82);
+      box-shadow: var(--shadow);
+      padding: 16px;
+    }
+    .row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+    .title { font-size: 14px; font-weight: 900; letter-spacing: 0.14em; text-transform: uppercase; }
+    .subtitle { margin-top: 10px; font-size: 12px; color: var(--muted); line-height: 1.4; }
+    .grid { margin-top: 14px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } }
+    .panel {
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: rgba(15, 23, 42, 0.55);
+      padding: 12px;
+    }
+    .panel h3 { margin: 0 0 6px; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; }
+    .hint { font-size: 11px; color: rgba(229,231,235,0.64); line-height: 1.4; min-height: 1.2em; }
+    .kpi { margin-top: 10px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    .k { border: 1px solid rgba(255,255,255,0.10); border-radius: 14px; padding: 10px; background: rgba(2, 6, 23, 0.55); }
+    .l { font-size: 10px; color: rgba(229,231,235,0.55); letter-spacing: 0.10em; text-transform: uppercase; }
+    .v { margin-top: 4px; font-size: 12px; font-weight: 700; }
+    .btnrow { margin-top: 10px; display: flex; gap: 10px; flex-wrap: wrap; }
+    .btn {
+      cursor: pointer;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.06);
+      color: rgba(229,231,235,0.92);
+      font-size: 12px;
+      letter-spacing: 0.10em;
+      text-transform: uppercase;
+      padding: 10px 14px;
+    }
+    .btn.primary { border-color: rgba(34,211,238,0.30); background: rgba(34,211,238,0.14); }
+    .btn:disabled { opacity: 0.55; cursor: not-allowed; }
 
-          function post(type, payload) {
-            if (!embedded) return;
-            try { window.parent.postMessage({ type, payload: payload || {} }, '*'); } catch {}
-          }
-
-          if (embedded && gate) {
-            gate.classList.add('show');
-            post('ARCADE:READY', { gameId: 'moonshot', mode: '3d' });
-          }
-
-          window.addEventListener('message', (ev) => {
-            const d = ev && ev.data;
-            if (!d || typeof d !== 'object') return;
-            if (String(d.type || '') !== 'ARCADE:RUN_GRANTED') return;
-            const p = d.payload || d;
-            const gid = String(p.gameId || '');
-            if (gid && gid !== 'moonshot') return;
-            waiting = false;
-            if (btn) btn.disabled = false;
-            if (hint) hint.textContent = '';
-            try { gate && gate.classList.remove('show'); } catch {}
-          });
-
-          btn && btn.addEventListener('click', () => {
-            if (!embedded || waiting) return;
-            waiting = true;
-            btn.disabled = true;
-            if (hint) hint.textContent = 'Starting run…';
-            post('ARCADE:REQUEST_RUN', { gameId: 'moonshot' });
-            window.setTimeout(() => {
-              if (!waiting) return;
-              waiting = false;
-              btn.disabled = false;
-              if (hint) hint.textContent = 'No response. Try again.';
-            }, 12000);
-          });
-        })();
-      </script>
-
-      <!-- Moonshot 3D client (shared) -->
-      <script type="module" src="/moonshot.js"></script>
-    </body>
-    </html>
+    #standaloneGate {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      background: radial-gradient(circle at top, rgba(2,6,23,0.92) 0%, rgba(0,0,0,0.96) 100%);
+    }
+    #standaloneGate.show { display: flex; }
+    .sgCard { width: min(520px, calc(100% - 26px)); border-radius: 18px; border: 1px solid rgba(255,255,255,0.12); background: rgba(2, 6, 23, 0.82); box-shadow: var(--shadow); padding: 16px; text-align: center; }
+    .sgTitle { font-size: 12px; font-weight: 900; letter-spacing: 0.14em; text-transform: uppercase; }
+    .sgBody { margin-top: 10px; font-size: 12px; color: rgba(229,231,235,0.72); line-height: 1.45; }
+  </style>
+</head>
+<body>
+  <div id="standaloneGate" aria-label="Dashboard required" role="dialog" aria-modal="true">
+    <div class="sgCard">
       <div class="sgTitle">Dashboard required</div>
       <div class="sgBody">Moonshot is embed-only. Open the <strong>Arcade Dashboard</strong> and launch the game from there.</div>
     </div>
@@ -654,7 +351,7 @@
       const rocket = { x: 110, y: 0, vy: 0, r: 14 };
       const pipes = [];
       let score = 0;
-        trail.length = 0;
+      trail.length = 0;
       let lastT = 0;
       let spawnT = 0;
       let runStart = 0;
@@ -718,8 +415,7 @@
         for (const s of stars) {
           s.y += s.v * dt * 0.06;
           if (s.y > H + 10) { s.y = -10; s.x = Math.random()*W; }
-          const tw = 0.55 + 0.45*Math.sin(t*0.001*s.tw + s.p);
-          ctx.globalAlpha = s.a * tw;
+          ctx.globalAlpha = s.a;
           ctx.fillStyle = '#e5e7eb';
           ctx.beginPath();
           ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
@@ -770,16 +466,6 @@
         // Bottom
         roundRect(x, botY, p.w, botH, 12);
         ctx.fill();
-        ctx.stroke();
-
-        // Inner glow
-        ctx.strokeStyle = 'rgba(34,211,238,0.10)';
-        ctx.lineWidth = 6;
-        ctx.stroke();
-
-        // Edge caps
-        ctx.lineWidth = 1;
-        ctx.strokeStyle = 'rgba(255,255,255,0.08)';
         ctx.stroke();
       }
 

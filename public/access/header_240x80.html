@@ -3548,6 +3548,62 @@ Search terms: dead internet theory • rational privacy in crypto`;
     })().catch(() => void 0);
 
     let webglRunning = true;
+    let webglRafId = 0;
+    let webglDisposed = false;
+
+    function disposeMaterial(mat){
+      if (!mat) return;
+      try {
+        const texKeys = ['map','alphaMap','aoMap','bumpMap','displacementMap','emissiveMap','envMap','lightMap','metalnessMap','normalMap','roughnessMap'];
+        for (const k of texKeys) {
+          const t = mat[k];
+          if (t && typeof t.dispose === 'function') t.dispose();
+        }
+      } catch {}
+      try { mat.dispose && mat.dispose(); } catch {}
+    }
+
+    function disposeObject3D(obj){
+      if (!obj) return;
+      try { obj.geometry && obj.geometry.dispose && obj.geometry.dispose(); } catch {}
+      const m = obj.material;
+      if (Array.isArray(m)) { for (const mm of m) disposeMaterial(mm); }
+      else disposeMaterial(m);
+    }
+
+    function pauseWebGL(){
+      webglRunning = false;
+      if (webglRafId) { try { cancelAnimationFrame(webglRafId); } catch {} }
+      webglRafId = 0;
+    }
+
+    function resumeWebGL(){
+      if (webglDisposed) return;
+      if (webglRunning) return;
+      webglRunning = true;
+      try { clock.getDelta(); } catch {}
+      webglRafId = requestAnimationFrame(animate);
+    }
+
+    function disposeWebGL(){
+      if (webglDisposed) return;
+      webglDisposed = true;
+      pauseWebGL();
+      try { composer && composer.dispose && composer.dispose(); } catch {}
+      try { scene && scene.traverse && scene.traverse(disposeObject3D); } catch {}
+      try { renderer && renderer.dispose && renderer.dispose(); } catch {}
+      try { renderer && renderer.forceContextLoss && renderer.forceContextLoss(); } catch {}
+    }
+
+    window.addEventListener('visibilitychange', () => {
+      try {
+        if (document.hidden) pauseWebGL();
+        else resumeWebGL();
+      } catch {}
+    }, { passive: true });
+
+    window.addEventListener('pagehide', disposeWebGL, { capture: true });
+    window.addEventListener('beforeunload', disposeWebGL, { capture: true });
 
     function animate() {
       if (!webglRunning) return;
@@ -3656,10 +3712,10 @@ Search terms: dead internet theory • rational privacy in crypto`;
       if (bloomEnabled) composer.render();
       else renderer.render(scene, camera);
 
-      requestAnimationFrame(animate);
+      webglRafId = requestAnimationFrame(animate);
     }
 
-    requestAnimationFrame(animate);
+    webglRafId = requestAnimationFrame(animate);
   </script>
 </body>
 </html>

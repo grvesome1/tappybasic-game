@@ -1987,7 +1987,34 @@
         try { startAvatarPromoRotation(); } catch {}
       } else {
         try { stopAvatarPromoRotation(); } catch {}
+
+        // Reduce background work: if the Avatar Studio iframe isn't visible, unload it.
+        try {
+          const modal = document.getElementById('avatarStudioModal');
+          const open = !!(modal && modal.classList.contains('show'));
+          if (!open) {
+            const f = document.getElementById('avatarStudioFrame');
+            const src = f ? String(f.getAttribute('src') || '') : '';
+            if (f && src && src !== 'about:blank') f.setAttribute('src', 'about:blank');
+          }
+        } catch {}
       }
+
+      // Ensure only one WebGL-heavy iframe is active: if we leave Play,
+      // unload the game iframe; if we return to Play, restore it.
+      try {
+        if (typeof gameFrame !== 'undefined' && gameFrame) {
+          const src = String(gameFrame.getAttribute('src') || '');
+          if (name !== 'play') {
+            if (src && src !== 'about:blank') gameFrame.setAttribute('src', 'about:blank');
+          } else {
+            if (!src || src === 'about:blank') {
+              const next = (currentGame && currentGame.embedUrl) ? String(currentGame.embedUrl) : '/games/moonshot/';
+              gameFrame.setAttribute('src', next);
+            }
+          }
+        }
+      } catch {}
 
       // Leaderboard v2 loader
       if (name === 'leaderboard') {
@@ -2614,7 +2641,8 @@
 
     function ensureAvatarStudioFrameLoaded(){
       if (!avatarStudioFrame) return false;
-      if (avatarStudioFrame.getAttribute('src')) return true;
+      const src = String(avatarStudioFrame.getAttribute('src') || '');
+      if (src && src !== 'about:blank') return true;
       try {
         avatarStudioFrame.setAttribute('src', STUDIO.frameUrl);
         avatarStudioFrame.addEventListener('load', () => {
@@ -4016,6 +4044,8 @@ async function recordRunResult(gameId, runId, score, durationMs) {
     window.addEventListener('message', (ev) => {
       const data = ev && ev.data;
       if (!data || typeof data !== 'object') return;
+
+      const m = data;
 
       if (m.channel === 'GRUESOME_ARCADE_V1' && typeof m.type === 'string' && m.type.startsWith('GA_STUDIO_')) {
         try { handleStudioMessage(m, ev); } catch {}

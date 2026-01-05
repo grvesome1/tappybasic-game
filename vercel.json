@@ -1,4 +1,5 @@
 {
+  "_comment": "Rewrite order matters: keep specific prefixes + asset paths above the SPA fallback. Catch-all must be last to avoid serving /index.html for JS/CSS/assets.",
   "buildCommand": null,
   "outputDirectory": "public",
   "installCommand": null,
@@ -81,6 +82,26 @@
     {
       "source": "/deck/(.*)",
       "destination": "/deck/$1"
+    },
+    {
+      "source": "/assets/(.*)",
+      "destination": "/assets/$1"
+    },
+    {
+      "source": "/vendor/(.*)",
+      "destination": "/vendor/$1"
+    },
+    {
+      "source": "/gruesome-arcade-(.*)",
+      "destination": "/gruesome-arcade-$1"
+    },
+    {
+      "source": "/header_240x80(.*)",
+      "destination": "/access/header_240x80.html"
+    },
+    {
+      "source": "/(.*\\..*)",
+      "destination": "/$1"
     },
     {
       "source": "/(.*)",
