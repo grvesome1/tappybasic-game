@@ -1,0 +1,13 @@
+{
+  "gameId": "stormhouse2",
+  "runId": "<runId>",
+  "score": 12345,
+  "durationMs": 185000,
+  "metrics": {
+    "waves": 18,
+    "kills": 532,
+    "inRunSpendAC": 47,
+    "hits": 820,
+    "attempts": 1000
+  }
+}

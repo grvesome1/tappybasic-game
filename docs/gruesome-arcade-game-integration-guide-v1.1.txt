@@ -1,0 +1,268 @@
+Gruesøme’s Arcade — Game Integration Guide (v1.1)
+Economy cohesion + metrics + run grants (ArcadeBridge spec)
+Last updated: 2026-01-05
+
+built by gruesøme
+
+--------------------------------------------------------------------------------
+0) What this is
+--------------------------------------------------------------------------------
+A reusable, generic reference for integrating ANY web game into Gruesøme’s Arcade:
+
+- Parent-authoritative economy (Credits, promos, PRO).
+- “Run grant” gating so a game cannot start an eligible run unless the Arcade grants it.
+- Multi-metric leaderboard support (game-type-aware scoring).
+- Minimal embedded-game responsibilities: gameplay + UI only.
+
+Target runtime:
+- The game runs inside an iframe hosted by the Arcade (same origin at launch).
+- The game talks to the Arcade via postMessage (“ArcadeBridge”).
+- The Arcade submits runs to the backend and handles leaderboard/payout eligibility.
+
+Launch rule of thumb:
+- The game never owns Credits, promos, PRO, payouts, or leaderboards.
+- The game is a gameplay client. The Arcade shell is the authority.
+
+--------------------------------------------------------------------------------
+1) Key concepts (the mental model)
+--------------------------------------------------------------------------------
+1) Credits (AC)
+- 1 AC = $0.01 “display anchor”.
+- Users buy AC on-chain (ETH -> backend reconciliation).
+- Runs and in-game upgrades spend AC off-chain at launch.
+- Promos may exist, but promos never block play (only “eligible for payouts”).
+
+2) Run grants (anti-cheat / economy authority)
+- Embedded games MUST gate gameplay start behind an Arcade run grant.
+- A run grant is permission to begin a run, with:
+  - runId (unique)
+  - runType (free/promo/paid/eligible)
+  - costAC (optional)
+  - eligibility flags
+
+3) Multi-metric leaderboards
+- Each game can expose multiple leaderboard metrics (score, time, waves, etc).
+- A “default metric” is used for the main leaderboard view and payouts (if desired).
+- Metrics are defined in the catalog (public/arcade-games.json) and in the metrics library.
+
+4) Fairness guardrails for economy-heavy games
+For games that spend Credits inside the run (defense, RPG, idle):
+- Track in-run spend as a metric: inRunSpendAC
+- Use a rankedSpendCapAC to prevent “pay-to-win” leaderboards.
+- Optionally separate boards:
+  - “ranked” = strict caps + eligible
+  - “sandbox” = no caps + for fun
+
+--------------------------------------------------------------------------------
+2) Integration at a glance (minimum viable)
+--------------------------------------------------------------------------------
+Embedded mode (iframe):
+1) On load: send ARCADE:READY
+2) On first start input: send ARCADE:REQUEST_RUN (don’t start yet)
+3) Wait for ARCADE:RUN_GRANTED
+4) Start gameplay, track metrics and duration
+5) On game over send ARCADE:RUN_RESULT (runId, durationMs, metrics)
+
+Standalone mode (opened directly, no parent):
+- The game starts normally and can show a “Demo mode” banner.
+
+--------------------------------------------------------------------------------
+3) ArcadeBridge message protocol (v1)
+--------------------------------------------------------------------------------
+All messages are postMessage() with a shared channel key.
+Recommended:
+- channel: "ARCADE_BRIDGE_V1"
+- gameId: stable string (matches catalog id)
+
+3.1 Outbound (game -> parent)
+A) ARCADE:READY
+{
+  "channel": "ARCADE_BRIDGE_V1",
+  "type": "ARCADE:READY",
+  "gameId": "moonshot",
+  "payload": { "version": "1.0.0" }
+}
+
+B) ARCADE:REQUEST_RUN
+Sent on the first “start” intent (tap/click/space/enter).
+{
+  "channel": "ARCADE_BRIDGE_V1",
+  "type": "ARCADE:REQUEST_RUN",
+  "gameId": "moonshot",
+  "payload": {
+    "mode": "ranked",              // optional (ranked/sandbox/tutorial)
+    "requestedCostAC": 0,          // optional
+    "wantsEligible": true          // optional hint; parent decides
+  }
+}
+
+C) ARCADE:RUN_RESULT
+Sent once at game-over (or on run abort).
+{
+  "channel": "ARCADE_BRIDGE_V1",
+  "type": "ARCADE:RUN_RESULT",
+  "gameId": "stormhouse2",
+  "payload": {
+    "runId": "run_01HS...",
+    "durationMs": 183420,
+    "metrics": {
+      "waves": 23,
+      "kills": 812,
+      "accuracyBp": 7345,
+      "efficiency": 1.72,
+      "inRunSpendAC": 42,
+      "score": 912345
+    }
+  }
+}
+
+Optional (vNext): in-run spend authorization
+D) ARCADE:SPEND_REQUEST (strict mode; recommended for economy games)
+{
+  "channel": "ARCADE_BRIDGE_V1",
+  "type": "ARCADE:SPEND_REQUEST",
+  "gameId": "stormhouse2",
+  "payload": {
+    "runId": "run_01HS...",
+    "amountAC": 5,
+    "sku": "upgrade:rifle_1",
+    "meta": { "level": 1 }
+  }
+}
+
+3.2 Inbound (parent -> game)
+A) ARCADE:SYNC
+A snapshot the game can display (credits, membership, etc).
+{
+  "channel": "ARCADE_BRIDGE_V1",
+  "type": "ARCADE:SYNC",
+  "gameId": "moonshot",
+  "payload": {
+    "walletConnected": true,
+    "pohVerified": false,
+    "paidAC": 1200,
+    "promoAC": 50,
+    "pro": { "active": true, "tier": 2, "expiresAt": 1760000000 },
+    "identity": {
+      "displayName": "NovaPilot",
+      "avatarPng": "https://.../avatar.png"
+    }
+  }
+}
+
+B) ARCADE:RUN_GRANTED
+{
+  "channel": "ARCADE_BRIDGE_V1",
+  "type": "ARCADE:RUN_GRANTED",
+  "gameId": "moonshot",
+  "payload": {
+    "runId": "run_01HS...",
+    "runType": "paid",       // free | promo | paid
+    "eligible": true,
+    "costAC": 5,
+    "rankedSpendCapAC": 25,  // optional fairness guardrail
+    "metric": "score"        // optional default metric for this run
+  }
+}
+
+C) ARCADE:RUN_DENIED
+{
+  "channel": "ARCADE_BRIDGE_V1",
+  "type": "ARCADE:RUN_DENIED",
+  "gameId": "moonshot",
+  "payload": {
+    "reason": "not_connected|insufficient_funds|poh_required|rate_limited",
+    "message": "Connect wallet to play."
+  }
+}
+
+Optional (vNext): ARCADE:SPEND_GRANTED / ARCADE:SPEND_DENIED.
+
+--------------------------------------------------------------------------------
+4) Metrics design (generic)
+--------------------------------------------------------------------------------
+4.1 Metric IDs and types
+Each metric has:
+- id: stable string (ex: "score", "timeMs", "waves", "accuracyBp")
+- label: UI label (ex: "Time", "Waves")
+- type: int | float
+- direction:
+  - "desc" = higher is better
+  - "asc"  = lower is better (time, damage taken, etc)
+- clamp / rounding rules (optional)
+
+4.2 Recommended metric patterns (works for most genres)
+Skill:
+- score (desc)
+- timeMs (asc) / durationMs (asc/desc depending)
+- accuracyBp (desc)  (basis points 0..10000)
+- waves / levelReached (desc)
+- winStreak (desc)
+- noDamageRuns (desc)
+
+Economy-skill hybrid:
+- efficiency (desc): output / spend (kills per AC, DPS per AC, etc)
+- inRunSpendAC (desc but capped for ranked)
+- valueEarnedAC (desc) if the game generates earnable value
+
+Activity (payout weighting, not “skill leaderboard”):
+- paidACSpent (desc) is tracked by the Arcade backend per run, not by the game.
+- activeDays is tracked at the backend.
+
+4.3 For payout eligibility
+- Skill payouts use the PAID-ONLY eligible leaderboard.
+- Games can show normal boards for fun, but payouts depend on eligibility.
+
+--------------------------------------------------------------------------------
+5) UX requirements (embedded mode)
+--------------------------------------------------------------------------------
+- Never freeze on “start” if a grant is slow:
+  - show “Requesting run…” and a 2.5s timeout message.
+- If denied:
+  - show reason + hint (“Open Wallet”).
+- If not embedded:
+  - show “Demo mode” and start instantly.
+
+Recommended fallback copy:
+- Not connected: “Connect wallet to play.”
+- No funds: “Not enough Credits — open Wallet.”
+- PoH required: “Verify PoH to claim payouts (you can still play).”
+
+--------------------------------------------------------------------------------
+6) Implementation template (vanilla JS)
+--------------------------------------------------------------------------------
+Detect embed:
+  const embedded = window.parent && window.parent !== window;
+
+Send message:
+  window.parent.postMessage(msg, parentOrigin);
+
+Listen:
+  window.addEventListener("message", (ev) => { ... });
+
+Security:
+- Prefer parentOrigin = new URL(document.referrer).origin
+- Always require channel + gameId match before acting
+
+--------------------------------------------------------------------------------
+7) QA checklist
+--------------------------------------------------------------------------------
+- Standalone mode works (no parent required).
+- Embedded mode:
+  - Sends READY on load.
+  - Start input triggers REQUEST_RUN (no gameplay yet).
+  - RUN_GRANTED starts gameplay and assigns runId.
+  - RUN_RESULT posts exactly once and includes durationMs + metrics.
+- Timeout UX appears after 2.5s if no response.
+- Metrics are sane (no NaN, no strings, no negative time).
+- If usesCreditsInRun:
+  - inRunSpendAC is reported
+  - rankedSpendCapAC is enforced when eligible
+
+--------------------------------------------------------------------------------
+Appendix A) Error codes
+--------------------------------------------------------------------------------
+not_connected | insufficient_funds | poh_required | rate_limited | unknown
+
+--------------------------------------------------------------------------------
+End

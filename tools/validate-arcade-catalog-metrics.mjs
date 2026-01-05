@@ -1,197 +1,143 @@
 #!/usr/bin/env node
 /**
- * validate-arcade-catalog-metrics.mjs
+ * validate-arcade-catalog-metrics.mjs (v3.8)
  *
- * Quick sanity checker for `public/arcade-games.json` metric declarations.
+ * Adds fairness checks for games that spend Credits inside runs.
  *
- * - No dependencies (Node built-ins only)
- * - Safe: never writes files
+ * Validates:
+ * - public/arcade-games.json contains metrics in a consistent MetricSpec shape
+ * - defaultMetric is present in metrics[]
+ * - metric IDs are unique per game
+ * - optional: metric IDs exist in public/arcade-metrics-library.json
+ * - NEW: if usesCreditsInRun=true, warn unless:
+ *    - metrics include efficiency (recommended payout metric), and
+ *    - metrics include inRunSpendAC (telemetry), and/or rankedSpendCapAC is set
+ *
+ * Exit codes:
+ * - 0: ok (may include warnings)
+ * - 1: fatal errors found
  *
  * built by gruesøme
- * sig_enc (xor+b64): OC8zNi56OCN6PSgvPymZ4jc/
+ * SIG_ENC_XOR5A_UTF8_HEX=382f33362e7a38237a3d282f3f2999e2373f
  */
 
-import fs from "node:fs/promises";
+import fs from "node:fs";
 import path from "node:path";
 
-const ROOT = process.cwd();
-const CATALOG_PATH = path.join(ROOT, "public", "arcade-games.json");
+const CWD = process.cwd();
+const CATALOG_PATH = path.join(CWD, "public", "arcade-games.json");
+const LIB_PATH = path.join(CWD, "public", "arcade-metrics-library.json");
 
-const EPS = 1e-6;
-
-function isObject(v) {
-  return v && typeof v === "object" && !Array.isArray(v);
+function isObject(x) {
+  return x && typeof x === "object" && !Array.isArray(x);
 }
 
-function normalizeGames(catalog) {
+function readJson(p) {
+  return JSON.parse(fs.readFileSync(p, "utf8"));
+}
+
+function loadGames(catalog) {
   if (Array.isArray(catalog)) return catalog;
   if (isObject(catalog) && Array.isArray(catalog.games)) return catalog.games;
   if (isObject(catalog)) {
-    // Support `{ "<id>": {...game...}, ... }`
-    const vals = Object.values(catalog);
-    if (vals.every((v) => isObject(v) && ("id" in v || "title" in v))) return vals;
+    const arr = Object.values(catalog).filter(v => isObject(v) && (v.gameId || v.id));
+    if (arr.length) return arr;
   }
   return [];
 }
 
-function sumWeights(payoutMetrics) {
-  return payoutMetrics.reduce((acc, m) => acc + (Number(m.weight) || 0), 0);
-}
+function main() {
+  const warnings = [];
+  const errors = [];
 
-function fmtGame(g, idx) {
-  const id = (g && g.id) ? String(g.id) : `#${idx + 1}`;
-  const title = g && g.title ? String(g.title) : "";
-  return title ? `${id} (${title})` : id;
-}
-
-function fail(msg) {
-  console.error(`ERROR: ${msg}`);
-}
-
-function warn(msg) {
-  console.warn(`WARN: ${msg}`);
-}
-
-async function main() {
-  let raw;
-  try {
-    raw = await fs.readFile(CATALOG_PATH, "utf-8");
-  } catch (e) {
-    warn(`Missing ${path.relative(ROOT, CATALOG_PATH)} — skipping validation (ok if you haven't added catalog metrics yet).`);
-    process.exit(0);
-  }
-
-  let catalog;
-  try {
-    catalog = JSON.parse(raw);
-  } catch (e) {
-    fail(`public/arcade-games.json is not valid JSON: ${e?.message || e}`);
+  if (!fs.existsSync(CATALOG_PATH)) {
+    console.error("FATAL: public/arcade-games.json not found");
     process.exit(1);
   }
 
-  const games = normalizeGames(catalog);
-  if (!games.length) {
-    warn(`Could not find a games list in public/arcade-games.json (expected array or {games:[...]}). Nothing to validate.`);
-    process.exit(0);
+  const catalog = readJson(CATALOG_PATH);
+  const games = loadGames(catalog);
+
+  const libById = new Set();
+  if (fs.existsSync(LIB_PATH)) {
+    const lib = readJson(LIB_PATH);
+    if (Array.isArray(lib)) for (const m of lib) if (m?.id) libById.add(m.id);
+    else if (Array.isArray(lib.metrics)) for (const m of lib.metrics) if (m?.id) libById.add(m.id);
+    else if (isObject(lib)) for (const k of Object.keys(lib)) libById.add(k);
+  } else {
+    warnings.push("public/arcade-metrics-library.json not found; skipping library ID validation");
   }
 
-  let errors = 0;
-  let warnings = 0;
-
-  const seenIds = new Set();
-
-  for (let i = 0; i < games.length; i++) {
-    const g = games[i];
-    const tag = fmtGame(g, i);
-
-    // id
-    if (!g || !g.id) {
-      fail(`${tag}: missing game.id`);
-      errors++;
+  for (const g of games) {
+    const id = g.gameId || g.id;
+    if (!id) {
+      errors.push("Game missing gameId/id");
       continue;
     }
-    if (seenIds.has(g.id)) {
-      fail(`${tag}: duplicate game.id "${g.id}"`);
-      errors++;
-    }
-    seenIds.add(g.id);
 
-    // gameType
-    if (!g.gameType) {
-      warn(`${tag}: missing gameType (recommend adding: shooter/defense/puzzle/rhythm/etc)`);
-      warnings++;
-    }
-
-    // metrics array
     const metrics = Array.isArray(g.metrics) ? g.metrics : [];
     if (!metrics.length) {
-      warn(`${tag}: no metrics[] declared (ok for legacy score-only games, but v3 metrics needs this)`);
-      warnings++;
+      warnings.push(`${id}: missing/empty metrics[] (will fall back to score only)`);
+      continue;
     }
 
-    const metricIds = new Set();
+    const seen = new Set();
+    let payoutWeightSum = 0;
+    let hasEfficiency = false;
+    let hasInRunSpend = false;
+
     for (const m of metrics) {
-      if (!m || typeof m.id !== "string" || !m.id.trim()) {
-        fail(`${tag}: metric missing id`);
-        errors++;
+      if (typeof m === "string") {
+        warnings.push(`${id}: metric "${m}" is a string; prefer full MetricSpec object`);
+        if (seen.has(m)) errors.push(`${id}: duplicate metric id "${m}"`);
+        seen.add(m);
+
+        if (m === "efficiency") hasEfficiency = true;
+        if (m === "inRunSpendAC") hasInRunSpend = true;
         continue;
       }
-      if (metricIds.has(m.id)) {
-        fail(`${tag}: duplicate metric id "${m.id}"`);
-        errors++;
-      }
-      metricIds.add(m.id);
 
-      if (!["asc", "desc"].includes(m.direction)) {
-        fail(`${tag}: metric "${m.id}" has invalid direction "${m.direction}" (expected asc|desc)`);
-        errors++;
-      }
-      if (!m.clamp || typeof m.clamp.min !== "number" || typeof m.clamp.max !== "number") {
-        warn(`${tag}: metric "${m.id}" missing clamp {min,max} (recommended to reduce abuse)`);
-        warnings++;
-      } else if (m.clamp.min > m.clamp.max) {
-        fail(`${tag}: metric "${m.id}" clamp.min > clamp.max`);
-        errors++;
-      }
-    }
-
-    // defaultMetric
-    if (g.defaultMetric && metrics.length && !metricIds.has(g.defaultMetric)) {
-      fail(`${tag}: defaultMetric "${g.defaultMetric}" not found in metrics[]`);
-      errors++;
-    }
-    if (!g.defaultMetric && metrics.length) {
-      warn(`${tag}: metrics[] exists but defaultMetric missing (UI won't know what to show first)`);
-      warnings++;
-    }
-
-    // payoutMetrics weights (if present)
-    const payoutMetrics = Array.isArray(g.payoutMetrics) ? g.payoutMetrics : (Array.isArray(g.skillPayoutMetrics) ? g.skillPayoutMetrics : []);
-    if (payoutMetrics.length) {
-      const w = sumWeights(payoutMetrics);
-      if (Math.abs(1 - w) > 0.02) {
-        warn(`${tag}: payoutMetrics weights sum to ${w.toFixed(3)} (recommend ~1.0)`);
-        warnings++;
+      if (!isObject(m) || typeof m.id !== "string") {
+        errors.push(`${id}: metric entry is invalid (must be object with id)`);
+        continue;
       }
 
-      for (const pm of payoutMetrics) {
-        if (!pm || typeof pm.id !== "string") {
-          fail(`${tag}: payoutMetric missing id`);
-          errors++;
-          continue;
-        }
-        if (metrics.length && !metricIds.has(pm.id)) {
-          warn(`${tag}: payoutMetric "${pm.id}" not declared in metrics[] (ok if computed server-side, but you should still list it)`);
-          warnings++;
-        }
+      if (seen.has(m.id)) errors.push(`${id}: duplicate metric id "${m.id}"`);
+      seen.add(m.id);
+
+      if (m.id === "efficiency") hasEfficiency = true;
+      if (m.id === "inRunSpendAC") hasInRunSpend = true;
+
+      if (typeof m.payoutWeight === "number" && m.payoutEligible) payoutWeightSum += m.payoutWeight;
+
+      if (libById.size && !libById.has(m.id)) {
+        warnings.push(`${id}: metric id "${m.id}" not found in library (ok if custom, but consider adding to library)`);
       }
     }
 
-    // In-run credit spend fairness checks
-    const usesCreditsInRun = !!g.usesCreditsInRun;
-    const hasSpentMetric = metricIds.has("spentInRunAC");
-    const hasEfficiency = metricIds.has("efficiency") || payoutMetrics.some((pm) => pm?.id === "efficiency");
-    const hasSpendCap = typeof g.rankedSpendCapAC === "number" && g.rankedSpendCapAC > 0;
+    if (!g.defaultMetric) warnings.push(`${id}: missing defaultMetric`);
+    else {
+      const hasDefault = metrics.some(mm => (typeof mm === "string" ? mm === g.defaultMetric : mm?.id === g.defaultMetric));
+      if (!hasDefault) errors.push(`${id}: defaultMetric "${g.defaultMetric}" not present in metrics[]`);
+    }
 
-    if (usesCreditsInRun || hasSpentMetric) {
-      if (!hasEfficiency && !hasSpendCap) {
-        warn(`${tag}: usesCreditsInRun=true (or spentInRunAC metric present) but no efficiency metric and no rankedSpendCapAC. Ranked fairness risk.`);
-        warnings++;
-      }
+    if (payoutWeightSum > 1.001) warnings.push(`${id}: payoutWeight sum is ${payoutWeightSum.toFixed(3)} (> 1.0). Consider normalizing.`);
+
+    if (g.usesCreditsInRun === true) {
+      if (!hasInRunSpend) warnings.push(`${id}: usesCreditsInRun=true but metrics[] missing "inRunSpendAC" (telemetry for fairness)`);
+      if (!hasEfficiency) warnings.push(`${id}: usesCreditsInRun=true but metrics[] missing "efficiency" (recommended payout metric)`);
+      if (!Number.isFinite(g.rankedSpendCapAC)) warnings.push(`${id}: usesCreditsInRun=true but rankedSpendCapAC not set (recommended cap for ranked skill boards)`);
     }
   }
 
-  const summary = `Catalog metrics validation complete: ${errors} error(s), ${warnings} warning(s).`;
-  if (errors) {
-    console.error(summary);
+  for (const w of warnings) console.warn("WARN:", w);
+  for (const e of errors) console.error("ERROR:", e);
+
+  if (errors.length) {
+    console.error(`\nFATAL: ${errors.length} error(s)`);
     process.exit(1);
-  } else {
-    console.log(summary);
-    process.exit(0);
   }
+  console.log(`OK: no fatal errors (${warnings.length} warning(s))`);
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+main();

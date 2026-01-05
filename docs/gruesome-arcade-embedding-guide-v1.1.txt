@@ -1,0 +1,112 @@
+Gruesøme’s Arcade — Game Library Embedding Guide (v1.1)
+How to host, register, and embed any web game into the Arcade library.
+Last updated: 2026-01-05
+
+built by gruesøme
+
+--------------------------------------------------------------------------------
+0) One sentence
+--------------------------------------------------------------------------------
+Games live at stable URLs under /public, are registered in public/arcade-games.json,
+and are loaded in a secured iframe with ArcadeBridge messaging.
+
+--------------------------------------------------------------------------------
+1) Core rules (non-negotiable)
+--------------------------------------------------------------------------------
+1) Keep gameId stable forever.
+   Treat it like a contract address. If you rename it, it is a NEW game.
+
+2) Use relative asset paths.
+   Example: ./assets/sfx.wav not /assets/sfx.wav
+   So the game works under /games/<gameId>/ or /public/<bundle>/.
+
+3) In embeds, the game must use run gating.
+   Games never start a payout-eligible run without ARCADE:RUN_GRANTED.
+
+4) The parent submits runs + updates leaderboards.
+   The iframe should never call /api/run/submit directly in production embeds.
+
+5) Wallet transactions happen in the Arcade UI (Wallet tab), not inside the iframe.
+
+--------------------------------------------------------------------------------
+2) Recommended folder structure
+--------------------------------------------------------------------------------
+Option A (simple static folder):
+public/games/<gameId>/
+  index.html
+  game.js
+  assets/...
+
+Option B (single-file drop):
+public/<gameId>/
+  index.html
+  ... (same idea)
+
+If the game is built (Vite/Parcel/etc), copy the final dist output here.
+
+Avoid:
+- Service workers
+- Cross-origin CDN scripts unless unavoidable
+- Hardcoded absolute paths
+
+--------------------------------------------------------------------------------
+3) Catalog registration (public/arcade-games.json)
+--------------------------------------------------------------------------------
+Each game entry should include:
+- id (string): stable gameId
+- name (string)
+- url (string): iframe URL, relative to /public
+- description (string)
+- tags (array)
+- usesCreditsInRun (bool): if the game spends Credits inside the run
+- rankedSpendCapAC (int): fairness cap for ranked eligible runs (when usesCreditsInRun)
+- defaultMetric (string): metric id used in main leaderboard
+- metrics (array): allowed metric ids + rules
+
+Example (defense game w/ in-run spend):
+{
+  "id": "stormhouse2",
+  "name": "Storm the House 2 (Remaster)",
+  "url": "/games/stormhouse2/index.html",
+  "usesCreditsInRun": true,
+  "rankedSpendCapAC": 25,
+  "defaultMetric": "waves",
+  "metrics": [
+    { "id": "waves", "direction": "desc" },
+    { "id": "efficiency", "direction": "desc" },
+    { "id": "durationMs", "direction": "desc" },
+    { "id": "inRunSpendAC", "direction": "desc", "clamp": { "max": 250 } }
+  ]
+}
+
+Validation:
+- Run: node tools/validate-arcade-catalog-metrics.mjs
+- Don’t ship with validator warnings.
+
+--------------------------------------------------------------------------------
+4) Iframe hosting + security
+--------------------------------------------------------------------------------
+Minimum:
+- sandbox the iframe if possible (allow-scripts, allow-same-origin)
+- validate postMessage channel + gameId + origin
+- never trust metrics blindly (clamp/round server-side where possible)
+
+If you later host games on a separate domain:
+- enforce allowlist origins for each gameId in the Arcade parent
+- rotate channel keys per game (optional)
+
+--------------------------------------------------------------------------------
+5) Release checklist
+--------------------------------------------------------------------------------
+- Game runs standalone (open the URL directly).
+- Game runs embedded:
+  - Sends READY
+  - Requests run
+  - Waits for RUN_GRANTED
+  - Sends RUN_RESULT
+- No absolute asset paths
+- No service worker
+- No direct leaderboard submissions
+
+--------------------------------------------------------------------------------
+End

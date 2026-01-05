@@ -1,0 +1,119 @@
+Gruesøme’s Arcade — Launch Reference (Web3 + Avatar PRO) (v1.1)
+Last updated: 2026-01-05
+
+built by gruesøme
+
+--------------------------------------------------------------------------------
+0) What changed in v1.1 (delta)
+--------------------------------------------------------------------------------
+- Weekly payout reserve: a % of daily net pot rolls into a weekly pot.
+- Multi-metric, game-type-aware leaderboards (catalog-defined metrics).
+- PRO Avatar nickname at mint (public display).
+- Gen1 PRO Avatar: launch as SBT, with an admin one-way unlock to tradable later.
+- Wallet UX: daily + weekly countdowns + claim flows (UI supports fallback to API routes).
+
+--------------------------------------------------------------------------------
+1) User types & PRO tiers
+--------------------------------------------------------------------------------
+Free user
+- Can play games.
+- Can earn leaderboard placement (for fun), but payouts require eligible (paid) activity.
+
+PRO membership is a single ERC-721 (“PRO Avatar NFT”)
+- One per wallet.
+- Membership status stored on-chain: tier + expiry.
+- Avatar image is locked permanently once minted (no edit system for Gen1).
+
+Tiers (launch)
+- PRO Mini: $2/mo
+  - Unlocks Avatar Studio access (mint)
+  - Eligible for small achievement Credit rewards
+- PRO Prime: $25/mo
+  - +10% payout bonus
+  - Free entry to tournaments
+  - Eligible for Credit airdrops (if any)
+- PRO Lifetime: $100
+  - “Lifetime until Jan 30, 2026; after that annual” (contract rule: after lifetimeSaleEnd it becomes annual)
+
+Nickname
+- User provides a nickname at mint.
+- Nickname is public while PRO is active and shown on leaderboards and other public surfaces.
+
+Transferability
+- Launch default: Soulbound (SBT) — transfers & approvals revert.
+- Future: admin can permanently unlock transfers for Gen1 collectibles when the ecosystem migrates.
+
+--------------------------------------------------------------------------------
+2) Credits economy (AC)
+--------------------------------------------------------------------------------
+- 1 Credit (AC) is an off-chain unit anchored to $0.01 for UX.
+- Users buy Credits using ETH (chain tx); backend credits the account.
+- Games do not own balances. Arcade parent does.
+
+Promos
+- Promo Credits can exist.
+- Promo runs may appear on “fun boards” but are not payout eligible.
+
+--------------------------------------------------------------------------------
+3) Leaderboards & payouts (daily + weekly)
+--------------------------------------------------------------------------------
+Leaderboards are populated by run submissions (server authoritative):
+- Daily, Weekly, All-time leaderboards exist per game and per metric.
+- “Eligible (paid-only)” boards are used for skill payouts.
+
+Payout pipeline (daily epoch)
+- Epoch settles at UTC midnight.
+- Net pot = (paid Credits spent) minus platform take.
+- Default splits (launch):
+  - 55% Skill pool (rank-based, paid-only eligible)
+  - 35% Activity pool (based on paid Credits spent + active days)
+  - 10% PRO boost pool (weighted, PRO-only)
+
+Weekly reserve
+- A percentage of each day’s net pot is reserved into a weekly pot.
+- Weekly pot is claimable after weekly settlement (Mon 00:05 UTC by cron).
+- Default weekly reserve: 15% (configurable).
+
+Lottery (optional at launch)
+- Funded from Activity pool (configurable %).
+- Winners are chosen weighted by paid activity.
+- If nobody qualifies, lottery can roll back to Activity.
+
+Fairness: economy-heavy games
+- If a game spends Credits during the run:
+  - track inRunSpendAC metric
+  - enforce rankedSpendCapAC for eligible boards
+  - provide “ranked vs sandbox” modes if needed
+
+--------------------------------------------------------------------------------
+4) Contracts (launch set)
+--------------------------------------------------------------------------------
+ArcadePayments.sol
+- Accepts ETH, forwards to treasury, credits user off-chain via backend.
+
+ArcadePromo.sol
+- Promo allocations and claims (optional; can be disabled at launch).
+
+ArcadeEpochVault.sol
+- Holds reward token (mUSD / stable).
+- Pays out claims based on backend settlement totals.
+
+ArcadeProAvatar.sol (v1.2)
+- PRO membership + avatar ERC-721
+- One per wallet, status stored in contract
+- Nickname stored once at mint
+- Transfers locked by default; admin one-way unlock possible
+
+--------------------------------------------------------------------------------
+5) Admin transparency goals (planned)
+--------------------------------------------------------------------------------
+Admin wallet appears on leaderboards (with “ADMIN” badge) but is excluded from payouts.
+If an admin wallet places in a payout position, rewards shift to the next eligible player.
+
+Admin page (future iteration)
+- Visible only for admin wallet
+- Shows vault + treasury balances, epoch totals
+- Allows deposit/withdraw (with on-chain tx) and “read-only” audit links
+
+--------------------------------------------------------------------------------
+End

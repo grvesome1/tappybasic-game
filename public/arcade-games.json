@@ -14,7 +14,7 @@
     {
       "id": "moonshot",
       "name": "Moonshot",
-      "tagline": "Precision flight \u2022 dodge debris \u2022 climb the stars",
+      "tagline": "Precision flight • dodge debris • climb the stars",
       "embedUrl": "/games/moonshot/",
       "status": "live",
       "runCostAC": 10,
@@ -57,7 +57,7 @@
     {
       "id": "storm-the-blockchain",
       "name": "Storm the Blockchain (3D Remaster)",
-      "tagline": "Classic defense \u2022 rebuilt for the onchain arcade",
+      "tagline": "Classic defense • rebuilt for the onchain arcade",
       "embedUrl": "/games/stormblockchain/",
       "status": "coming_soon",
       "runCostAC": 0,
@@ -96,11 +96,94 @@
           "eligible": false
         }
       ]
+    },
+    {
+      "gameId": "stormhouse2",
+      "title": "Storm the House 2 (Remaster)",
+      "path": "/games/stormhouse2/index.html",
+      "payoutEligible": true,
+      "runCostAC": 1,
+      "gameType": "defense",
+      "usesCreditsInRun": true,
+      "rankedSpendCapAC": 200,
+      "notes": "Defense economy game: uses in-run Credits. Skill payouts weight waves + efficiency to reduce pay-to-win.",
+      "metrics": [
+        {
+          "id": "waves",
+          "label": "Waves",
+          "format": "int",
+          "dir": "desc",
+          "payoutEligible": true,
+          "payoutWeight": 0.55,
+          "clamp": {
+            "min": 0,
+            "max": 999
+          }
+        },
+        {
+          "id": "efficiency",
+          "label": "Efficiency",
+          "format": "int",
+          "dir": "desc",
+          "payoutEligible": true,
+          "payoutWeight": 0.3,
+          "clamp": {
+            "min": 0,
+            "max": 999999999
+          }
+        },
+        {
+          "id": "durationMs",
+          "label": "Survival Time",
+          "format": "ms",
+          "dir": "desc",
+          "payoutEligible": true,
+          "payoutWeight": 0.15,
+          "clamp": {
+            "min": 0,
+            "max": 86400000
+          }
+        },
+        {
+          "id": "inRunSpendAC",
+          "label": "In‑run Credits Spent",
+          "format": "int",
+          "dir": "asc",
+          "payoutEligible": false,
+          "clamp": {
+            "min": 0,
+            "max": 999999
+          }
+        },
+        {
+          "id": "kills",
+          "label": "Kills",
+          "format": "int",
+          "dir": "desc",
+          "payoutEligible": false,
+          "clamp": {
+            "min": 0,
+            "max": 9999999
+          }
+        },
+        {
+          "id": "accuracyBp",
+          "label": "Accuracy",
+          "format": "bp",
+          "dir": "desc",
+          "payoutEligible": false,
+          "clamp": {
+            "min": 0,
+            "max": 10000
+          }
+        }
+      ],
+      "defaultMetric": "waves"
     }
   ],
   "meta": {
     "schema": "gruesome-arcade.catalog.v1",
-    "signaturePlain": "built by grues\u00f8me",
+    "signaturePlain": "built by gruesøme",
     "signatureEnc": "SIG_ENC_XOR5A_HEX=382f33362e7a38237a3d282f3f29a2373f",
     "version": "2.8",
     "updatedAtUtc": "2025-12-29T00:00:00Z"

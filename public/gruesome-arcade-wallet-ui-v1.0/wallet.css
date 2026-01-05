@@ -194,6 +194,59 @@
 .ga-snap .ga-k{ color: var(--ga-muted); font-size: 12px; margin-bottom: 4px; }
 .ga-snap .ga-v{ font-weight: 700; font-size: 14px; }
 
+/* Payouts */
+.ga-payoutGrid{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  padding: 0 18px 18px 18px;
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 980px){
+  .ga-payoutGrid{ grid-template-columns: 1fr; }
+}
+
+.ga-payoutCard{
+  border: 1px solid var(--ga-stroke);
+  background: rgba(0,0,0,0.16);
+  border-radius: var(--ga-radius-lg);
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.ga-payoutCard__top{
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.ga-payoutCard__title{
+  font-family: var(--ga-font-brand);
+  font-weight: 800;
+  letter-spacing: 0.2px;
+}
+
+.ga-payoutCard__amtRow{
+  display: grid;
+  gap: 6px;
+}
+
+.ga-payoutCard__amt{
+  font-weight: 900;
+  font-size: 18px;
+  letter-spacing: 0.2px;
+}
+
+.ga-payoutCard__break{
+  display: grid;
+  gap: 8px;
+}
+
 .ga-heroActions{
   display:flex;
   gap: 10px;

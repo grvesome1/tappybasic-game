@@ -3,53 +3,46 @@
     "name": "Gruesome Arcade Metrics Library",
     "version": "3.1",
     "sig": "built by gruesøme",
-    "sig_enc": "OC8zNi56OCN6PSgvPymZ4jc/",
-    "sig_alg": "xor(0x5A)+base64",
-    "updatedAt": "2026-01-03"
+    "sig_enc": "382f33362e7a38237a3d282f3f2999e2373f",
+    "sig_alg": "xor(0x5A)+hex",
+    "updatedAt": "2026-01-03",
+    "ensuredAt": "2026-01-05T14:30:27.287Z",
+    "source": "tools/metrics-library-canonical.json"
   },
   "metrics": [
     {
-      "id": "score",
-      "label": "Score",
+      "id": "accuracyBp",
+      "label": "Accuracy",
+      "kind": "ratio",
+      "direction": "desc",
+      "format": "bp",
+      "clamp": {
+        "min": 0,
+        "max": 10000
+      }
+    },
+    {
+      "id": "apm",
+      "label": "Actions Per Minute",
+      "kind": "ratio",
+      "direction": "desc",
+      "format": "int",
+      "clamp": {
+        "min": 0,
+        "max": 2000
+      },
+      "telemetryOnly": true,
+      "notes": "Useful for RTS/skill intensity; easy to game, so telemetry unless carefully designed."
+    },
+    {
+      "id": "assists",
+      "label": "Assists",
       "kind": "counter",
       "direction": "desc",
       "format": "int",
       "clamp": {
         "min": 0,
         "max": 1000000000
-      }
-    },
-    {
-      "id": "durationMs",
-      "label": "Survival Time",
-      "kind": "duration",
-      "direction": "desc",
-      "format": "ms",
-      "clamp": {
-        "min": 0,
-        "max": 86400000
-      }
-    },
-    {
-      "id": "timeMs",
-      "label": "Completion Time",
-      "kind": "duration",
-      "direction": "asc",
-      "format": "ms",
-      "clamp": {
-        "min": 0,
-        "max": 86400000
-      }
-    },
-    {
-      "id": "objectiveCount",
-      "label": "Objectives Completed",
-      "kind": "counter",
-      "direction": "desc",
-      "format": "int",
-      "clamp": {
-        "min": 0,
-        "max": 1000000
       }
     },
     {
@@ -64,19 +57,8 @@
       }
     },
     {
-      "id": "mistakes",
-      "label": "Mistakes",
-      "kind": "counter",
-      "direction": "asc",
-      "format": "int",
-      "clamp": {
-        "min": 0,
-        "max": 10000
-      }
-    },
-    {
-      "id": "streak",
-      "label": "Max Streak",
+      "id": "baseHpLeft",
+      "label": "Base HP Left",
       "kind": "counter",
       "direction": "desc",
       "format": "int",
@@ -86,53 +68,79 @@
       }
     },
     {
-      "id": "accuracyBp",
-      "label": "Accuracy",
-      "kind": "ratio",
-      "direction": "desc",
-      "format": "bp",
+      "id": "bestLapMs",
+      "label": "Best Lap",
+      "kind": "duration",
+      "direction": "asc",
+      "format": "ms",
       "clamp": {
         "min": 0,
-        "max": 10000
+        "max": 86400000
       }
+    },
+    {
+      "id": "bossKills",
+      "label": "Boss Kills",
+      "kind": "counter",
+      "direction": "desc",
+      "format": "int",
+      "clamp": {
+        "min": 0,
+        "max": 1000000
+      }
+    },
+    {
+      "id": "buildVariety",
+      "label": "Build Variety",
+      "kind": "counter",
+      "direction": "desc",
+      "format": "int",
+      "clamp": {
+        "min": 0,
+        "max": 1000000
+      },
+      "telemetryOnly": true,
+      "notes": "Number of unique tools/towers/weapons used; anti-spam metric for versatility."
+    },
+    {
+      "id": "checkpointsCleared",
+      "label": "Checkpoints Cleared",
+      "kind": "counter",
+      "direction": "desc",
+      "format": "int",
+      "clamp": {
+        "min": 0,
+        "max": 1000000000
+      }
+    },
+    {
+      "id": "cleanRun",
+      "label": "Clean Run",
+      "kind": "composite",
+      "direction": "desc",
+      "format": "ratio",
+      "clamp": {
+        "min": 0,
+        "max": 1
+      },
+      "telemetryOnly": true,
+      "notes": "Computed: 1 / (mistakes + deaths + 1)."
+    },
+    {
+      "id": "coinsCollected",
+      "label": "Coins Collected",
+      "kind": "counter",
+      "direction": "desc",
+      "format": "int",
+      "clamp": {
+        "min": 0,
+        "max": 1000000000
+      },
+      "notes": "Generic collectible count (coins/loot)."
     },
     {
       "id": "completionBp",
       "label": "Completion",
-      "kind": "ratio",
-      "direction": "desc",
-      "format": "bp",
-      "clamp": {
-        "min": 0,
-        "max": 10000
-      }
-    },
-    {
-      "id": "difficultyTier",
-      "label": "Difficulty Tier",
-      "kind": "counter",
-      "direction": "desc",
-      "format": "int",
-      "clamp": {
-        "min": 0,
-        "max": 20
-      },
-      "telemetryOnly": true
-    },
-    {
-      "id": "kills",
-      "label": "Kills",
-      "kind": "counter",
-      "direction": "desc",
-      "format": "int",
-      "clamp": {
-        "min": 0,
-        "max": 10000000
-      }
-    },
-    {
-      "id": "headshotBp",
-      "label": "Headshot Rate",
       "kind": "ratio",
       "direction": "desc",
       "format": "bp",
@@ -175,50 +183,52 @@
       }
     },
     {
-      "id": "nearMissCount",
-      "label": "Near Misses",
+      "id": "difficultyTier",
+      "label": "Difficulty Tier",
       "kind": "counter",
       "direction": "desc",
       "format": "int",
       "clamp": {
         "min": 0,
-        "max": 1000000
-      }
-    },
-    {
-      "id": "shotsFired",
-      "label": "Shots Fired",
-      "kind": "counter",
-      "direction": "desc",
-      "format": "int",
-      "clamp": {
-        "min": 0,
-        "max": 100000000
+        "max": 20
       },
       "telemetryOnly": true
     },
     {
-      "id": "shotsHit",
-      "label": "Shots Hit",
+      "id": "distance",
+      "label": "Distance",
       "kind": "counter",
       "direction": "desc",
       "format": "int",
       "clamp": {
         "min": 0,
-        "max": 100000000
+        "max": 1000000000
       },
-      "telemetryOnly": true
+      "unit": "units",
+      "notes": "Runner/launcher distance traveled; keep units consistent per game."
     },
     {
-      "id": "waves",
-      "label": "Waves Survived",
-      "kind": "counter",
+      "id": "durationMs",
+      "label": "Survival Time",
+      "kind": "duration",
+      "direction": "desc",
+      "format": "ms",
+      "clamp": {
+        "min": 0,
+        "max": 86400000
+      }
+    },
+    {
+      "id": "efficiency",
+      "label": "Efficiency",
+      "kind": "composite",
       "direction": "desc",
       "format": "int",
       "clamp": {
         "min": 0,
-        "max": 1000000
-      }
+        "max": 1000000000
+      },
+      "notes": "Computed: objectiveCount/(spentInRunAC+1)"
     },
     {
       "id": "enemiesLeaked",
@@ -232,45 +242,33 @@
       }
     },
     {
-      "id": "baseHpLeft",
-      "label": "Base HP Left",
-      "kind": "counter",
+      "id": "headshotBp",
+      "label": "Headshot Rate",
+      "kind": "ratio",
       "direction": "desc",
-      "format": "int",
+      "format": "bp",
       "clamp": {
         "min": 0,
-        "max": 1000000
+        "max": 10000
       }
     },
     {
-      "id": "towersBuilt",
-      "label": "Towers Built",
+      "id": "healingDone",
+      "label": "Healing Done",
       "kind": "counter",
       "direction": "desc",
       "format": "int",
       "clamp": {
         "min": 0,
-        "max": 1000000
+        "max": 1000000000
       },
       "telemetryOnly": true
     },
     {
-      "id": "towersSold",
-      "label": "Towers Sold",
+      "id": "hintsUsed",
+      "label": "Hints Used",
       "kind": "counter",
       "direction": "asc",
-      "format": "int",
-      "clamp": {
-        "min": 0,
-        "max": 1000000
-      },
-      "telemetryOnly": true
-    },
-    {
-      "id": "laps",
-      "label": "Laps",
-      "kind": "counter",
-      "direction": "desc",
       "format": "int",
       "clamp": {
         "min": 0,
@@ -278,21 +276,27 @@
       }
     },
     {
-      "id": "bestLapMs",
-      "label": "Best Lap",
-      "kind": "duration",
-      "direction": "asc",
-      "format": "ms",
+      "id": "inRunSpendAC",
+      "kind": "currency",
+      "format": "int",
+      "desc": "Credits spent inside the run economy (paid-only in ranked mode)."
+    },
+    {
+      "id": "kills",
+      "label": "Kills",
+      "kind": "counter",
+      "direction": "desc",
+      "format": "int",
       "clamp": {
         "min": 0,
-        "max": 86400000
+        "max": 10000000
       }
     },
     {
-      "id": "trackResets",
-      "label": "Resets",
+      "id": "laps",
+      "label": "Laps",
       "kind": "counter",
-      "direction": "asc",
+      "direction": "desc",
       "format": "int",
       "clamp": {
         "min": 0,
@@ -311,8 +315,19 @@
       }
     },
     {
-      "id": "hintsUsed",
-      "label": "Hints Used",
+      "id": "maxCombo",
+      "label": "Max Combo",
+      "kind": "counter",
+      "direction": "desc",
+      "format": "int",
+      "clamp": {
+        "min": 0,
+        "max": 100000000
+      }
+    },
+    {
+      "id": "mistakes",
+      "label": "Mistakes",
       "kind": "counter",
       "direction": "asc",
       "format": "int",
@@ -333,8 +348,8 @@
       }
     },
     {
-      "id": "perfectClears",
-      "label": "Perfect Clears",
+      "id": "nearMissCount",
+      "label": "Near Misses",
       "kind": "counter",
       "direction": "desc",
       "format": "int",
@@ -342,6 +357,18 @@
         "min": 0,
         "max": 1000000
       }
+    },
+    {
+      "id": "noSpendRun",
+      "label": "No-Spend Run",
+      "kind": "counter",
+      "direction": "desc",
+      "format": "int",
+      "clamp": {
+        "min": 0,
+        "max": 1
+      },
+      "notes": "Computed: 1 if spentInRunAC==0 else 0"
     },
     {
       "id": "notesHit",
@@ -366,42 +393,42 @@
       }
     },
     {
-      "id": "maxCombo",
-      "label": "Max Combo",
+      "id": "objectiveCount",
+      "label": "Objectives Completed",
       "kind": "counter",
       "direction": "desc",
       "format": "int",
       "clamp": {
         "min": 0,
-        "max": 100000000
+        "max": 1000000
       }
     },
     {
-      "id": "timingStdDevMs",
-      "label": "Timing Std Dev",
-      "kind": "duration",
-      "direction": "asc",
-      "format": "ms",
-      "clamp": {
-        "min": 0,
-        "max": 10000
-      }
-    },
-    {
-      "id": "spentInRunAC",
-      "label": "Credits Spent In-Run",
-      "kind": "currency",
-      "direction": "asc",
-      "format": "ac",
+      "id": "perfectClears",
+      "label": "Perfect Clears",
+      "kind": "counter",
+      "direction": "desc",
+      "format": "int",
       "clamp": {
         "min": 0,
         "max": 1000000
-      },
-      "telemetryOnly": true
+      }
     },
     {
-      "id": "efficiency",
-      "label": "Efficiency",
+      "id": "placement",
+      "label": "Placement",
+      "kind": "counter",
+      "direction": "asc",
+      "format": "int",
+      "clamp": {
+        "min": 1,
+        "max": 1000000
+      },
+      "notes": "Lower is better (1st place). For battle royale / bracket formats."
+    },
+    {
+      "id": "precisionScore",
+      "label": "Precision Score",
       "kind": "composite",
       "direction": "desc",
       "format": "int",
@@ -409,44 +436,8 @@
         "min": 0,
         "max": 1000000000
       },
-      "notes": "Computed: objectiveCount/(spentInRunAC+1)"
-    },
-    {
-      "id": "noSpendRun",
-      "label": "No-Spend Run",
-      "kind": "counter",
-      "direction": "desc",
-      "format": "int",
-      "clamp": {
-        "min": 0,
-        "max": 1
-      },
-      "notes": "Computed: 1 if spentInRunAC==0 else 0"
-    },
-    {
-      "id": "distance",
-      "label": "Distance",
-      "kind": "counter",
-      "direction": "desc",
-      "format": "int",
-      "clamp": {
-        "min": 0,
-        "max": 1000000000
-      },
-      "unit": "units",
-      "notes": "Runner/launcher distance traveled; keep units consistent per game."
-    },
-    {
-      "id": "coinsCollected",
-      "label": "Coins Collected",
-      "kind": "counter",
-      "direction": "desc",
-      "format": "int",
-      "clamp": {
-        "min": 0,
-        "max": 1000000000
-      },
-      "notes": "Generic collectible count (coins/loot)."
+      "telemetryOnly": true,
+      "notes": "Computed: score * (accuracyBp/10000)."
     },
     {
       "id": "purchasesInRun",
@@ -460,18 +451,6 @@
       },
       "telemetryOnly": true,
       "notes": "Count of in-run purchases/upgrades. Telemetry/anti-cheat by default."
-    },
-    {
-      "id": "upgradesBought",
-      "label": "Upgrades Bought",
-      "kind": "counter",
-      "direction": "desc",
-      "format": "int",
-      "clamp": {
-        "min": 0,
-        "max": 1000000
-      },
-      "telemetryOnly": true
     },
     {
       "id": "resourcesCollected",
@@ -499,54 +478,6 @@
       "notes": "Lower is usually better (efficiency), but keep telemetry unless game is designed around it."
     },
     {
-      "id": "apm",
-      "label": "Actions Per Minute",
-      "kind": "ratio",
-      "direction": "desc",
-      "format": "int",
-      "clamp": {
-        "min": 0,
-        "max": 2000
-      },
-      "telemetryOnly": true,
-      "notes": "Useful for RTS/skill intensity; easy to game, so telemetry unless carefully designed."
-    },
-    {
-      "id": "win",
-      "label": "Win",
-      "kind": "counter",
-      "direction": "desc",
-      "format": "int",
-      "clamp": {
-        "min": 0,
-        "max": 1
-      },
-      "notes": "1=win, 0=loss. For match-based games."
-    },
-    {
-      "id": "placement",
-      "label": "Placement",
-      "kind": "counter",
-      "direction": "asc",
-      "format": "int",
-      "clamp": {
-        "min": 1,
-        "max": 1000000
-      },
-      "notes": "Lower is better (1st place). For battle royale / bracket formats."
-    },
-    {
-      "id": "assists",
-      "label": "Assists",
-      "kind": "counter",
-      "direction": "desc",
-      "format": "int",
-      "clamp": {
-        "min": 0,
-        "max": 1000000000
-      }
-    },
-    {
       "id": "revives",
       "label": "Revives",
       "kind": "counter",
@@ -558,29 +489,15 @@
       }
     },
     {
-      "id": "healingDone",
-      "label": "Healing Done",
+      "id": "score",
+      "label": "Score",
       "kind": "counter",
       "direction": "desc",
       "format": "int",
       "clamp": {
         "min": 0,
         "max": 1000000000
-      },
-      "telemetryOnly": true
-    },
-    {
-      "id": "buildVariety",
-      "label": "Build Variety",
-      "kind": "counter",
-      "direction": "desc",
-      "format": "int",
-      "clamp": {
-        "min": 0,
-        "max": 1000000
-      },
-      "telemetryOnly": true,
-      "notes": "Number of unique tools/towers/weapons used; anti-spam metric for versatility."
+      }
     },
     {
       "id": "secretsFound",
@@ -595,26 +512,28 @@
       "notes": "Optional exploration bonus (hidden rooms/collectibles)."
     },
     {
-      "id": "bossKills",
-      "label": "Boss Kills",
+      "id": "shotsFired",
+      "label": "Shots Fired",
       "kind": "counter",
       "direction": "desc",
       "format": "int",
       "clamp": {
         "min": 0,
-        "max": 1000000
-      }
+        "max": 100000000
+      },
+      "telemetryOnly": true
     },
     {
-      "id": "checkpointsCleared",
-      "label": "Checkpoints Cleared",
+      "id": "shotsHit",
+      "label": "Shots Hit",
       "kind": "counter",
       "direction": "desc",
       "format": "int",
       "clamp": {
         "min": 0,
-        "max": 1000000000
-      }
+        "max": 100000000
+      },
+      "telemetryOnly": true
     },
     {
       "id": "spendPerObjectiveAC",
@@ -630,30 +549,119 @@
       "notes": "Computed: spentInRunAC / (objectiveCount + 1)."
     },
     {
-      "id": "precisionScore",
-      "label": "Precision Score",
-      "kind": "composite",
+      "id": "spentInRunAC",
+      "label": "Credits Spent In-Run",
+      "kind": "currency",
+      "direction": "asc",
+      "format": "ac",
+      "clamp": {
+        "min": 0,
+        "max": 1000000
+      },
+      "telemetryOnly": true
+    },
+    {
+      "id": "streak",
+      "label": "Max Streak",
+      "kind": "counter",
       "direction": "desc",
       "format": "int",
       "clamp": {
         "min": 0,
-        "max": 1000000000
-      },
-      "telemetryOnly": true,
-      "notes": "Computed: score * (accuracyBp/10000)."
+        "max": 1000000
+      }
     },
     {
-      "id": "cleanRun",
-      "label": "Clean Run",
-      "kind": "composite",
+      "id": "timeMs",
+      "label": "Completion Time",
+      "kind": "duration",
+      "direction": "asc",
+      "format": "ms",
+      "clamp": {
+        "min": 0,
+        "max": 86400000
+      }
+    },
+    {
+      "id": "timingStdDevMs",
+      "label": "Timing Std Dev",
+      "kind": "duration",
+      "direction": "asc",
+      "format": "ms",
+      "clamp": {
+        "min": 0,
+        "max": 10000
+      }
+    },
+    {
+      "id": "towersBuilt",
+      "label": "Towers Built",
+      "kind": "counter",
       "direction": "desc",
-      "format": "ratio",
+      "format": "int",
+      "clamp": {
+        "min": 0,
+        "max": 1000000
+      },
+      "telemetryOnly": true
+    },
+    {
+      "id": "towersSold",
+      "label": "Towers Sold",
+      "kind": "counter",
+      "direction": "asc",
+      "format": "int",
+      "clamp": {
+        "min": 0,
+        "max": 1000000
+      },
+      "telemetryOnly": true
+    },
+    {
+      "id": "trackResets",
+      "label": "Resets",
+      "kind": "counter",
+      "direction": "asc",
+      "format": "int",
+      "clamp": {
+        "min": 0,
+        "max": 10000
+      }
+    },
+    {
+      "id": "upgradesBought",
+      "label": "Upgrades Bought",
+      "kind": "counter",
+      "direction": "desc",
+      "format": "int",
+      "clamp": {
+        "min": 0,
+        "max": 1000000
+      },
+      "telemetryOnly": true
+    },
+    {
+      "id": "waves",
+      "label": "Waves Survived",
+      "kind": "counter",
+      "direction": "desc",
+      "format": "int",
+      "clamp": {
+        "min": 0,
+        "max": 1000000
+      }
+    },
+    {
+      "id": "win",
+      "label": "Win",
+      "kind": "counter",
+      "direction": "desc",
+      "format": "int",
       "clamp": {
         "min": 0,
         "max": 1
       },
-      "telemetryOnly": true,
-      "notes": "Computed: 1 / (mistakes + deaths + 1)."
+      "notes": "1=win, 0=loss. For match-based games."
     }
   ]
 }
