@@ -164,6 +164,11 @@
     return x.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
+  function setText(el, text){
+    if (!el) return;
+    el.textContent = String(text == null ? "" : text);
+  }
+
   function fmtPct(n, digits=1){
     const x = Number(n) || 0;
     return `${(x*100).toFixed(digits)}%`;
@@ -210,52 +215,53 @@
   }
 
   function renderPayouts(){
-    if (!els.dailyAmount || !els.weeklyAmount) return;
-
     const dailyUsd = Math.max(0, Number(state.daily.usd || 0));
     const weeklyUsd = Math.max(0, Number(state.weekly.usd || 0));
+    const pohOk = !!state.pohVerified;
 
-    els.dailyAmount.textContent = dailyUsd > 0 ? fmtUsd(dailyUsd) : "0.00";
-    els.weeklyAmount.textContent = weeklyUsd > 0 ? fmtUsd(weeklyUsd) : "0.00";
+    setText(els.dailyAmount, dailyUsd > 0 ? fmtUsd(dailyUsd) : "0.00");
+    setText(els.weeklyAmount, weeklyUsd > 0 ? fmtUsd(weeklyUsd) : "0.00");
 
-    els.dailyKey.textContent = state.daily.ymd ? `Day: ${state.daily.ymd}` : "Day: —";
-    els.weeklyKey.textContent = state.weekly.yw ? `Week: ${state.weekly.yw}` : "Week: —";
+    setText(els.dailyKey, state.daily.ymd ? `Day: ${state.daily.ymd}` : "Day: —");
+    setText(els.weeklyKey, state.weekly.yw ? `Week: ${state.weekly.yw}` : "Week: —");
 
     const dRec = state.daily.record;
     const wRec = state.weekly.record;
 
-    els.dailyTotal.textContent = dRec ? fmtUsd(recordUsd(dRec)) : "—";
-    els.dailySkill.textContent = dRec ? fmtUsd((Number(dRec.skillCents || 0) / 100)) : "—";
-    els.dailyActivity.textContent = dRec ? fmtUsd((Number(dRec.activityCents || 0) / 100)) : "—";
-    els.dailyPro.textContent = dRec ? fmtUsd((Number(dRec.proCents || 0) / 100)) : "—";
-    els.dailyLottery.textContent = dRec ? fmtUsd((Number(dRec.lotteryCents || 0) / 100)) : "—";
+    setText(els.dailyTotal, dRec ? fmtUsd(recordUsd(dRec)) : "—");
+    setText(els.dailySkill, dRec ? fmtUsd((Number(dRec.skillCents || 0) / 100)) : "—");
+    setText(els.dailyActivity, dRec ? fmtUsd((Number(dRec.activityCents || 0) / 100)) : "—");
+    setText(els.dailyPro, dRec ? fmtUsd((Number(dRec.proCents || 0) / 100)) : "—");
+    setText(els.dailyLottery, dRec ? fmtUsd((Number(dRec.lotteryCents || 0) / 100)) : "—");
 
-    els.weeklyTotal.textContent = wRec ? fmtUsd(recordUsd(wRec)) : "—";
-    els.weeklySkill.textContent = wRec ? fmtUsd((Number(wRec.skillCents || 0) / 100)) : "—";
-    els.weeklyActivity.textContent = wRec ? fmtUsd((Number(wRec.activityCents || 0) / 100)) : "—";
-    els.weeklyPro.textContent = wRec ? fmtUsd((Number(wRec.proCents || 0) / 100)) : "—";
-    els.weeklyLottery.textContent = wRec ? fmtUsd((Number(wRec.lotteryCents || 0) / 100)) : "—";
+    setText(els.weeklyTotal, wRec ? fmtUsd(recordUsd(wRec)) : "—");
+    setText(els.weeklySkill, wRec ? fmtUsd((Number(wRec.skillCents || 0) / 100)) : "—");
+    setText(els.weeklyActivity, wRec ? fmtUsd((Number(wRec.activityCents || 0) / 100)) : "—");
+    setText(els.weeklyPro, wRec ? fmtUsd((Number(wRec.proCents || 0) / 100)) : "—");
+    setText(els.weeklyLottery, wRec ? fmtUsd((Number(wRec.lotteryCents || 0) / 100)) : "—");
 
     if (els.dailyStatus){
-      if (!state.connected) els.dailyStatus.textContent = "Connect wallet to claim.";
-      else if (state.daily.claimed) els.dailyStatus.textContent = "Already claimed.";
-      else if (dailyUsd <= 0) els.dailyStatus.textContent = "Nothing to claim.";
-      else els.dailyStatus.textContent = "Ready to claim.";
+      if (!state.connected) setText(els.dailyStatus, "Connect wallet to claim.");
+      else if (!pohOk) setText(els.dailyStatus, "POH verification required to claim.");
+      else if (state.daily.claimed) setText(els.dailyStatus, "Already claimed.");
+      else if (dailyUsd <= 0) setText(els.dailyStatus, "Nothing to claim.");
+      else setText(els.dailyStatus, "Ready to claim.");
     }
     if (els.weeklyStatus){
-      if (!state.connected) els.weeklyStatus.textContent = "Connect wallet to claim.";
-      else if (state.weekly.claimed) els.weeklyStatus.textContent = "Already claimed.";
-      else if (weeklyUsd <= 0) els.weeklyStatus.textContent = "Nothing to claim.";
-      else els.weeklyStatus.textContent = "Ready to claim.";
+      if (!state.connected) setText(els.weeklyStatus, "Connect wallet to claim.");
+      else if (!pohOk) setText(els.weeklyStatus, "POH verification required to claim.");
+      else if (state.weekly.claimed) setText(els.weeklyStatus, "Already claimed.");
+      else if (weeklyUsd <= 0) setText(els.weeklyStatus, "Nothing to claim.");
+      else setText(els.weeklyStatus, "Ready to claim.");
     }
 
     if (els.btnClaimDaily){
-      const disabled = !state.connected || state.claimBusyDaily || state.daily.claimed || dailyUsd <= 0;
+      const disabled = !state.connected || !pohOk || state.claimBusyDaily || state.daily.claimed || dailyUsd <= 0;
       els.btnClaimDaily.disabled = disabled;
       els.btnClaimDaily.textContent = state.claimBusyDaily ? "Claiming…" : "Claim (Tx)";
     }
     if (els.btnClaimWeekly){
-      const disabled = !state.connected || state.claimBusyWeekly || state.weekly.claimed || weeklyUsd <= 0;
+      const disabled = !state.connected || !pohOk || state.claimBusyWeekly || state.weekly.claimed || weeklyUsd <= 0;
       els.btnClaimWeekly.disabled = disabled;
       els.btnClaimWeekly.textContent = state.claimBusyWeekly ? "Claiming…" : "Claim (Tx)";
     }
@@ -292,6 +298,8 @@
 
   function applyEpochFromApi(data){
     if (!data || typeof data !== "object") return;
+
+    if (typeof data.pohVerified === "boolean") state.pohVerified = data.pohVerified;
 
     if (data.nextEpochAtUtc) state.nextEpochAt = parseIsoMs(data.nextEpochAtUtc);
     if (data.nextWeekAtUtc) state.nextWeekAt = parseIsoMs(data.nextWeekAtUtc);
@@ -695,6 +703,7 @@
   async function onClaim(kind){
     const isDaily = kind === "daily";
     if (!state.connected) return toast("Not connected", "Connect your wallet first.", "bad");
+    if (!state.pohVerified) return toast("Payouts", "POH verification required to claim.", "bad");
 
     const url = isDaily ? "/api/epoch/claim" : "/api/week/claim";
     const label = isDaily ? "Daily claim" : "Weekly claim";

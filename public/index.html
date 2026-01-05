@@ -1169,6 +1169,16 @@
     function now() { return Date.now(); }
     function clamp(n,a,b) { return Math.max(a, Math.min(b, n)); }
 
+    function escapeHtml(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+      }[c]));
+    }
+
     function shortAddr(addr) {
       const s = String(addr || '');
       if (!s) return '';
@@ -2309,7 +2319,7 @@
         playDesc.textContent = 'Select a live game from the library.';
         pillRunCost.textContent = 'Loading · -- Credits/run';
         btnClaimPromo.textContent = 'Claim promo (Tx)';
-        if (playMetricsKv) playMetricsKv.innerHTML = '';
+        if (playMetricsKv) playMetricsKv.textContent = '';
         if (playMetricsHint) playMetricsHint.textContent = 'Select a game to view its metrics.';
         return;
       }
@@ -2322,36 +2332,53 @@
       btnClaimPromo.disabled = claimed || !(g.promoRuns > 0);
 
       // Metrics block
-      if (playMetricsKv) {
-        const metrics = Array.isArray(g.metrics) ? g.metrics : [];
-        const defaultMetric = g.defaultMetric ? String(g.defaultMetric) : '';
-        const usesCreditsInRun = (g.usesCreditsInRun != null) ? !!g.usesCreditsInRun : (Number(g.runCostAC || 0) > 0);
+      try {
+        if (playMetricsKv) {
+          playMetricsKv.textContent = '';
 
-        const eligible = metrics.filter(m => m && m.eligible !== false);
-        const defaultLabel = metrics.find(m => m && String(m.id) === defaultMetric)?.label || defaultMetric || '—';
+          const addRow = (k, v) => {
+            const kk = document.createElement('div');
+            kk.className = 'k';
+            kk.textContent = String(k);
 
-        const rows = [];
-        rows.push(['Run uses Credits', usesCreditsInRun ? 'Yes' : 'No']);
-        rows.push(['Default metric', defaultLabel || '—']);
-        rows.push(['Eligible metrics', eligible.length ? eligible.map(m => m.label || m.id).join(', ') : '—']);
+            const vv = document.createElement('div');
+            vv.className = 'v';
+            vv.textContent = String(v);
 
-        if (metrics.length) {
-          rows.push(['All metrics', metrics.map(m => {
-            const label = m.label || m.id || 'metric';
-            const kind = m.kind ? String(m.kind) : '';
-            const dir = m.direction ? String(m.direction) : '';
-            const unit = m.unit ? String(m.unit) : '';
-            const tag = [kind, dir, unit].filter(Boolean).join(' · ');
-            const elig = (m.eligible === false) ? 'ineligible' : 'eligible';
-            return tag ? `${label} (${tag}, ${elig})` : `${label} (${elig})`;
-          }).join(' | ') ]);
+            playMetricsKv.appendChild(kk);
+            playMetricsKv.appendChild(vv);
+          };
+
+          const metrics = Array.isArray(g.metrics) ? g.metrics : [];
+          const defaultMetric = g.defaultMetric ? String(g.defaultMetric) : '';
+          const usesCreditsInRun = (g.usesCreditsInRun != null) ? !!g.usesCreditsInRun : (Number(g.runCostAC || 0) > 0);
+
+          const eligible = metrics.filter(m => m && m.eligible !== false);
+          const defaultLabel = metrics.find(m => m && String(m.id) === defaultMetric)?.label || defaultMetric || '—';
+
+          addRow('Run uses Credits', usesCreditsInRun ? 'Yes' : 'No');
+          addRow('Default metric', defaultLabel || '—');
+          addRow('Eligible metrics', eligible.length ? eligible.map(m => m.label || m.id).join(', ') : '—');
+
+          if (metrics.length) {
+            addRow('All metrics', metrics.map(m => {
+              const label = m.label || m.id || 'metric';
+              const kind = m.kind ? String(m.kind) : '';
+              const dir = m.direction ? String(m.direction) : '';
+              const unit = m.unit ? String(m.unit) : '';
+              const tag = [kind, dir, unit].filter(Boolean).join(' · ');
+              const elig = (m.eligible === false) ? 'ineligible' : 'eligible';
+              return tag ? `${label} (${tag}, ${elig})` : `${label} (${elig})`;
+            }).join(' | '));
+          }
         }
 
-        playMetricsKv.innerHTML = rows.map(([k,v]) => `<div class="k">${escapeHtml(String(k))}</div><div class="v">${escapeHtml(String(v))}</div>`).join('');
-      }
-
-      if (playMetricsHint) {
-        playMetricsHint.textContent = 'Metrics are read from the game catalog.';
+        if (playMetricsHint) playMetricsHint.textContent = 'Metrics are read from the game catalog.';
+      } catch {
+        try {
+          if (playMetricsHint) playMetricsHint.textContent = 'Metrics unavailable.';
+          if (playMetricsKv) playMetricsKv.textContent = '';
+        } catch {}
       }
     }
 
