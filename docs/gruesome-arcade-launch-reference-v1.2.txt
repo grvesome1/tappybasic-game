@@ -1,0 +1,90 @@
+Gruesøme’s Arcade — Launch Reference (v1.2)
+Last updated: 2026-01-05
+
+built by gruesøme
+sig(enc,xor:0x5A,hex): 382f33362e7a38237a3d282f3f2999e2373f
+
+This document is the “what happens at launch” reference for:
+- Credits (paid + promo)
+- Leaderboards (skill + activity)
+- Epoch settlement (daily + weekly reserve)
+- Payout claiming UX
+- PRO avatar + nickname identity
+
+1) Economy
+Credits are the Arcade’s in-app unit:
+- Paid Credits: purchased with ETH
+- Promo Credits: granted by promotions/airdrops
+- Only paid Credits make a run payout-eligible for Skill rewards.
+
+2) Run types
+A run is a parent-authorized session:
+- runId: unique ID issued by Arcade
+- costAC: how many credits are consumed up-front or reserved
+- eligible: whether this run counts for Skill payouts (paid-only)
+
+Games must be gated behind ARCADE:RUN_GRANTED in embedded mode.
+
+3) Leaderboards (v2)
+There are multiple leaderboards:
+- Skill (per game):
+  - ranked by selected metric (defaultMetric per game)
+  - periods: daily / weekly / all-time
+  - eligibility: paid-only board for payouts
+- Activity (global):
+  - weighted by paid Credits spent and active days
+  - used for Activity payouts and PRO/Lottery weights
+
+Multi-metric support:
+- Each game defines allowed metrics in arcade-games.json.
+- Metric IDs come from arcade-metrics-library.json.
+
+4) Metrics & fairness
+Arcade is built to be “equitable, not equal”:
+- Different game types express skill differently.
+- The system supports:
+  - speed metrics (timeMs, asc)
+  - endurance metrics (durationMs, desc)
+  - precision metrics (accuracyBp, desc)
+  - efficiency metrics (efficiency, desc)
+  - economy-in-run metrics (spentInRunAC, purchasesInRun) with caps
+
+Guardrails (anti-whale / anti-cheat)
+- clamp (min/max) per metric
+- direction (asc/desc) is explicit per metric
+- rankedSpendCapAC for games where credits affect outcomes
+
+5) Epoch settlement + payouts
+Daily:
+- Settles at UTC midnight.
+- Splits pot into:
+  - Skill pool (paid-only skill leaderboard ranks)
+  - Activity pool (paid activity ZSET weights)
+  - PRO boost pool
+  - Lottery pool (subset of activity + optional transfers)
+
+Weekly:
+- A reserve percentage of daily pots can be rolled into weekly payouts.
+- Weekly skill uses weekly paid-only leaderboards.
+- Weekly activity uses weekly activity weights.
+
+Wallet UX:
+- Show Daily + Weekly countdowns and claimables.
+- Provide claim buttons (Tx) for each.
+
+6) Identity (nickname + PRO avatar)
+Nickname:
+- Set at mint time or via profile endpoint (set-once).
+- Displayed publicly on leaderboards when active.
+
+PRO avatar:
+- NFT / SBT-based avatar system.
+- Leaderboard hover can display avatarPng when present.
+
+7) Transparency / admin
+Recommended admin behavior:
+- Admin can appear on leaderboards with a distinct identity (nickname + avatar),
+  but must be excluded from payouts.
+- When an excluded account places in payout positions, the payout should roll down
+  to the next eligible rank.
+
