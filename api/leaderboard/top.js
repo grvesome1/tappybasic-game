@@ -7,6 +7,7 @@ import * as Sec from '../_lib/security.js';
 import * as G from '../_lib/games.js';
 import * as U from '../_lib/user.js';
 import * as ME from '../_lib/metricEngine.js';
+import { getExcludedPayoutAddrs } from '../_lib/payoutExclusion.js';
 
 function intParam(q, k, d) {
   const v = q && q[k] != null ? Number(q[k]) : NaN;
@@ -76,6 +77,8 @@ export default async function handler(req, res) {
     const address = String((await Sec.getSessionAddress(req)) || '').toLowerCase();
     const canYou = Sec.isAddress(address);
 
+    const excluded = getExcludedPayoutAddrs();
+
     let key = '';
     let metricMeta = null;
 
@@ -129,16 +132,21 @@ export default async function handler(req, res) {
     // Enrich entries with public identity (nickname/avatar gated by PRO active + SBT locked)
     const wantAddrs = entries.map(e => e.address);
     if (canYou) wantAddrs.push(address);
-    const idMap = await U.getPublicIdentityMany(wantAddrs);
+    const forceShowAddrs = new Set(entries.filter(e => excluded.has(e.address)).map(e => e.address));
+    if (canYou && excluded.has(address)) forceShowAddrs.add(address);
+    const idMap = await U.getPublicIdentityMany(wantAddrs, { forceShowAddrs });
 
     const entriesOut = entries.map(e => {
       const id = idMap[e.address] || {};
+      const payoutEligible = !excluded.has(e.address);
       return {
         ...e,
         displayName: id.displayName || U.shortAddr(e.address),
         nickname: id.nickname || null,
         avatarPng: id.avatarPng || null,
         level: (id.level != null) ? id.level : null,
+        payoutEligible,
+        badge: payoutEligible ? null : 'ADMIN',
       };
     });
 
@@ -153,6 +161,7 @@ export default async function handler(req, res) {
         if (board !== 'activity') youScore = ME.decode(metricMeta || { id: 'score', dir: 'desc' }, youScoreEnc);
 
         const id = idMap[address] || {};
+        const payoutEligible = !excluded.has(address);
         you = {
           rank: Number(youEnc) + 1,
           address,
@@ -161,6 +170,8 @@ export default async function handler(req, res) {
           nickname: id.nickname || null,
           avatarPng: id.avatarPng || null,
           level: (id.level != null) ? id.level : null,
+          payoutEligible,
+          badge: payoutEligible ? null : 'ADMIN',
         };
       }
     }

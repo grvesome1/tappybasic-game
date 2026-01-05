@@ -13,6 +13,11 @@ export function sameOrigin(req) {
   }
 }
 
+export function isAddress(addr) {
+  const s = String(addr || '').trim();
+  return /^0x[0-9a-fA-F]{40}$/.test(s);
+}
+
 export function bearerToken(req) {
   const h = (req && req.headers) ? req.headers : {};
   const auth = h.authorization || h.Authorization;

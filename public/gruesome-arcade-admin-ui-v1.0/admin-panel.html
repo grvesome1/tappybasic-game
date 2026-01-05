@@ -1,0 +1,250 @@
+<!-- built by gruesøme | SIG_ENC_XOR5A_HEX=382f33362e7a38237a3d282f3f29a2373f -->
+<section class="ga-admin" data-ga-admin>
+  <header class="ga-admin__header">
+    <div class="ga-admin__title">
+      <div class="ga-admin__kicker">Gruesøme’s Arcade</div>
+      <h1 class="ga-admin__h1">Admin Console</h1>
+      <p class="ga-admin__sub">
+        Private operations + transparency controls. This wallet is excluded from payouts.
+      </p>
+    </div>
+
+    <div class="ga-admin__headerRight">
+      <div class="ga-admin__chip" id="gaAdminChip">
+        <span class="ga-admin__dot" aria-hidden="true"></span>
+        <span id="gaAdminChipText">Not connected</span>
+      </div>
+      <button class="ga-btn ga-btn--primary" id="gaAdminConnectBtn">Connect</button>
+    </div>
+  </header>
+
+  <div class="ga-admin__grid">
+    <!-- Identity -->
+    <section class="ga-card">
+      <div class="ga-card__head">
+        <h2 class="ga-card__title">Admin identity</h2>
+        <div class="ga-card__meta">Public display (leaderboards / social surfaces)</div>
+      </div>
+
+      <label class="ga-field">
+        <span class="ga-field__label">Nickname (max 32 chars)</span>
+        <input class="ga-input" id="gaAdminNickname" maxlength="32" placeholder="gruesøme" />
+      </label>
+
+      <label class="ga-field">
+        <span class="ga-field__label">Avatar image URL (PNG recommended)</span>
+        <input class="ga-input" id="gaAdminAvatarUrl" placeholder="https://.../avatar.png" />
+      </label>
+
+      <div class="ga-row ga-row--tight">
+        <button class="ga-btn ga-btn--primary" id="gaAdminSaveIdentityBtn">Save identity</button>
+        <button class="ga-btn" id="gaAdminPreviewIdentityBtn">Preview</button>
+      </div>
+
+      <div class="ga-hint" id="gaAdminIdentityHint">
+        Tip: For full transparency, admin identity is always visible and marked <b>ADMIN (no payouts)</b>.
+      </div>
+
+      <div class="ga-preview" id="gaAdminIdentityPreview" hidden>
+        <div class="ga-preview__imgWrap">
+          <img id="gaAdminIdentityPreviewImg" alt="Admin avatar preview" />
+        </div>
+        <div class="ga-preview__text">
+          <div class="ga-preview__name" id="gaAdminIdentityPreviewName">—</div>
+          <div class="ga-preview__badge">ADMIN · no payouts</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Payout exclusion -->
+    <section class="ga-card">
+      <div class="ga-card__head">
+        <h2 class="ga-card__title">Payout exclusion</h2>
+        <div class="ga-card__meta">Rank can appear — payouts roll down</div>
+      </div>
+
+      <div class="ga-kv">
+        <div class="ga-kv__k">Admin wallet</div>
+        <div class="ga-kv__v ga-mono" id="gaAdminWallet">—</div>
+
+        <div class="ga-kv__k">Excluded from payouts</div>
+        <div class="ga-kv__v" id="gaAdminExcluded">—</div>
+
+        <div class="ga-kv__k">Env var</div>
+        <div class="ga-kv__v ga-mono">ECON_PAYOUT_EXCLUDE_ADDRS</div>
+      </div>
+
+      <button class="ga-btn" id="gaAdminRefreshExclusionBtn">Re-check status</button>
+      <div class="ga-hint">Backend settlement must skip excluded wallets for roll-down to work.</div>
+    </section>
+
+    <!-- Contract config -->
+    <section class="ga-card">
+      <div class="ga-card__head">
+        <h2 class="ga-card__title">Contracts</h2>
+        <div class="ga-card__meta">Saved locally (admin-only)</div>
+      </div>
+
+      <label class="ga-field">
+        <span class="ga-field__label">ArcadePayments (ETH pot)</span>
+        <input class="ga-input ga-mono" id="gaAdminPaymentsAddr" placeholder="0x..." />
+      </label>
+
+      <label class="ga-field">
+        <span class="ga-field__label">ArcadeEpochVault (mUSD claims)</span>
+        <input class="ga-input ga-mono" id="gaAdminVaultAddr" placeholder="0x..." />
+      </label>
+
+      <label class="ga-field">
+        <span class="ga-field__label">mUSD token address</span>
+        <input class="ga-input ga-mono" id="gaAdminMusdAddr" placeholder="0x..." />
+      </label>
+
+      <label class="ga-field">
+        <span class="ga-field__label">ArcadeProAvatar (PRO SBT/NFT)</span>
+        <input class="ga-input ga-mono" id="gaAdminProAvatarAddr" placeholder="0x..." />
+      </label>
+
+      <label class="ga-field">
+        <span class="ga-field__label">ArcadePromo (promo receipts)</span>
+        <input class="ga-input ga-mono" id="gaAdminPromoAddr" placeholder="0x..." />
+      </label>
+
+      <div class="ga-row ga-row--tight">
+        <button class="ga-btn ga-btn--primary" id="gaAdminSaveContractsBtn">Save</button>
+        <button class="ga-btn" id="gaAdminLoadContractsBtn">Load</button>
+      </div>
+
+      <div class="ga-hint">If your repo already hardcodes addresses, you can ignore this and just paste once.</div>
+    </section>
+
+    <!-- Pot overview -->
+    <section class="ga-card">
+      <div class="ga-card__head">
+        <h2 class="ga-card__title">Pot overview</h2>
+        <div class="ga-card__meta">On-chain balances via your wallet RPC</div>
+      </div>
+
+      <div class="ga-kv">
+        <div class="ga-kv__k">ArcadePayments balance (ETH)</div>
+        <div class="ga-kv__v ga-mono" id="gaAdminPaymentsBal">—</div>
+
+        <div class="ga-kv__k">EpochVault mUSD balance</div>
+        <div class="ga-kv__v ga-mono" id="gaAdminVaultBal">—</div>
+      </div>
+
+      <button class="ga-btn" id="gaAdminRefreshBalancesBtn">Refresh balances</button>
+    </section>
+
+    <!-- Withdraw payments pot -->
+    <section class="ga-card">
+      <div class="ga-card__head">
+        <h2 class="ga-card__title">Withdraw: ArcadePayments pot</h2>
+        <div class="ga-card__meta">Calls <span class="ga-mono">withdrawPot(to, amountWei)</span></div>
+      </div>
+
+      <label class="ga-field">
+        <span class="ga-field__label">To address</span>
+        <input class="ga-input ga-mono" id="gaAdminWithdrawTo" placeholder="0x..." />
+      </label>
+
+      <label class="ga-field">
+        <span class="ga-field__label">Amount (ETH)</span>
+        <input class="ga-input" id="gaAdminWithdrawEth" placeholder="0.10" inputmode="decimal" />
+      </label>
+
+      <button class="ga-btn ga-btn--primary" id="gaAdminWithdrawPaymentsBtn">Withdraw (tx)</button>
+      <div class="ga-hint">Requires contract admin role. Gas paid by you.</div>
+    </section>
+
+    <!-- Sweep epoch vault -->
+    <section class="ga-card">
+      <div class="ga-card__head">
+        <h2 class="ga-card__title">Sweep: EpochVault (mUSD)</h2>
+        <div class="ga-card__meta">Calls <span class="ga-mono">sweepERC20(mUSD, to, amount)</span></div>
+      </div>
+
+      <label class="ga-field">
+        <span class="ga-field__label">To address</span>
+        <input class="ga-input ga-mono" id="gaAdminSweepTo" placeholder="0x..." />
+      </label>
+
+      <label class="ga-field">
+        <span class="ga-field__label">Amount (mUSD)</span>
+        <input class="ga-input" id="gaAdminSweepMusd" placeholder="10.00" inputmode="decimal" />
+      </label>
+
+      <button class="ga-btn ga-btn--primary" id="gaAdminSweepVaultBtn">Sweep (tx)</button>
+      <div class="ga-hint">Safety tool. Prefer publishing proper epoch roots for normal payouts.</div>
+    </section>
+
+    <!-- ProAvatar controls -->
+    <section class="ga-card">
+      <div class="ga-card__head">
+        <h2 class="ga-card__title">PRO avatar contract</h2>
+        <div class="ga-card__meta">Gen1 ops (danger zone)</div>
+      </div>
+
+      <div class="ga-kv">
+        <div class="ga-kv__k">Transfers unlocked</div>
+        <div class="ga-kv__v" id="gaAdminTransfersUnlocked">—</div>
+      </div>
+
+      <button class="ga-btn ga-btn--danger" id="gaAdminUnlockTransfersBtn">Unlock transfers permanently (tx)</button>
+      <div class="ga-hint">Irreversible. Do this only when you’re ready to replace the studio and make Gen1 tradable.</div>
+    </section>
+
+    <!-- Promo config -->
+    <section class="ga-card">
+      <div class="ga-card__head">
+        <h2 class="ga-card__title">Promo config</h2>
+        <div class="ga-card__meta">Calls <span class="ga-mono">setPromo(gameIdHash, grantAC)</span></div>
+      </div>
+
+      <label class="ga-field">
+        <span class="ga-field__label">Game ID (string, e.g. moonshot)</span>
+        <input class="ga-input" id="gaAdminPromoGameId" placeholder="moonshot" />
+      </label>
+
+      <label class="ga-field">
+        <span class="ga-field__label">Grant (AC)</span>
+        <input class="ga-input" id="gaAdminPromoGrant" placeholder="500" inputmode="numeric" />
+      </label>
+
+      <button class="ga-btn ga-btn--primary" id="gaAdminSetPromoBtn">Set promo (tx)</button>
+      <div class="ga-hint">Requires <span class="ga-mono">ethers</span> global for keccak hashing; otherwise provide bytes32 manually in Advanced mode.</div>
+
+      <details class="ga-details">
+        <summary class="ga-details__summary">Advanced: provide gameId bytes32</summary>
+        <label class="ga-field">
+          <span class="ga-field__label">gameId (bytes32 hex)</span>
+          <input class="ga-input ga-mono" id="gaAdminPromoGameIdHex" placeholder="0x..." />
+        </label>
+      </details>
+    </section>
+
+    <!-- Backend diagnostics -->
+    <section class="ga-card ga-card--wide">
+      <div class="ga-card__head">
+        <h2 class="ga-card__title">Backend diagnostics</h2>
+        <div class="ga-card__meta">Daily + weekly epoch status</div>
+      </div>
+
+      <div class="ga-row ga-row--tight">
+        <button class="ga-btn" id="gaAdminRefreshBackendBtn">Refresh</button>
+        <button class="ga-btn" id="gaAdminCopyBackendBtn">Copy JSON</button>
+      </div>
+
+      <pre class="ga-pre" id="gaAdminBackendPre">{}</pre>
+      <div class="ga-hint">If you see <span class="ga-mono">redis_not_configured</span>, payouts will remain local-only.</div>
+    </section>
+  </div>
+
+  <footer class="ga-admin__footer">
+    <div class="ga-admin__footerLeft">
+      <span class="ga-admin__small">Admin console UI bundle · v1.0</span>
+      <span class="ga-admin__small ga-mono">built by gruesøme</span>
+    </div>
+    <div class="ga-admin__footerRight" id="gaAdminToast" aria-live="polite"></div>
+  </footer>
+</section>

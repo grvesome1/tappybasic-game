@@ -152,9 +152,19 @@ export async function setPublicIdentity(address, patch) {
   return { ok: true, state: await getState(address) };
 }
 
-export async function getPublicIdentityMany(addresses) {
+export async function getPublicIdentityMany(addresses, opts) {
   const addrs = Array.from(new Set((addresses || []).map(a => String(a || '').toLowerCase()).filter(Boolean))).slice(0, 250);
   if (addrs.length === 0) return {};
+
+  const forceShow = (() => {
+    try {
+      const v = opts && opts.forceShowAddrs;
+      if (!v) return new Set();
+      if (v instanceof Set) return v;
+      if (Array.isArray(v)) return new Set(v.map(a => String(a || '').toLowerCase()));
+    } catch {}
+    return new Set();
+  })();
 
   const pipe = [];
   for (const a of addrs) {
@@ -173,7 +183,7 @@ export async function getPublicIdentityMany(addresses) {
     const level = r ? Number(r[4] || 1) : 1;
 
     const profile = { proTier, proExp };
-    const show = canShowPublicIdentity(profile);
+    const show = (forceShow && forceShow.has(a)) ? true : canShowPublicIdentity(profile);
 
     out[a] = {
       displayName: (show && nickname) ? nickname : shortAddr(a),
