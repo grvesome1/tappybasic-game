@@ -10,7 +10,6 @@ import { GAMES } from '../_lib/games.js';
 import { ipFromReq, enforce, rlKey } from '../_lib/rate.js';
 import { sameOrigin } from '../_lib/security.js';
 import { bump } from '../_lib/metrics.js';
-import * as ME from '../_lib/metricEngine.js';
 
 function calcXpEarned(score, runType) {
   const s = Math.max(0, Number(score || 0));
@@ -36,6 +35,96 @@ function weekKeyUtc() {
   return String(y) + 'W' + w;
 }
 
+function getMetricCfg(cfg, metricId) {
+  const list = Array.isArray(cfg?.metrics) ? cfg.metrics : [];
+  if (!metricId) return null;
+  return list.find((m) => String(m?.id || '') === String(metricId)) || null;
+}
+
+function normalizeMetrics(cfg) {
+  const list = Array.isArray(cfg?.metrics) ? cfg.metrics : [];
+  if (list.length) return list;
+  return [{ id: 'score', label: 'Score', kind: 'score', dir: 'desc', format: 'int', src: 'score', payoutWeight: 1.0 }];
+}
+
+function metricMissingFallback(metricCfg) {
+  // Missing ASC metrics must not benefit the player (0 would be "best").
+  const clampMax = Number(metricCfg?.clamp?.max);
+  if ((metricCfg?.dir || 'desc') === 'asc') {
+    if (Number.isFinite(clampMax)) return clampMax;
+    return 9_000_000_000_000; // 9e12 sentinel
+  }
+  return 0;
+}
+
+function metricRawValue(metricCfg, body, ctx) {
+  const id = String(metricCfg?.id || '').trim();
+  const src = String(metricCfg?.src || id || 'score').trim();
+  const mobj = body && typeof body.metrics === 'object' && body.metrics && !Array.isArray(body.metrics) ? body.metrics : null;
+
+  // Prefer explicit metric map, then direct fields
+  let v =
+    (mobj && mobj[id] != null ? mobj[id] : null) ??
+    (mobj && src && mobj[src] != null ? mobj[src] : null) ??
+    (body && body[id] != null ? body[id] : null) ??
+    (body && src && body[src] != null ? body[src] : null);
+
+  // Legacy ctx fallbacks
+  if (v == null) {
+    if (id === 'score' || src === 'score') v = ctx?.score;
+    else if (id === 'durationMs' || src === 'durationMs') v = ctx?.durationMs;
+    else if (id === 'inRunSpendAC' || src === 'inRunSpendAC') v = ctx?.inRunSpendAC;
+  }
+
+  // Derived metrics (generic helpers; games may also compute these client-side)
+  if (v == null && id === 'efficiency') {
+    const primaryId = String(ctx?.defaultMetric || 'score');
+    const primary =
+      (mobj && mobj[primaryId] != null ? Number(mobj[primaryId]) : null) ??
+      (body && body[primaryId] != null ? Number(body[primaryId]) : null) ??
+      null;
+    const spend =
+      (mobj && mobj.inRunSpendAC != null ? Number(mobj.inRunSpendAC) : null) ??
+      (body && body.inRunSpendAC != null ? Number(body.inRunSpendAC) : null) ??
+      0;
+    if (Number.isFinite(primary)) {
+      v = Math.floor((Math.max(0, primary) * 1000) / (Math.max(0, spend) + 1));
+    }
+  }
+
+  if (v == null && (id === 'accuracyBp' || id === 'accBp')) {
+    const hits =
+      (mobj && mobj.hits != null ? Number(mobj.hits) : null) ??
+      (body && body.hits != null ? Number(body.hits) : null);
+    const shots =
+      (mobj && mobj.shots != null ? Number(mobj.shots) : null) ??
+      (body && body.shots != null ? Number(body.shots) : null);
+    if (Number.isFinite(hits) && Number.isFinite(shots) && shots > 0) {
+      v = Math.floor((Math.max(0, hits) / Math.max(1, shots)) * 10000);
+    }
+  }
+
+  let n = Number(v);
+  if (!Number.isFinite(n)) n = metricMissingFallback(metricCfg);
+
+  // sanitize + clamp
+  n = Math.max(0, Math.floor(n));
+  const cmin = Number(metricCfg?.clamp?.min);
+  const cmax = Number(metricCfg?.clamp?.max);
+  if (Number.isFinite(cmin)) n = Math.max(n, cmin);
+  if (Number.isFinite(cmax)) n = Math.min(n, cmax);
+
+  const fmt = String(metricCfg?.format || '').toLowerCase();
+  if (fmt === 'bp' || fmt === 'basispoints') n = clamp(n, 0, 10000);
+
+  return n;
+}
+
+function metricEncValue(metricCfg, body, ctx) {
+  const raw = metricRawValue(metricCfg, body, ctx);
+  const enc = (metricCfg?.dir || 'desc') === 'asc' ? -raw : raw;
+  return { raw, enc };
+}
 
 export default async function handler(req, res) {
   try {
@@ -73,15 +162,6 @@ export default async function handler(req, res) {
     if (durationMs < Number(cfg.minDurationMs || 0)) return res.status(400).json({ error: 'duration_too_short' });
     if (durationMs > 60 * 60 * 1000) return res.status(400).json({ error: 'duration_too_long' });
 
-    // --- Metrics payload (optional) ---
-    // Games may submit a flexible `metrics` object; we validate/derive/clamp per game cfg.
-    const baseRun = { score, durationMs };
-    const metricsRaw = ME.parseIncomingMetrics(body, baseRun);
-    const metricsAll = ME.computeDerivedMetrics(metricsRaw, baseRun);
-    const projectedMetrics = ME.projectMetricsForGame(cfg, metricsAll, baseRun);
-    const metricsStored = ME.toValueMap(projectedMetrics);
-
-
     await U.ensureUser(address);
 
     const runKey = K.run(address, runId);
@@ -102,6 +182,12 @@ export default async function handler(req, res) {
     const runType = String(runRec.runType || '');
     const costAC = Math.max(0, Math.floor(Number(runRec.costAC || 0)));
 
+    // Optional in-run spend metric (used by some game profiles for fairness / efficiency).
+    let inRunSpendAC = Math.max(0, Math.floor(Number(body?.metrics?.inRunSpendAC ?? body?.inRunSpendAC ?? 0)));
+    const spendCapAC = Number(cfg.rankedSpendCapAC || 0);
+    if (Number.isFinite(spendCapAC) && spendCapAC > 0) inRunSpendAC = Math.min(inRunSpendAC, spendCapAC);
+
+
     // Determine runType best-effort: if costAC==0 => free. Else use stored type if present; fallback 'paid'.
     let finalRunType = 'free';
     if (costAC > 0) finalRunType = runType === 'promo' || runType === 'paid' ? runType : 'paid';
@@ -109,7 +195,6 @@ export default async function handler(req, res) {
     runRec.status = 'submitted';
     runRec.score = score;
     runRec.durationMs = durationMs;
-    runRec.metrics = metricsStored;
     runRec.submittedAt = new Date().toISOString();
     runRec.runType = finalRunType;
 
@@ -138,7 +223,8 @@ export default async function handler(req, res) {
 
     // --- Build leaderboard targets (best-of write) ---
     // We encode metric values so higher-is-better. For asc metrics, enc is negative.
-    
+    const metrics = normalizeMetrics(cfg);
+
     /** @type {{key:string, score:number, expireSec:number}} */
     const targets = [];
 
@@ -156,12 +242,11 @@ export default async function handler(req, res) {
       addTarget(K.lbWeeklyPaid(gameId, wk), score, EXP_WEEKLY);
     }
 
-    // Metric leaderboards (encoded so higher-is-better; asc metrics are stored as negative)
-    for (const m of projectedMetrics) {
+    // Metric leaderboards
+    for (const m of metrics) {
       const mid = String(m?.id || '').trim();
       if (!mid) continue;
-      const enc = Number(m?.enc || 0);
-      if (!Number.isFinite(enc)) continue;
+      const { enc } = metricEncValue(m, body, { score, durationMs, defaultMetric: cfg.defaultMetric, inRunSpendAC });
 
       addTarget(K.lbAllMetric(gameId, mid), enc, 0);
       addTarget(K.lbDailyMetric(gameId, mid, ymd), enc, EXP_DAILY);
@@ -173,7 +258,6 @@ export default async function handler(req, res) {
         addTarget(K.lbWeeklyPaidMetric(gameId, mid, wk), enc, EXP_WEEKLY);
       }
     }
-
 
     // Fetch existing scores to do best-of updates without requiring Redis ZADD GT support.
     const existing = targets.length ? await R.pipeline(targets.map((t) => ['ZSCORE', t.key, addrLc])) : [];
@@ -201,7 +285,6 @@ export default async function handler(req, res) {
       durationMs,
       runType: finalRunType,
       xpEarned,
-      metrics: metricsStored,
     });
 
     const cmds = [

@@ -1,0 +1,42 @@
+ARCADE ACTIVITY ORB MONITOR — v2.4
+built by gruesøme
+sig(enc:xor-0x5A,utf8,hex)=382f33362e7a38237a3d282f3f29a2373f
+
+What’s new in v2.4 (focus: “3D data orb” depth + admin transparency spine)
+
+VISUAL / MOTION
+- OrbitControls-based slow camera circling (parallax depth). In admin mode you can drag/zoom.
+- Faster ring rotation (default ringSpeedMult=1.80) with slider in Admin Tools.
+- Physical glass-like core (MeshPhysicalMaterial + env reflections) for real specular depth.
+- Subtle generated environment map (CanvasTexture) + minimal key/rim/ambient lights (no shadows).
+
+ADMIN UI / OPERATIONS
+- Admin overlay updated (higher contrast, more professional labels).
+- “Admin tools” panel: ring speed, camera orbit speed, fog density, particles, outer shell, ref arcs.
+- Visual config persistence via localStorage (export/import/reset).
+- Always-on audit log (localStorage-backed) + export JSON/CSV.
+- Admin snapshot polling + 3D graph layer: snapshot → generic { nodes, links }.
+
+ITERATION 4.3 SUPPORT (Admin transparency + data spine)
+- Backend: GET /api/admin/snapshot (template) with GA_ADMIN_ADDRS allowlist helper.
+  Files:
+    backend/api/_lib/admin.js
+    backend/api/admin/snapshot.js
+  Env:
+    GA_ADMIN_ADDRS=0xYourAdminWallet[,0xAnotherAdmin]
+  Notes:
+    This route includes best-effort internal fetches; wire it to your real epoch/week/activity sources.
+
+- Frontend adapter (no UI changes, just data conversion):
+    public/gruesome-arcade-3d-map-adapter-v1.0/ga3d-admin-adapter.js
+  Exports:
+    getAdminSnapshot()
+    snapshotToGraph(snapshot)
+
+LOCAL PREVIEW
+- Open ARCADE_ACTIVITY_ORB_MONITOR_STANDALONE_v2.4.html
+- Toggle admin: F9 or Ctrl+Shift+A
+- Click “Inject mock snapshot” to see the graph layer without a backend.
+
+INTEGRATION
+- See integration/README.md and integration/example.html

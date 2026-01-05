@@ -1,0 +1,92 @@
+You are working in the `gruesomes.arcade` repo.
+
+Goal: Cleanly install Iteration 4.2 + 4.3 + 4.4 (Orb Monitor) with minimal risk and no accidental overwrites.
+
+IMPORTANT
+- The iteration bundles are **regular folders** already present in the repo root (NOT zip files). Do NOT try to unzip in code.
+- Only copy from these extracted folders:
+  - `iteration-4.2/`
+  - `iteration-4.3/`
+  - `iteration-4.4/`
+
+0) Safety: verify git state
+- Run:
+  - `git status -sb`
+- If the tree is NOT clean, STOP and print:
+  - `git status -sb`
+  - the exact safe commands to either (A) commit, or (B) stash with untracked (`git stash push -u`).
+
+1) Branch
+- Create and switch to:
+  - `git checkout -b launch-final-4.4`
+
+2) Validate extracted folders exist
+- Confirm these paths exist:
+  - `.\iteration-4.2\api\` OR `.\iteration-4.2\public\` OR `.\iteration-4.2\docs\`
+  - `.\iteration-4.3\api\admin\snapshot.js`
+  - `.\iteration-4.4\public\orb\index.html`
+- If any are missing, STOP and list the root directories so the correct folder name can be identified.
+
+3) Copy allowlisted folders into the repo
+Use PowerShell and ONLY these copy operations (no refactors):
+
+- Copy Iteration 4.2 payload:
+  - `Copy-Item -Recurse -Force ".\iteration-4.2\api\*" ".\api\"` (if exists)
+  - `Copy-Item -Recurse -Force ".\iteration-4.2\public\*" ".\public\"` (if exists)
+  - `Copy-Item -Recurse -Force ".\iteration-4.2\docs\*" ".\docs\"` (if exists)
+  - `Copy-Item -Recurse -Force ".\iteration-4.2\tools\*" ".\tools\"` (if exists)
+
+- Copy Iteration 4.3 payload:
+  - `Copy-Item -Recurse -Force ".\iteration-4.3\api\*" ".\api\"`
+  - `Copy-Item -Recurse -Force ".\iteration-4.3\public\*" ".\public\"`
+  - `Copy-Item -Recurse -Force ".\iteration-4.3\docs\*" ".\docs\"`
+  - `Copy-Item -Recurse -Force ".\iteration-4.3\tools\*" ".\tools\"`
+
+- Copy Iteration 4.4 payload (Orb Monitor):
+  - `Copy-Item -Recurse -Force ".\iteration-4.4\public\orb\*" ".\public\orb\"`
+  - `Copy-Item -Recurse -Force ".\iteration-4.4\docs\*" ".\docs\"`
+
+4) Quick syntax/import checks (fail fast)
+Run:
+- `node --check .\api\admin\snapshot.js`
+- `node --check .\public\orb\integration\activity-orb.js`
+
+If you have the metrics validator in tools, also run:
+- `node .\tools\validate-arcade-catalog-metrics.mjs`
+
+5) Smoke tests (local or deployed)
+A) Admin snapshot endpoint:
+- Non-admin should return 401/403:
+  - `curl -i http://localhost:3000/api/admin/snapshot`
+- Admin session should return JSON.
+
+B) Orb Monitor page:
+- Open:
+  - `http://localhost:3000/orb/`
+- Click “Admin: ON”
+  - Expect: either live snapshot HUD updates (admin) OR “403 Forbidden” message (non-admin)
+- Click “Mock Snapshot”
+  - Expect: orb graph refresh + HUD update.
+
+NOTE: The orb loads Three.js modules from either local vendor paths OR CDN fallback.  
+If your CSP blocks `https://cdn.jsdelivr.net`, you must (a) allow it in CSP OR (b) vendor Three locally at one of:
+- `/vendor/three/three.module.js` and `/vendor/three/OrbitControls.js`
+- `/three.module.js` and `/OrbitControls.js`
+
+6) Commit
+- Show diff summary:
+  - `git --no-pager diff --stat`
+  - `git --no-pager diff --name-only`
+- Commit:
+  - `git add -A`
+  - `git commit -m "Install Iterations 4.2+4.3+4.4 (admin spine + orb monitor)"`
+- Print:
+  - `git show --name-only --oneline --stat -1`
+
+7) Keep iteration folders out of git
+- Ensure `iteration-*/` is in `.gitignore` so extracted payloads don’t show as untracked.
+
+
+(Info) Iteration 4.4 adds a small adapter shim at:
+- `/gruesome-arcade-3d-map-adapter-v1.0/ga3d-admin-adapter.js`
+which re-exports `/gruesome-arcade-metrics-map-adapter-v1.0/adminSnapshotAdapter.js`.

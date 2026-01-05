@@ -1,33 +1,172 @@
 <!DOCTYPE html>
-<html lang="en" data-ui-version="2.8" data-game-id="moonshot">
+<html lang="en" data-arcade="moonshot" data-ui-version="2.0" data-econ-version="1.5">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <script>
-    (function () {
-      try {
-        if (window.top === window.self) window.location.replace('/');
-      } catch (_) {
-        // If framing info is restricted, do nothing.
-      }
-    })();
-  </script>
-  <title>Moonshot · ArcadeBridge · v2.8</title>
+  <title>Moonshot</title>
   <!-- built by gruesøme -->
   <!-- SIG_ENC_XOR5A_HEX=382f33362e7a38237a3d282f3f29a2373f -->
-  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@200;400;600;700;800;900&display=swap" rel="stylesheet" />
   <style>
-    :root{
+    :root {
       color-scheme: dark;
-      --bg0: #020617;
-      --panel: rgba(15, 23, 42, 0.78);
-      --border: rgba(255,255,255,0.10);
-      --muted: rgba(229,231,235,0.70);
-      --text: rgba(229,231,235,0.96);
-      --cyan: #22d3ee;
-      --cyan2: rgba(34,211,238,0.22);
-      --shadow: 0 24px 70px rgba(0,0,0,0.85);
-      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+
+      /* Type */
+      --ui-font: 'Barlow', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --ui-text: #e5e7eb;
+      --ui-muted: rgba(229, 231, 235, 0.72);
+      --ui-dim: rgba(229, 231, 235, 0.55);
+      --ui-heading: #f9fafb;
+
+      /* Palette */
+      --ui-cyan: #22d3ee;
+      --ui-purple: #8a2be2;
+      --ui-magenta: #ff00ff;
+      --ui-mint: #00ffcc;
+      --ui-yellow: #ffdd55;
+      --ui-red: #ff4444;
+
+      /* Surfaces */
+      --ui-bg-0: #020617;
+      --ui-bg-1: rgba(15, 23, 42, 0.76);
+      --ui-bg-2: rgba(15, 23, 42, 0.9);
+      --ui-border: rgba(55, 65, 81, 0.9);
+      --ui-panel: rgba(0, 0, 0, 0.6);
+      --ui-radius: 14px;
+      --ui-radius-sm: 10px;
+      --ui-radius-lg: 18px;
+
+      /* Accents */
+      --ui-cyan-soft: rgba(34, 211, 238, 0.45);
+      --ui-cyan-border-weak: rgba(34, 211, 238, 0.22);
+      --ui-cyan-border: rgba(34, 211, 238, 0.28);
+      --ui-cyan-border-strong: rgba(34, 211, 238, 0.35);
+      --ui-cyan-text: rgba(165, 243, 252, 0.95);
+      --ui-cyan-glow: rgba(56, 189, 248, 0.85);
+      --ui-green: #22c55e;
+      --ui-orange: #f97316;
+
+      /* Status */
+      --ui-success-bg: rgba(22, 163, 74, 0.18);
+      --ui-success-border: rgba(52, 211, 153, 0.9);
+      --ui-success-text: #bbf7d0;
+      --ui-success-glow: rgba(34, 197, 94, 0.9);
+
+      /* Effects */
+      --ui-shadow: 0 22px 60px rgba(0, 0, 0, 0.9);
+      --ui-glow: 0 0 18px rgba(34, 211, 238, 0.28);
+      --ui-glow-strong: 0 0 28px rgba(34, 211, 238, 0.42);
+      --ui-glow-soft: 0 0 18px rgba(34, 211, 238, 0.22);
+      --ui-glow-faint: 0 0 22px rgba(34, 211, 238, 0.16);
+      --ui-inset-shadow: 0 0 18px rgba(0, 0, 0, 0.65) inset;
+      --ui-drop-shadow: 0 10px 36px rgba(0, 0, 0, 0.55);
+      --ui-chip-shadow: 0 0 10px rgba(34, 211, 238, 0.35);
+      --ui-speed-glow: 0 0 16px rgba(56, 189, 248, 0.65);
+
+      /* Component backgrounds */
+      --ui-tutorial-panel-bg: radial-gradient(circle at top, rgba(17,24,39,1) 0%, rgba(15,23,42,0.96) 55%, rgba(15,23,42,0.94) 100%);
+      --ui-panel-bg-strong: radial-gradient(circle at top, rgba(15,23,42,0.98) 0%, rgba(15,23,42,0.94) 55%, rgba(15,23,42,0.9) 100%);
+      --ui-hud-bg: linear-gradient(180deg, rgba(6, 20, 52, 0.72), rgba(2, 6, 23, 0.54));
+      --ui-center-bg: rgba(2, 6, 23, 0.55);
+      --ui-tutorial-overlay-bg:
+        radial-gradient(circle at 50% 20%, rgba(34, 211, 238, 0.07) 0%, transparent 60%),
+        linear-gradient(180deg, rgba(2, 6, 23, 0.35) 0%, rgba(0, 0, 0, 0.55) 100%);
+      --ui-slow-overlay-bg:
+        radial-gradient(circle at center, rgba(56, 189, 248, 0.14) 0%, transparent 58%),
+        radial-gradient(circle at top, rgba(8, 47, 73, 0.55) 0%, transparent 72%);
+
+      /* Motion */
+      --motion-fast: 160ms;
+      --motion-med: 320ms;
+      --motion-slow: 900ms;
+      --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+      --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+      --ease-pop: cubic-bezier(0.2, 1.6, 0.2, 1);
+
+      /* Layering */
+      --z-scene-fx: 8;
+      --z-panel: 90;
+      --z-ui: 29;
+      --z-hud: 30;
+      --z-hud-pop: 31;
+      --z-tutorial: 120;
+    }
+
+    /* Unique motion language per UI surface */
+    @keyframes hud-scan {
+      0% { transform: translateX(-120%); opacity: 0.0; }
+      10% { opacity: 0.14; }
+      55% { opacity: 0.10; }
+      100% { transform: translateX(120%); opacity: 0.0; }
+    }
+
+    @keyframes powerup-shimmer {
+      0% { transform: translateX(-120%); opacity: 0.0; }
+      15% { opacity: 0.18; }
+      55% { opacity: 0.10; }
+      100% { transform: translateX(120%); opacity: 0.0; }
+    }
+
+    @keyframes chip-in {
+      0% { transform: translateY(-6px) scale(0.96); opacity: 0; }
+      55% { transform: translateY(0px) scale(1.02); opacity: 1; }
+      100% { transform: translateY(0px) scale(1); opacity: 1; }
+    }
+
+    @keyframes chip-out {
+      0% { transform: translateY(0px) scale(1); opacity: 1; }
+      100% { transform: translateY(-6px) scale(0.96); opacity: 0; }
+    }
+
+    @keyframes message-ping {
+      0% { transform: translateX(-50%) translateY(0px) scale(0.98); box-shadow: var(--ui-glow-faint); }
+      40% { transform: translateX(-50%) translateY(-1px) scale(1.02); box-shadow: var(--ui-glow-strong); }
+      100% { transform: translateX(-50%) translateY(0px) scale(1); box-shadow: var(--ui-glow-faint); }
+    }
+
+    @keyframes toast-pop {
+      0% { transform: translateY(10px) scale(0.98); opacity: 0; }
+      55% { transform: translateY(0px) scale(1.02); opacity: 1; }
+      100% { transform: translateY(0px) scale(1); opacity: 1; }
+    }
+
+    @keyframes panel-in {
+      0% { opacity: 0; transform: translate(-50%, -48%) scale(0.98); }
+      65% { opacity: 1; transform: translate(-50%, -50%) scale(1.02); }
+      100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    }
+
+    @keyframes tutorial-reveal {
+      0% { transform: translateY(10px) scale(0.985); opacity: 0; }
+      65% { transform: translateY(0px) scale(1.01); opacity: 1; }
+      100% { transform: translateY(0px) scale(1); opacity: 1; }
+    }
+
+    @keyframes slow-ripple {
+      0% { filter: saturate(1); }
+      50% { filter: saturate(1.18); }
+      100% { filter: saturate(1); }
+    }
+
+    @keyframes speed-flow {
+      0% { background-position: 0% 50%; }
+      100% { background-position: 200% 50%; }
+    }
+
+    /* Distinct factor pulses (Score / High / Combo) */
+    @keyframes score-tick {
+      0% { transform: translateY(0px) scale(1); filter: saturate(1); }
+      45% { transform: translateY(-1px) scale(1.03); filter: saturate(1.25); }
+      100% { transform: translateY(0px) scale(1); filter: saturate(1); }
+    }
+    @keyframes high-glint {
+      0% { opacity: 0.92; text-shadow: 0 0 0 rgba(0,0,0,0); }
+      40% { opacity: 1; text-shadow: 0 0 18px rgba(255, 221, 85, 0.32); }
+      100% { opacity: 0.92; text-shadow: 0 0 0 rgba(0,0,0,0); }
+    }
+    @keyframes combo-step {
+      0% { letter-spacing: 0.06em; transform: translateY(0px) scale(1); }
+      35% { letter-spacing: 0.10em; transform: translateY(-1px) scale(1.02); }
+      100% { letter-spacing: 0.06em; transform: translateY(0px) scale(1); }
     }
 
     html, body {
@@ -36,678 +175,1723 @@
       width: 100%;
       height: 100%;
       overflow: hidden;
-      background: radial-gradient(circle at top, #020617 0%, #020617 40%, #000 100%);
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Barlow', sans-serif;
-      color: var(--text);
+      background: radial-gradient(circle at top, var(--ui-bg-0) 0%, var(--ui-bg-0) 40%, #000 100%);
+      font-family: var(--ui-font);
+      color: var(--ui-text);
     }
-
-    #root { position: fixed; inset: 0; }
-    #canvas { width: 100%; height: 100%; display: block; background: #000; }
-
-    .hud {
+    #moonshot-root {
       position: fixed;
-      top: 12px;
-      left: 12px;
+      inset: 0;
       display: flex;
-      gap: 10px;
-      z-index: 5;
+      align-items: stretch;
+      justify-content: center;
+    }
+    #moonshot-canvas-container {
+      position: relative;
+      flex: 1;
+    }
+    /* HUD: text-only factors (no shared bubble) */
+    #moonshot-hud {
+      position: absolute;
+      inset: 0;
       pointer-events: none;
+      z-index: var(--z-hud);
     }
-    .chip {
-      display: inline-flex;
+    .moonshot-hud-factor {
+      position: absolute;
+      top: calc(env(safe-area-inset-top, 0px) + 10px);
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding: 0;
+      background: none;
+      border: none;
+      box-shadow: none;
+      opacity: 0.96;
+      transform-origin: 50% 20%;
+    }
+    .moonshot-hud-factor .moonshot-label {
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: rgba(229, 231, 235, 0.72);
+    }
+    .moonshot-hud-factor .moonshot-value {
+      font-size: 28px;
+      font-weight: 800;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+      text-shadow: 0 12px 24px rgba(0,0,0,0.55);
+    }
+    #moonshot-hud-score {
+      left: calc(env(safe-area-inset-left, 0px) + 14px);
+      text-align: left;
+    }
+    #moonshot-hud-score .moonshot-value {
+      color: var(--ui-cyan);
+    }
+    #moonshot-hud-high {
+      left: 50%;
+      transform: translateX(-50%);
+      text-align: center;
+      opacity: 0.92;
+    }
+    #moonshot-hud-high .moonshot-value {
+      color: var(--ui-yellow);
+    }
+    #moonshot-hud-combo {
+      right: calc(env(safe-area-inset-right, 0px) + 14px);
+      text-align: right;
+    }
+    #moonshot-hud-combo .moonshot-value {
+      color: rgba(165, 243, 252, 0.95);
+    }
+    #moonshot-hud-score.pulse { animation: score-tick 260ms var(--ease-out) both; }
+    #moonshot-hud-high.pulse { animation: high-glint 520ms var(--ease-out) both; }
+    #moonshot-hud-combo.pulse { animation: combo-step 360ms var(--ease-out) both; }
+    #moonshot-powerups-bar {
+      position: absolute;
+      top: calc(env(safe-area-inset-top, 0px) + 70px);
+      left: 50%;
+      transform: translateX(-50%);
+      display: none;
       align-items: center;
-      gap: 10px;
-      padding: 10px 12px;
-      border-radius: 14px;
-      background: rgba(2, 6, 23, 0.62);
-      border: 1px solid var(--border);
-      box-shadow: 0 18px 40px rgba(0,0,0,0.60);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      font-size: 12px;
-      letter-spacing: 0.02em;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: var(--ui-bg-1);
+      border: 1px solid var(--ui-cyan-border-strong);
+      box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6);
+      font-size: 11px;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: var(--z-ui);
     }
-    .dot {
+    #moonshot-powerups-bar::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background:
+        linear-gradient(90deg,
+          transparent 0%,
+          rgba(255, 255, 255, 0.0) 25%,
+          rgba(34, 211, 238, 0.18) 50%,
+          rgba(255, 255, 255, 0.0) 75%,
+          transparent 100%);
+      transform: translateX(-120%);
+      opacity: 0;
+      pointer-events: none;
+      mix-blend-mode: screen;
+    }
+    #moonshot-powerups-bar.pulse::before {
+      opacity: 1;
+      animation: powerup-shimmer 820ms linear both;
+    }
+    .moonshot-powerups-list {
+      display: flex;
+      gap: 6px;
+    }
+    .moonshot-powerup-chip {
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: var(--ui-bg-2);
+      border: 1px solid var(--ui-cyan-soft);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ui-cyan-text);
+      text-shadow: none;
+      animation: chip-in var(--motion-med) var(--ease-out) both;
+      will-change: transform, opacity;
+    }
+    .moonshot-powerup-chip.leaving {
+      animation: chip-out var(--motion-fast) var(--ease-in) both;
+    }
+    .moonshot-hud-block {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .moonshot-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      opacity: 0.75;
+      letter-spacing: 0.06em;
+    }
+    .moonshot-value {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      font-variant-numeric: tabular-nums;
+    }
+    #moonshot-score {
+      font-size: 22px;
+      font-weight: 800;
+    }
+    #moonshot-center-message {
+      position: absolute;
+      left: 50%;
+      bottom: calc(env(safe-area-inset-bottom, 0px) + 110px);
+      transform: translateX(-50%);
+      font-size: 13px;
+      color: rgba(229, 231, 235, 0.92);
+      text-align: center;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: var(--ui-center-bg);
+      border: 1px solid var(--ui-cyan-border-weak);
+      box-shadow: 0 14px 38px rgba(0, 0, 0, 0.62);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      pointer-events: none;
+      z-index: var(--z-hud-pop);
+      will-change: transform, box-shadow, opacity;
+    }
+    #moonshot-center-message.ping {
+      animation: message-ping 520ms var(--ease-pop) both;
+    }
+
+    #moonshot-tutorial {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--ui-tutorial-overlay-bg);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      z-index: var(--z-tutorial);
+      opacity: 1;
+      visibility: visible;
+      transition: opacity var(--motion-med) var(--ease-out), visibility 0s linear;
+    }
+    #moonshot-tutorial.is-hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity var(--motion-med) var(--ease-in), visibility 0s linear var(--motion-med);
+    }
+    .moonshot-tutorial-inner {
+      width: min(92vw, 420px);
+      padding: 16px 18px 14px;
+      border-radius: 18px;
+      border: 1px solid var(--ui-cyan-border);
+      box-shadow: 0 22px 70px rgba(0, 0, 0, 0.82);
+      background: var(--ui-tutorial-panel-bg);
+      font-size: 13px;
+      animation: tutorial-reveal var(--motion-slow) var(--ease-out) both;
+    }
+    #moonshot-tutorial.is-hidden .moonshot-tutorial-inner {
+      animation: none;
+      transform: translateY(10px) scale(0.985);
+      opacity: 0;
+      transition: transform var(--motion-med) var(--ease-in), opacity var(--motion-med) var(--ease-in);
+    }
+    .moonshot-tutorial-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: rgba(229, 231, 235, 0.95);
+      text-align: center;
+    }
+    .moonshot-tutorial-body {
+      color: var(--ui-text);
+      margin-bottom: 10px;
+      line-height: 1.45;
+    }
+    .moonshot-tutorial-subtitle {
+      font-size: 12px;
+      color: var(--ui-muted);
+      margin-top: -2px;
+      margin-bottom: 12px;
+      line-height: 1.4;
+    }
+    .moonshot-tutorial-warning {
+      margin-top: 8px;
+      margin-bottom: 10px;
+      padding: 9px 10px;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 68, 68, 0.45);
+      background: rgba(255, 68, 68, 0.12);
+      color: rgba(255, 231, 231, 0.95);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.10em;
+      text-transform: uppercase;
+      text-align: center;
+      animation: tutorial-warning-pulse 1150ms var(--ease-in-out) infinite;
+    }
+    @keyframes tutorial-warning-pulse {
+      0% { opacity: 0.92; box-shadow: 0 0 0 0 rgba(255, 68, 68, 0.0); }
+      45% { opacity: 1; box-shadow: 0 0 0 5px rgba(255, 68, 68, 0.12); }
+      100% { opacity: 0.92; box-shadow: 0 0 0 0 rgba(255, 68, 68, 0.0); }
+    }
+    .moonshot-tutorial-section-title {
+      margin-top: 8px;
+      margin-bottom: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: rgba(229, 231, 235, 0.92);
+    }
+    .moonshot-tutorial-list {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .moonshot-tutorial-row {
+      display: grid;
+      grid-template-columns: 18px 1fr;
+      gap: 10px;
+      align-items: start;
+      padding: 9px 10px;
+      border-radius: 14px;
+      border: 1px solid rgba(34, 211, 238, 0.14);
+      background: rgba(2, 6, 23, 0.32);
+    }
+    .moonshot-tutorial-bullet {
       width: 8px;
       height: 8px;
       border-radius: 999px;
-      background: var(--cyan);
-      box-shadow: 0 0 12px rgba(34,211,238,0.55);
+      margin-top: 6px;
+      background: rgba(34, 211, 238, 0.95);
+      box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.12);
+      justify-self: center;
     }
-    .mono { font-family: var(--mono); opacity: 0.88; }
+    .moonshot-tutorial-row strong {
+      color: rgba(229, 231, 235, 0.95);
+      font-weight: 600;
+    }
+    .moonshot-tutorial-powerups {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .moonshot-tutorial-powerup {
+      display: grid;
+      grid-template-columns: 28px 1fr;
+      gap: 10px;
+      align-items: center;
+      padding: 9px 10px;
+      border-radius: 14px;
+      border: 1px solid rgba(34, 211, 238, 0.14);
+      background: rgba(2, 6, 23, 0.28);
+    }
+    .moonshot-tutorial-powerup-icon {
+      width: 26px;
+      height: 26px;
+      border-radius: 10px;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      background: rgba(15, 23, 42, 0.75);
+      box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
+      color: rgba(229, 231, 235, 0.92);
+      filter: drop-shadow(0 0 8px rgba(0, 0, 0, 0.35));
+    }
+    .moonshot-tutorial-powerup.pwr-gun .moonshot-tutorial-powerup-icon { color: var(--ui-orange); }
+    .moonshot-tutorial-powerup.pwr-slow .moonshot-tutorial-powerup-icon { color: var(--ui-green); }
+    .moonshot-tutorial-powerup.pwr-double .moonshot-tutorial-powerup-icon { color: var(--ui-red); }
+    .moonshot-tutorial-powerup.pwr-missile .moonshot-tutorial-powerup-icon { color: var(--ui-red); }
+    .moonshot-tutorial-powerup.pwr-invinc .moonshot-tutorial-powerup-icon { color: var(--ui-cyan); }
+    .moonshot-tutorial-powerup.pwr-wormhole .moonshot-tutorial-powerup-icon { color: var(--ui-mint); }
 
-    .pop { animation: pop 240ms ease-out; }
-    @keyframes pop { 0%{ transform: scale(1); } 55%{ transform: scale(1.06); } 100%{ transform: scale(1); } }
-
-    #toast {
-      position: fixed;
-      left: 50%;
-      bottom: 18px;
-      transform: translateX(-50%) translateY(10px);
-      opacity: 0;
-      z-index: 20;
+    /* Compact mode for smaller game viewports so the tutorial stays within the container (no scrolling). */
+    @media (max-height: 740px) {
+      .moonshot-tutorial-inner {
+        padding: 14px 16px 12px;
+      }
+      .moonshot-tutorial-warning { margin-bottom: 8px; }
+      .moonshot-tutorial-section-title { margin-top: 6px; margin-bottom: 6px; }
+      .moonshot-tutorial-row,
+      .moonshot-tutorial-powerup { padding: 8px 10px; }
+      .moonshot-tutorial-powerup-desc { display: none; }
+    }
+    .moonshot-tutorial-powerup-name {
       font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: rgba(229, 231, 235, 0.94);
+      margin-bottom: 2px;
+    }
+    .moonshot-tutorial-powerup-desc {
+      font-size: 12px;
+      color: rgba(209, 213, 219, 0.92);
+      line-height: 1.35;
+    }
+    .moonshot-tutorial-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px 14px;
+      margin-bottom: 10px;
+    }
+    .moonshot-tutorial-item {
+      font-size: 12px;
+      color: rgba(209, 213, 219, 0.95);
+    }
+    .moonshot-tutorial-item span.label {
+      display: block;
+      font-weight: 600;
+      color: var(--ui-cyan-text);
+      margin-bottom: 2px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .moonshot-tutorial-footer {
+      font-size: 12px;
+      color: var(--ui-muted);
+      margin-top: 4px;
+    }
+
+    #moonshot-slow-overlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: var(--ui-slow-overlay-bg);
+      mix-blend-mode: screen;
+      opacity: 0;
+      transition: opacity 0.18s var(--ease-out);
+      z-index: var(--z-scene-fx);
+    }
+    #moonshot-slow-overlay.active {
+      animation: slow-ripple 1.8s ease-in-out infinite;
+    }
+
+    /* (Legacy UI removed) */
+
+    /* Gameover panel (centered modal) */
+    #moonshot-gameover-panel {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      right: auto;
+      transform: translate(-50%, -50%) scale(0.985);
+      transform-origin: 50% 50%;
+      width: min(92vw, 440px);
+      padding: 18px 18px 14px;
+      border-radius: var(--ui-radius-lg);
+      background: var(--ui-panel-bg-strong);
+      border: 1px solid var(--ui-border);
+      box-shadow: var(--ui-shadow);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      opacity: 0;
+      pointer-events: none;
+      z-index: var(--z-panel);
+    }
+    #moonshot-gameover-panel.visible {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translate(-50%, -50%) scale(1);
+      animation: panel-in var(--motion-slow) var(--ease-out) both;
+    }
+    #moonshot-gameover-panel h2 {
+      margin: 0 0 10px;
+      font-size: 18px;
       letter-spacing: 0.08em;
       text-transform: uppercase;
-      padding: 10px 12px;
-      border-radius: 999px;
-      border: 1px solid rgba(34,211,238,0.25);
-      background: rgba(2, 6, 23, 0.78);
-      box-shadow: 0 18px 45px rgba(0,0,0,0.80);
-      transition: opacity 140ms ease-out, transform 140ms ease-out;
+      color: var(--ui-heading);
     }
-    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-
-    .overlay {
-      position: fixed;
-      inset: 0;
+    .moonshot-summary-row {
       display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 6px;
+    }
+    .moonshot-summary-label {
+      color: var(--ui-muted);
+      font-size: 12px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .moonshot-summary-value {
+      color: var(--ui-text);
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+    .moonshot-summary-hint {
+      margin-top: 6px;
+      font-size: 11px;
+      color: var(--ui-dim);
+    }
+
+    /* Bottom speed meter inspired by the 2D HUD */
+    #moonshot-speed-meter {
+      position: absolute;
+      left: 50%;
+      right: auto;
+      transform: translateX(-50%);
+      width: calc(100% - (env(safe-area-inset-left, 0px) + env(safe-area-inset-right, 0px) + 28px));
+      max-width: 980px;
+      bottom: calc(env(safe-area-inset-bottom, 0px) + 72px);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 12px;
+      color: rgba(209, 213, 219, 0.92);
+      pointer-events: none;
+      z-index: var(--z-hud);
+    }
+    .moonshot-speed-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      opacity: 0.9;
+    }
+    .moonshot-speed-bar {
+      width: 100%;
+      height: 14px;
+      border-radius: 999px;
+      background: var(--ui-bg-2);
+      box-shadow: var(--ui-inset-shadow);
+      overflow: hidden;
+    }
+    .moonshot-speed-bar-fill {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, var(--ui-green), var(--ui-cyan), var(--ui-orange));
+      background-size: 200% 100%;
+      box-shadow: var(--ui-speed-glow);
+      transition: width 0.08s linear;
+    }
+    #moonshot-speed-meter.active .moonshot-speed-bar-fill {
+      animation: speed-flow 1.2s linear infinite;
+    }
+
+    /* Keep the HUD legible on very small viewports */
+    @media (max-width: 420px) {
+      #moonshot-hud {
+        padding: 9px 10px;
+        gap: 8px;
+      }
+      .moonshot-value {
+        font-size: 18px;
+      }
+      #moonshot-center-message {
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 96px);
+        font-size: 12px;
+      }
+    }
+
+    /* Accessibility: respect reduced motion */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation: none !important;
+        transition: none !important;
+        scroll-behavior: auto !important;
+      }
+    }
+  
+
+    /* === Arcade Economy Overlay (session-aware) === */
+    .econ-icon {
+      border: 1px solid var(--ui-cyan-border-weak);
+      background: rgba(2, 6, 23, 0.45);
+      color: rgba(229,231,235,0.86);
+      border-radius: 10px;
+      width: 34px;
+      height: 28px;
+      display: inline-flex;
       align-items: center;
       justify-content: center;
-      z-index: 10;
-      background: linear-gradient(180deg, rgba(2,6,23,0.18) 0%, rgba(0,0,0,0.78) 100%);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-    }
-    .card {
-      width: min(860px, calc(100% - 26px));
-      border-radius: 18px;
-      border: 1px solid rgba(255,255,255,0.12);
-      background: rgba(2, 6, 23, 0.82);
-      box-shadow: var(--shadow);
-      padding: 16px;
-    }
-    .row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
-    .title { font-size: 14px; font-weight: 900; letter-spacing: 0.14em; text-transform: uppercase; }
-    .subtitle { margin-top: 10px; font-size: 12px; color: var(--muted); line-height: 1.4; }
-    .grid { margin-top: 14px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-    @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } }
-    .panel {
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      background: rgba(15, 23, 42, 0.55);
-      padding: 12px;
-    }
-    .panel h3 { margin: 0 0 6px; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; }
-    .hint { font-size: 11px; color: rgba(229,231,235,0.64); line-height: 1.4; min-height: 1.2em; }
-    .kpi { margin-top: 10px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
-    .k { border: 1px solid rgba(255,255,255,0.10); border-radius: 14px; padding: 10px; background: rgba(2, 6, 23, 0.55); }
-    .l { font-size: 10px; color: rgba(229,231,235,0.55); letter-spacing: 0.10em; text-transform: uppercase; }
-    .v { margin-top: 4px; font-size: 12px; font-weight: 700; }
-    .btnrow { margin-top: 10px; display: flex; gap: 10px; flex-wrap: wrap; }
-    .btn {
       cursor: pointer;
-      border-radius: 999px;
-      border: 1px solid rgba(255,255,255,0.14);
-      background: rgba(255,255,255,0.06);
-      color: rgba(229,231,235,0.92);
+      transition: transform var(--motion-fast) var(--ease-out), border-color var(--motion-fast) var(--ease-out), background var(--motion-fast) var(--ease-out);
+    }
+    .econ-icon:hover {
+      transform: translateY(-1px);
+      border-color: rgba(34, 211, 238, 0.28);
+      background: rgba(15, 23, 42, 0.60);
+    }
+    #moonshot-economy-ui.collapsed .econ-grid,
+    #moonshot-economy-ui.collapsed .econ-actions,
+    #moonshot-economy-ui.collapsed .econ-foot { display: none; }
+    #moonshot-economy-ui.collapsed .econ-card { padding-bottom: 10px; }
+
+    /* built by gruesøme */
+    /* SIG_ENC_XOR5A_HEX=382f33362e7a38237a3d282f3f29a2373f */
+
+    #moonshot-economy-ui {
+      position: absolute;
+      left: calc(env(safe-area-inset-left, 0px) + 14px);
+      bottom: calc(env(safe-area-inset-bottom, 0px) + 72px);
+      z-index: calc(var(--z-panel) + 5);
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: flex-start;
+      max-width: min(92vw, 420px);
+    }
+
+
+
+    .econ-card {
+      pointer-events: auto;
+      width: min(92vw, 420px);
+      padding: 12px 12px 10px;
+      border-radius: 16px;
+      border: 1px solid var(--ui-cyan-border);
+      background: radial-gradient(circle at top, rgba(15,23,42,0.94) 0%, rgba(15,23,42,0.86) 55%, rgba(2,6,23,0.80) 100%);
+      box-shadow: 0 22px 70px rgba(0,0,0,0.80);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      overflow: hidden;
+      position: relative;
+    }
+    .econ-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent 0%, rgba(34, 211, 238, 0.16) 50%, transparent 100%);
+      opacity: 0.25;
+      transform: translateX(-120%);
+      animation: hud-scan 3.1s linear infinite;
+      pointer-events: none;
+      mix-blend-mode: screen;
+    }
+
+    .econ-row {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .econ-title {
       font-size: 12px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: rgba(229, 231, 235, 0.92);
+      font-weight: 700;
+    }
+
+    .econ-pill {
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(34, 211, 238, 0.22);
+      color: rgba(165, 243, 252, 0.92);
+      background: rgba(2, 6, 23, 0.35);
+      box-shadow: 0 0 10px rgba(34, 211, 238, 0.16);
+      white-space: nowrap;
+    }
+    .econ-pill.good {
+      border-color: rgba(52, 211, 153, 0.55);
+      color: rgba(187, 247, 208, 0.95);
+      background: rgba(22, 163, 74, 0.12);
+      box-shadow: 0 0 14px rgba(34, 197, 94, 0.18);
+    }
+    .econ-pill.warn {
+      border-color: rgba(255, 221, 85, 0.45);
+      color: rgba(255, 240, 196, 0.96);
+      background: rgba(255, 221, 85, 0.10);
+      box-shadow: 0 0 14px rgba(255, 221, 85, 0.16);
+    }
+    .econ-pill.bad {
+      border-color: rgba(255, 68, 68, 0.40);
+      color: rgba(254, 202, 202, 0.96);
+      background: rgba(255, 68, 68, 0.10);
+      box-shadow: 0 0 14px rgba(255, 68, 68, 0.12);
+    }
+
+    .econ-grid {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .econ-stat {
+      border-radius: 12px;
+      border: 1px solid rgba(34, 211, 238, 0.14);
+      background: rgba(2, 6, 23, 0.34);
+      padding: 7px 8px;
+      box-shadow: 0 10px 28px rgba(0,0,0,0.45);
+    }
+    .econ-stat .k {
+      display: block;
+      font-size: 9px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: rgba(229,231,235,0.62);
+      margin-bottom: 2px;
+    }
+    .econ-stat .v {
+      display: block;
+      font-size: 16px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      color: rgba(229,231,235,0.95);
+      text-shadow: 0 0 10px rgba(34, 211, 238, 0.14);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .econ-actions {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+
+    .econ-btn {
+      border-radius: 999px;
+      border: 1px solid rgba(55, 65, 81, 0.9);
+      background: rgba(2, 6, 23, 0.40);
+      color: rgba(229,231,235,0.92);
+      font-family: var(--ui-font);
+      font-size: 11px;
       letter-spacing: 0.10em;
       text-transform: uppercase;
-      padding: 10px 14px;
+      padding: 8px 10px;
+      cursor: pointer;
+      transition: transform var(--motion-fast) var(--ease-out),
+                  border-color var(--motion-fast) var(--ease-out),
+                  background var(--motion-fast) var(--ease-out),
+                  box-shadow var(--motion-fast) var(--ease-out);
+      user-select: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
     }
-    .btn.primary { border-color: rgba(34,211,238,0.30); background: rgba(34,211,238,0.14); }
-    .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+    .econ-btn:hover {
+      transform: translateY(-1px);
+      border-color: rgba(34, 211, 238, 0.35);
+      box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.18), 0 14px 40px rgba(0,0,0,0.55);
+      background: rgba(2, 6, 23, 0.56);
+    }
+    .econ-btn:active {
+      transform: translateY(0px);
+    }
+    .econ-btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .econ-btn.primary {
+      border-color: rgba(34, 211, 238, 0.28);
+      background: linear-gradient(90deg, rgba(34, 211, 238, 0.20), rgba(2, 6, 23, 0.42));
+      box-shadow: 0 0 16px rgba(34, 211, 238, 0.14);
+    }
 
-    #standaloneGate {
-      position: fixed;
-      inset: 0;
+    .econ-foot {
+      position: relative;
+      z-index: 1;
+      font-size: 11px;
+      color: rgba(229,231,235,0.64);
+      line-height: 1.35;
+    }
+
+    #econ-toasts {
+      pointer-events: none;
+      display: grid;
+      gap: 8px;
+    }
+    .econ-toast {
+      width: min(92vw, 420px);
+      pointer-events: none;
+      padding: 10px 12px;
+      border-radius: 16px;
+      border: 1px solid rgba(34, 211, 238, 0.22);
+      background: rgba(2, 6, 23, 0.62);
+      box-shadow: 0 22px 70px rgba(0,0,0,0.75);
+      animation: toast-pop var(--motion-med) var(--ease-out) both;
+      font-size: 12px;
+      color: rgba(229,231,235,0.92);
+      letter-spacing: 0.04em;
+      line-height: 1.4;
+    }
+    .econ-toast.good { border-color: rgba(52, 211, 153, 0.45); background: rgba(22, 163, 74, 0.10); }
+    .econ-toast.bad { border-color: rgba(255, 68, 68, 0.35); background: rgba(255, 68, 68, 0.08); }
+    .econ-toast.warn { border-color: rgba(255, 221, 85, 0.35); background: rgba(255, 221, 85, 0.07); }
+
+    /* Add a compact promo row to the tutorial */
+    .moonshot-promo-row {
+      margin-top: 12px;
+      padding: 10px 10px;
+      border-radius: 14px;
+      border: 1px solid rgba(34, 211, 238, 0.18);
+      background: rgba(2, 6, 23, 0.32);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .moonshot-promo-row .promo-text {
+      font-size: 12px;
+      color: rgba(229,231,235,0.92);
+      line-height: 1.35;
+    }
+    .moonshot-promo-row .promo-text strong {
+      color: rgba(165, 243, 252, 0.95);
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    @media (max-width: 420px) {
+      #moonshot-economy-ui {
+        left: calc(env(safe-area-inset-left, 0px) + 10px);
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+      }
+      .econ-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .econ-stat .v { font-size: 15px; }
+    }
+
+    /* Mobile thrust button (desktop-style boost on touch) */
+    #moonshot-thrust-btn {
+      position: absolute;
+      right: calc(env(safe-area-inset-right, 0px) + 18px);
+      bottom: calc(env(safe-area-inset-bottom, 0px) + 18px);
+      z-index: var(--z-hud-pop);
       display: none;
       align-items: center;
       justify-content: center;
-      z-index: 50;
-      background: radial-gradient(circle at top, rgba(2,6,23,0.92) 0%, rgba(0,0,0,0.96) 100%);
+      width: 138px;
+      height: 64px;
+      border-radius: 999px;
+      border: 1px solid var(--ui-border);
+      background: var(--ui-bg-2);
+      color: var(--ui-heading);
+      font-weight: 800;
+      letter-spacing: 0.10em;
+      text-transform: uppercase;
+      box-shadow: var(--ui-drop-shadow);
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+      pointer-events: auto;
     }
-    #standaloneGate.show { display: flex; }
-    .sgCard { width: min(520px, calc(100% - 26px)); border-radius: 18px; border: 1px solid rgba(255,255,255,0.12); background: rgba(2, 6, 23, 0.82); box-shadow: var(--shadow); padding: 16px; text-align: center; }
-    .sgTitle { font-size: 12px; font-weight: 900; letter-spacing: 0.14em; text-transform: uppercase; }
-    .sgBody { margin-top: 10px; font-size: 12px; color: rgba(229,231,235,0.72); line-height: 1.45; }
+    #moonshot-thrust-btn.is-held {
+      border-color: var(--ui-cyan-border-strong);
+      box-shadow: var(--ui-drop-shadow), var(--ui-glow-strong);
+      color: var(--ui-cyan-text);
+    }
+    @media (pointer: coarse) {
+      #moonshot-thrust-btn { display: flex; }
+    }
+    body.force-mobile #moonshot-thrust-btn { display: flex; }
+
+    /* Ensure touch steering doesn't trigger browser gestures */
+    #moonshot-canvas-container canvas { touch-action: none; }
+
   </style>
 </head>
 <body>
-  <div id="standaloneGate" aria-label="Dashboard required" role="dialog" aria-modal="true">
-    <div class="sgCard">
-      <div class="sgTitle">Dashboard required</div>
-      <div class="sgBody">Moonshot is embed-only. Open the <strong>Arcade Dashboard</strong> and launch the game from there.</div>
-    </div>
-  </div>
-
-  <div id="root">
-    <canvas id="canvas"></canvas>
-
-    <div class="hud" aria-hidden="true">
-      <div class="chip"><span class="dot"></span><b>Moonshot</b><span class="mono" id="hudScore">Score 0</span></div>
-      <div class="chip"><span class="mono" id="hudRun">Run --</span><span class="mono" id="hudBest">Best 0</span></div>
-    </div>
-
-    <div id="toast"></div>
-
-    <div class="overlay" id="overlay">
-      <div class="card">
-        <div class="row">
-          <div class="title">Moonshot</div>
-          <div class="title" style="opacity:0.75">ArcadeBridge v0.3</div>
-        </div>
-        <div class="subtitle" id="subText">
-          Launch from the dashboard. Start a run to spend Credits. Promo runs are not payout-eligible.
-        </div>
-
-        <div class="grid">
-          <div class="panel">
-            <h3>Controls</h3>
-            <div class="hint">Tap / Click / Space to thrust. Avoid debris. Score = gates passed.</div>
-            <div class="kpi">
-              <div class="k"><div class="l">Run cost</div><div class="v" id="kRunCost">10 Credits</div></div>
-              <div class="k"><div class="l">Promo runs</div><div class="v" id="kPromo">5</div></div>
-              <div class="k"><div class="l">Status</div><div class="v" id="kStatus">Ready</div></div>
-            </div>
-
-            <div class="btnrow">
-              <button class="btn primary" id="btnStart">Start Run</button>
-              <button class="btn" id="btnPromo">Claim Promo (Tx)</button>
-            </div>
-            <div class="hint" id="hintLine">Tip: Promo claim is a gas-paid transaction in the final build.</div>
-          </div>
-
-          <div class="panel">
-            <h3>Session</h3>
-            <div class="hint" id="sessionLine">Syncing with dashboard…</div>
-            <div class="kpi">
-              <div class="k"><div class="l">Paid Credits</div><div class="v" id="kPaid">0</div></div>
-              <div class="k"><div class="l">Promo Credits</div><div class="v" id="kPromoBal">0</div></div>
-              <div class="k"><div class="l">Run type</div><div class="v" id="kRunType">--</div></div>
-            </div>
-            <div class="hint" id="resultLine"></div>
-          </div>
-        </div>
+  <script>
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('mobile') === '1' || params.get('forceMobile') === '1') {
+        document.body.classList.add('force-mobile');
+      }
+    } catch (e) {}
+  </script>
+  <div id="moonshot-root">
+    <div id="moonshot-canvas-container"></div>
+    <button id="moonshot-thrust-btn" type="button" aria-label="Thrust">THRUST</button>
+    <div id="moonshot-slow-overlay"></div>
+    <div id="moonshot-hud">
+      <div class="moonshot-hud-factor" id="moonshot-hud-score">
+        <div class="moonshot-label">Score</div>
+        <div class="moonshot-value" id="moonshot-score">0</div>
+      </div>
+      <div class="moonshot-hud-factor" id="moonshot-hud-high">
+        <div class="moonshot-label">High</div>
+        <div class="moonshot-value" id="moonshot-high-score">0</div>
+      </div>
+      <div class="moonshot-hud-factor" id="moonshot-hud-combo">
+        <div class="moonshot-label">Combo</div>
+        <div class="moonshot-value" id="moonshot-combo">x1</div>
       </div>
     </div>
-  </div>
+    <div id="moonshot-powerups-bar">
+      <span class="moonshot-label">Powerups</span>
+      <div class="moonshot-powerups-list" id="moonshot-powerups"></div>
+    </div>
+    <div id="moonshot-center-message">Drag to steer. Hold THRUST to boost.</div>
+    <div id="moonshot-gameover-panel">
+      <h2>Run Summary</h2>
+      <div class="moonshot-summary-row">
+        <span class="moonshot-summary-label">Score</span>
+        <span class="moonshot-summary-value" id="moonshot-final-score">0</span>
+      </div>
+      <div class="moonshot-summary-row">
+        <span class="moonshot-summary-label">High Score</span>
+        <span class="moonshot-summary-value" id="moonshot-final-high-score">0</span>
+      </div>
+      <div class="moonshot-summary-row">
+        <span class="moonshot-summary-label">Best Combo</span>
+        <span class="moonshot-summary-value" id="moonshot-final-combo">x1</span>
+      </div>
+      <div class="moonshot-summary-hint">Drag to steer. Hold THRUST (or Space) to boost.</div>
+    </div>
+    <div id="moonshot-tutorial">
+      <div class="moonshot-tutorial-inner">
+        <div class="moonshot-tutorial-title">Moonshot 3D</div>
+        <div class="moonshot-tutorial-warning">WARNING: GAME GET FAST</div>
+        <div class="moonshot-tutorial-body">Keep your runaway rocket from crashing as long as you can.</div>
+        <div class="moonshot-tutorial-subtitle">Drag to steer. Hold THRUST (or Space) to boost speed.</div>
+
+        <div class="moonshot-tutorial-section-title">Basics</div>
+        <div class="moonshot-tutorial-list">
+          <div class="moonshot-tutorial-row">
+            <div class="moonshot-tutorial-bullet"></div>
+            <div><strong>Thread the gaps</strong> between candles to survive.</div>
+          </div>
+          <div class="moonshot-tutorial-row">
+            <div class="moonshot-tutorial-bullet"></div>
+            <div><strong>Near-miss</strong> the edges to build combo flow.</div>
+          </div>
+        </div>
+
+        <div class="moonshot-tutorial-section-title">Powerups</div>
+        <div class="moonshot-tutorial-powerups">
+          <div class="moonshot-tutorial-powerup pwr-gun">
+            <svg class="moonshot-tutorial-powerup-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <!-- bullet -->
+              <path d="M7 12h8" fill="none" style="stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-opacity: 0.6"/>
+              <path d="M6 10.5h7" fill="none" style="stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-opacity: 0.35"/>
+              <path d="M6 13.5h7" fill="none" style="stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-opacity: 0.35"/>
+              <circle cx="17" cy="12" r="2.1" fill="currentColor" fill-opacity="0.88"/>
+            </svg>
+            <div>
+              <div class="moonshot-tutorial-powerup-name">Gun</div>
+              <div class="moonshot-tutorial-powerup-desc">Auto-fire bullets that destroy candles.</div>
+            </div>
+          </div>
+          <div class="moonshot-tutorial-powerup pwr-slow">
+            <svg class="moonshot-tutorial-powerup-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <!-- hourglass -->
+              <path d="M8 6h8" fill="none" style="stroke: currentColor; stroke-width: 2; stroke-linecap: round"/>
+              <path d="M9 6v2c0 1.2 1.1 2.2 3 4 1.9 1.8 3 2.8 3 4v2" fill="none" style="stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round"/>
+              <path d="M8 18h8" fill="none" style="stroke: currentColor; stroke-width: 2; stroke-linecap: round"/>
+              <path d="M15 6v2c0 1.2-1.1 2.2-3 4-1.9 1.8-3 2.8-3 4v2" fill="none" style="stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; stroke-opacity: 0.55"/>
+            </svg>
+            <div>
+              <div class="moonshot-tutorial-powerup-name">Slow</div>
+              <div class="moonshot-tutorial-powerup-desc">Slows time briefly. When it ends, the run stays slower.</div>
+            </div>
+          </div>
+          <div class="moonshot-tutorial-powerup pwr-double">
+            <svg class="moonshot-tutorial-powerup-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <!-- red X -->
+              <path d="M7.5 7.5l9 9" fill="none" style="stroke: currentColor; stroke-width: 2.6; stroke-linecap: round"/>
+              <path d="M16.5 7.5l-9 9" fill="none" style="stroke: currentColor; stroke-width: 2.6; stroke-linecap: round"/>
+            </svg>
+            <div>
+              <div class="moonshot-tutorial-powerup-name">Double</div>
+              <div class="moonshot-tutorial-powerup-desc">Boosts your multiplier.</div>
+            </div>
+          </div>
+          <div class="moonshot-tutorial-powerup pwr-missile">
+            <svg class="moonshot-tutorial-powerup-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <!-- missile -->
+              <path d="M8 16l7-7" fill="none" style="stroke: currentColor; stroke-width: 2.4; stroke-linecap: round"/>
+              <path d="M13.5 6.5c2.6 0.2 4 1.6 4 4.2L15 13.2 10.8 9z" fill="none" style="stroke: currentColor; stroke-width: 2; stroke-linejoin: round"/>
+              <path d="M9.6 10.2l-1.8 1.8 0.9 0.9 1.8-1.8" fill="none" style="stroke: currentColor; stroke-width: 2; stroke-linecap: round"/>
+            </svg>
+            <div>
+              <div class="moonshot-tutorial-powerup-name">Missile</div>
+              <div class="moonshot-tutorial-powerup-desc">Fires missiles that blast candles (and speeds up gunfire).</div>
+            </div>
+          </div>
+          <div class="moonshot-tutorial-powerup pwr-invinc">
+            <svg class="moonshot-tutorial-powerup-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <!-- sword + shield -->
+              <path d="M12 6.2l5 2.8v4.2c0 3.6-2.2 6-5 6s-5-2.4-5-6V9l5-2.8z" fill="none" style="stroke: currentColor; stroke-width: 2; stroke-linejoin: round; stroke-opacity: 0.75"/>
+              <path d="M9 17l8-8" fill="none" style="stroke: currentColor; stroke-width: 2; stroke-linecap: round"/>
+              <path d="M15.8 8.2l1.2 1.2" fill="none" style="stroke: currentColor; stroke-width: 2; stroke-linecap: round"/>
+              <path d="M8.6 17.4l-1.1 1.1" fill="none" style="stroke: currentColor; stroke-width: 2; stroke-linecap: round"/>
+            </svg>
+            <div>
+              <div class="moonshot-tutorial-powerup-name">Invinc</div>
+              <div class="moonshot-tutorial-powerup-desc">Crash-proof + minigun lasers destroy candles.</div>
+            </div>
+          </div>
+          <div class="moonshot-tutorial-powerup pwr-wormhole">
+            <svg class="moonshot-tutorial-powerup-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <!-- portal -->
+              <path d="M12 5c4.2 0 7 2.8 7 7s-2.8 7-7 7-7-2.8-7-7 2.8-7 7-7z" fill="none" style="stroke: currentColor; stroke-width: 2; stroke-opacity: 0.75"/>
+              <path d="M12 8c2.7 0 4.6 1.9 4.6 4.6S14.7 17 12 17s-4.6-1.9-4.6-4.6S9.3 8 12 8z" fill="none" style="stroke: currentColor; stroke-width: 2; stroke-dasharray: 3 3; stroke-linecap: round; stroke-opacity: 0.85"/>
+              <path d="M9.2 10.2c1.1-1 2.5-1.6 4-1.6" fill="none" style="stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-opacity: 0.5"/>
+            </svg>
+            <div>
+              <div class="moonshot-tutorial-powerup-name">Wormhole</div>
+              <div class="moonshot-tutorial-powerup-desc">Flips steering axis (vertical ↔ horizontal) + brief slow burst.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="moonshot-tutorial-footer">Tap / click / Space anywhere to launch.</div>
+      </div>
+    </div>
+
+    <!-- Bottom speed meter mirroring the 2D game feel -->
+    <div id="moonshot-speed-meter">
+      <div class="moonshot-speed-label">
+        <span>Speed</span>
+        <span id="moonshot-speed-value">1.0x</span>
+      </div>
+      <div class="moonshot-speed-bar">
+        <div class="moonshot-speed-bar-fill" id="moonshot-speed-bar-fill"></div>
+      </div>
+    </div>
+
+    <!-- Economy overlay (session-aware wrapper; no Web3 wiring yet) -->
+    <div id="moonshot-economy-ui" class="collapsed" data-econ-ui>
+      <div class="econ-card" data-econ-ui>
+        <div class="econ-row" data-econ-ui>
+          <div class="econ-title" data-econ-ui>Arcade Session</div>
+          <button class="econ-icon" id="econ-toggle" type="button" aria-label="Collapse economy panel" data-econ-ui>▸</button>
+          <div class="econ-pill warn" id="econ-mode" data-econ-ui>OFFLINE</div>
+        </div>
+
+        <div class="econ-grid" data-econ-ui>
+          <div class="econ-stat" data-econ-ui><span class="k" data-econ-ui>Paid AC</span><span class="v" id="econ-paid" data-econ-ui>0</span></div>
+          <div class="econ-stat" data-econ-ui><span class="k" data-econ-ui>Promo runs</span><span class="v" id="econ-promo-runs" data-econ-ui>0</span></div>
+          <div class="econ-stat" data-econ-ui><span class="k" data-econ-ui>Run cost</span><span class="v" id="econ-cost" data-econ-ui>10 AC</span></div>
+          <div class="econ-stat" data-econ-ui><span class="k" data-econ-ui>PRO</span><span class="v" id="econ-pro" data-econ-ui>NONE</span></div>
+
+          <div class="econ-stat" data-econ-ui><span class="k" data-econ-ui>XP</span><span class="v" id="econ-xp" data-econ-ui>0</span></div>
+          <div class="econ-stat" data-econ-ui><span class="k" data-econ-ui>Level</span><span class="v" id="econ-level" data-econ-ui>1</span></div>
+          <div class="econ-stat" data-econ-ui><span class="k" data-econ-ui>Best</span><span class="v" id="econ-best" data-econ-ui>0</span></div>
+          <div class="econ-stat" data-econ-ui><span class="k" data-econ-ui>Status</span><span class="v" id="econ-status" data-econ-ui>Ready</span></div>
+        </div>
+
+        <div class="econ-actions" data-econ-ui>
+          <button class="econ-btn primary" id="econ-claim-promo" type="button" data-econ-ui>Claim 5 free runs</button>
+          <button class="econ-btn" id="econ-add-500" type="button" data-econ-ui>Demo: +500 AC</button>
+          <!-- Wallet/Leaderboard pages are not included in this standalone package -->
+        </div>
+
+        <div class="econ-foot" id="econ-foot" data-econ-ui>
+          Promo runs: XP + leaderboard. Paid runs: payout-eligible (mUSD daily claim).
+        </div>
+      </div>
+
+      <div id="econ-toasts" data-econ-ui></div>
+    </div>
+
+<!-- Moonshot 3D client -->
+  <script>
+    // Dev helper: add ?nosw=1 to unregister service worker (helps when iterating on UI)
+    try {
+      const params = new URLSearchParams(location.search);
+      if (params.has('nosw') && 'serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then((regs) => {
+          regs.forEach((reg) => reg.unregister());
+          console.log('[Moonshot] Service workers unregistered (reload to fully detach).');
+        });
+      }
+    } catch (e) {
+      // no-op
+    }
+  </script>
 
   <script>
     // built by gruesøme
     // SIG_ENC_XOR5A_HEX=382f33362e7a38237a3d282f3f29a2373f
+
     (function() {
       'use strict';
 
+      // Standalone package default: OFFLINE (no backend required).
+      // To enable API calls (if you have a backend), open with `?api=1`.
+      const API_ENABLED = (() => {
+        try { return new URLSearchParams(location.search).get('api') === '1'; } catch { return false; }
+      })();
+
       const GAME_ID = 'moonshot';
-      const VERSION = '2.7';
 
-      const EMBEDDED = (window.parent && window.parent !== window);
-      const standaloneGate = document.getElementById('standaloneGate');
-      if (!EMBEDDED) {
-        standaloneGate && standaloneGate.classList.add('show');
-        // No game boot when standalone.
-        return;
-      }
+      // Locked economy numbers (v1.5)
+      const AC_USD = 0.01;
+      const RUN_COST_AC = 10;                // Moonshot run cost
+      const PROMO_FREE_RUNS = 5;             // launch promo
+      const PROMO_GRANT_AC = RUN_COST_AC * PROMO_FREE_RUNS; // 50 AC
 
-      // Bridge + state
-      const bridge = {
-        post(type, payload) {
-          try { window.parent.postMessage(Object.assign({ type }, payload || {}), '*'); } catch (e) {}
-        }
+      // Storage keys (aligned with Dashboard/Wallet/Leaderboard v2.0)
+      const K = {
+        paidAc: 'arcade.credits.paid',
+        promoAc: 'arcade.credits.promo.moonshot',
+        promoClaimed: 'arcade.promo.moonshot.claimed',
+        best: 'arcade.stats.moonshot.bestScore',
+        runs: 'arcade.runs.moonshot',
+        xp: 'arcade.profile.xp',
+        level: 'arcade.profile.level',
+        proTier: 'arcade.profile.pro.tier',
+        proExpires: 'arcade.profile.pro.expiresAt'
       };
 
-      const st = {
-        runCostAC: 10,
-        promoRuns: 5,
-        promoGrantAC: 50,
-        promoClaimed: false,
-        paidAC: 0,
-        promoAC: 0,
-        best: 0,
-        lastRunType: '--',
-        address: '',
-      };
-      let lastBestShown = 0;
-
-      let activeGrant = null; // { runId, runType, costAC, grantedAt }
-      let running = false;
-      let gameover = false;
-
-      // UI refs
       const UI = {
-        hudScore: document.getElementById('hudScore'),
-        hudRun: document.getElementById('hudRun'),
-        hudBest: document.getElementById('hudBest'),
-        overlay: document.getElementById('overlay'),
-        btnStart: document.getElementById('btnStart'),
-        btnPromo: document.getElementById('btnPromo'),
-        kRunCost: document.getElementById('kRunCost'),
-        kPromo: document.getElementById('kPromo'),
-        kStatus: document.getElementById('kStatus'),
-        kPaid: document.getElementById('kPaid'),
-        kPromoBal: document.getElementById('kPromoBal'),
-        kRunType: document.getElementById('kRunType'),
-        sessionLine: document.getElementById('sessionLine'),
-        resultLine: document.getElementById('resultLine'),
-        toast: document.getElementById('toast'),
+        promoRuns: document.getElementById('econ-promo-runs'),
+        paid: document.getElementById('econ-paid'),
+        cost: document.getElementById('econ-cost'),
+        pro: document.getElementById('econ-pro'),
+        xp: document.getElementById('econ-xp'),
+        level: document.getElementById('econ-level'),
+        best: document.getElementById('econ-best'),
+        status: document.getElementById('econ-status'),
+        mode: document.getElementById('econ-mode'),
+        toastHost: document.getElementById('econ-toasts'),
+        claimPromoBtn: document.getElementById('econ-claim-promo'),
+        add500Btn: document.getElementById('econ-add-500'),
+        toggleBtn: document.getElementById('econ-toggle'),
+        tutorialInner: document.querySelector('.moonshot-tutorial-inner'),
+        gameoverPanel: document.getElementById('moonshot-gameover-panel'),
+        finalScore: document.getElementById('moonshot-final-score')
       };
 
-      function toast(msg) {
-        try {
-          UI.toast.textContent = msg;
-          UI.toast.classList.add('show');
-          clearTimeout(toast._t);
-          toast._t = setTimeout(()=>UI.toast.classList.remove('show'), 1800);
-        } catch(e){}
+      function now() { return Date.now(); }
+      function safeNum(x, fallback) {
+        const n = Number(x);
+        return Number.isFinite(n) ? n : (fallback ?? 0);
       }
 
-      function fmt(n) { return (Number.isFinite(n) ? Math.floor(n) : 0).toString(); }
+      function lsGet(key) { try { return localStorage.getItem(key); } catch { return null; } }
+      function lsSet(key, value) { try { localStorage.setItem(key, String(value)); } catch {} }
+      function lsDel(key) { try { localStorage.removeItem(key); } catch {} }
 
-      function renderSession() {
-        UI.kRunCost.textContent = fmt(st.runCostAC) + ' Credits';
-        UI.kPromo.textContent = fmt(st.promoRuns);
-        UI.kPaid.textContent = fmt(st.paidAC);
-        UI.kPromoBal.textContent = fmt(st.promoAC);
-        const newBest = Number(st.best||0);
-        UI.hudBest.textContent = 'Best ' + fmt(newBest);
-        if (newBest > lastBestShown) {
-          lastBestShown = newBest;
-          try { UI.hudBest.classList.remove('pop'); void UI.hudBest.offsetWidth; UI.hudBest.classList.add('pop'); } catch {}
+      function getInt(key, def=0){
+        const v = lsGet(key);
+        const n = Number.parseInt(v, 10);
+        return Number.isFinite(n) ? n : def;
+      }
+      function setInt(key, n){
+        lsSet(key, String(Math.max(0, Math.floor(Number(n) || 0))));
+      }
+
+      function getPaidAC(){
+    if (EMBEDDED) {
+      const n = Number(getSync()?.player?.paidAC || 0);
+      return Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0;
+    }
+    return getInt(K.paidAc, 0);
+  }
+      function setPaidAC(n){ setInt(K.paidAc, n); }
+
+      function getPromoAC(){
+    if (EMBEDDED) {
+      const n = Number(getSync()?.game?.promoAC || 0);
+      return Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0;
+    }
+    return getInt(K.promoAc, 0);
+  }
+      function setPromoAC(n){ setInt(K.promoAc, n); }
+
+      function promoRunsRemaining(){ return Math.floor(getPromoAC() / RUN_COST_AC); }
+
+      function isPromoClaimed(){ return String(lsGet(K.promoClaimed) || '0') === '1'; }
+      function setPromoClaimed(){ lsSet(K.promoClaimed, '1'); }
+
+      function getXP(){
+    if (EMBEDDED) {
+      const n = Number(getSync()?.player?.xp || 0);
+      return Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0;
+    }
+    return getInt(K.xp, 0);
+  }
+      function setXP(n){ setInt(K.xp, n); }
+
+      function levelFromXP(xp){ return Math.max(1, Math.floor(xp / 100) + 1); }
+      function getLevel(){
+        const stored = getInt(K.level, 0);
+        const computed = levelFromXP(getXP());
+        if (stored !== computed) setInt(K.level, computed);
+        return computed;
+      }
+
+      function proActive(){
+        const tier = String(lsGet(K.proTier) || 'none');
+        if (tier === 'none') return false;
+        if (tier === 'lifetime') return true;
+        const exp = getInt(K.proExpires, 0);
+        return exp > now();
+      }
+      function proTierLabel(){
+        if (!proActive()) return 'NONE';
+        return String(lsGet(K.proTier) || 'none').toUpperCase();
+      }
+
+      function getBest(){
+    if (EMBEDDED) {
+      const b = getSync()?.player?.bestByGame?.[GAME_ID];
+      const n = Number(b || 0);
+      return Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0;
+    }
+    return getInt(K.best, 0);
+  }
+      function setBest(n){ setInt(K.best, n); }
+
+      function haveAnyCredit(){
+        return getPromoAC() >= RUN_COST_AC || getPaidAC() >= RUN_COST_AC;
+      }
+
+      function pickBucket(){
+        return (getPromoAC() >= RUN_COST_AC) ? 'PROMO' : 'PAID';
+      }
+
+      function consumeAtStart(bucket){
+        if (bucket === 'PROMO'){
+          const promo = getPromoAC();
+          if (promo < RUN_COST_AC) return false;
+          setPromoAC(promo - RUN_COST_AC);
+          return true;
         }
-        UI.kRunType.textContent = st.lastRunType || '--';
-        UI.hudRun.textContent = 'Run ' + (st.lastRunType || '--');
-        UI.btnPromo.disabled = !!st.promoClaimed;
-        UI.btnPromo.textContent = st.promoClaimed ? 'Promo Claimed' : 'Claim Promo (Tx)';
-        UI.sessionLine.textContent = st.address ? ('Connected as ' + st.address.slice(0,6) + '…' + st.address.slice(-4)) : 'Syncing with dashboard…';
+        const paid = getPaidAC();
+        if (paid < RUN_COST_AC) return false;
+        setPaidAC(paid - RUN_COST_AC);
+        return true;
       }
 
-      // Game: simple rocket dodge (flappy-style)
-      const canvas = document.getElementById('canvas');
-      const ctx = canvas.getContext('2d', { alpha: false });
-
-      let W = 800, H = 600, DPR = 1;
-      function resize() {
-        DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
-        W = Math.floor(window.innerWidth);
-        H = Math.floor(window.innerHeight);
-        canvas.width = Math.floor(W * DPR);
-        canvas.height = Math.floor(H * DPR);
-        canvas.style.width = W + 'px';
-        canvas.style.height = H + 'px';
-        ctx.setTransform(DPR,0,0,DPR,0,0);
+      function refundAtStart(bucket){
+        if (bucket === 'PROMO'){
+          setPromoAC(getPromoAC() + RUN_COST_AC);
+          return;
+        }
+        setPaidAC(getPaidAC() + RUN_COST_AC);
       }
-      window.addEventListener('resize', resize, { passive: true });
-      resize();
 
-      const stars = [];
-      const trail = [];
-      function initStars() {
-        stars.length = 0;
-        const count = Math.floor((W * H) / 9000);
-        for (let i=0;i<count;i++) {
-          stars.push({
-            x: Math.random()*W,
-            y: Math.random()*H,
-            r: Math.random()*1.6 + 0.2,
-            a: Math.random()*0.7 + 0.2,
-            v: Math.random()*0.6 + 0.15,
+      function ensurePromoRowInjected(){
+        if (!UI.tutorialInner) return;
+        if (UI.tutorialInner.querySelector('.moonshot-promo-row')) return;
+
+        const row = document.createElement('div');
+        row.className = 'moonshot-promo-row';
+        row.setAttribute('data-econ-ui', '1');
+        row.innerHTML = `
+          <div class="promo-text" data-econ-ui>
+            <strong data-econ-ui>Launch promo</strong><br data-econ-ui />
+            First ${PROMO_FREE_RUNS} runs are free (Moonshot-only promo bucket).
+          </div>
+          <button class="econ-btn primary" type="button" id="promo-claim-inline" data-econ-ui>
+            Claim
+          </button>
+        `;
+        UI.tutorialInner.appendChild(row);
+
+        const btn = row.querySelector('#promo-claim-inline');
+        if (btn) {
+          btn.addEventListener('click', function(e){
+            e.preventDefault(); e.stopPropagation();
+            const ok = claimPromo();
+            btn.textContent = ok ? 'Claimed' : 'Claimed';
+            btn.disabled = true;
+            render();
           });
         }
       }
-      initStars();
 
-      const rocket = { x: 110, y: 0, vy: 0, r: 14 };
-      const pipes = [];
-      let score = 0;
-      trail.length = 0;
-      let lastT = 0;
-      let spawnT = 0;
-      let runStart = 0;
-
-      function resetRun() {
-        rocket.x = Math.min(130, W*0.22);
-        rocket.y = H*0.5;
-        rocket.vy = 0;
-        pipes.length = 0;
-        score = 0;
-        trail.length = 0;
-        lastT = 0;
-        spawnT = 0;
-        runStart = performance.now();
-        UI.hudScore.textContent = 'Score 0';
-        UI.resultLine.textContent = '';
-        gameover = false;
+      function claimPromo(silent){
+        if (isPromoClaimed()) return false;
+        setPromoClaimed();
+        setPromoAC(getPromoAC() + PROMO_GRANT_AC);
+        if (!silent) toast(`Promo claimed · +${PROMO_FREE_RUNS} runs`, 'good');
+        return true;
       }
 
-      function spawnPipe() {
-        const gapH = Math.max(150, Math.min(220, H*0.28));
-        const pad = 60;
-        const gapY = pad + Math.random()*(H - pad*2 - gapH);
-        const w = Math.max(56, Math.min(74, W*0.08));
-        pipes.push({
-          x: W + w + 10,
-          w,
-          gapY,
-          gapH,
-          passed: false
+      function computeXPGain(score, bucket){
+        const s = Math.max(0, Math.floor(score));
+        const base = (bucket === 'PAID') ? 10 : 5;
+        const bonus = Math.min(20, Math.floor(s / 1000));
+        return base + bonus;
+      }
+
+      function toast(message, tone){
+        if (!UI.toastHost) return;
+        const el = document.createElement('div');
+        el.className = 'econ-toast' + (tone ? (' ' + tone) : '');
+        el.textContent = message;
+        UI.toastHost.appendChild(el);
+        setTimeout(() => { try { el.remove(); } catch {} }, 2400);
+      }
+
+      function setStatus(text, tone){
+        if (UI.status) UI.status.textContent = text;
+        if (UI.mode) {
+          UI.mode.classList.remove('good', 'warn', 'bad');
+          UI.mode.classList.add(tone || 'warn');
+        }
+      }
+
+      function recordRun(run){
+        let arr = [];
+        try { arr = JSON.parse(lsGet(K.runs) || '[]'); } catch { arr = []; }
+        if (!Array.isArray(arr)) arr = [];
+        arr.unshift(run);
+        if (arr.length > 50) arr = arr.slice(0, 50);
+        lsSet(K.runs, JSON.stringify(arr));
+      }
+
+      function render(){
+        const paid = getPaidAC();
+        const promoRuns = promoRunsRemaining();
+        const xp = getXP();
+        const lvl = getLevel();
+        const best = getBest();
+
+        if (UI.paid) UI.paid.textContent = String(paid);
+        if (UI.promoRuns) UI.promoRuns.textContent = String(promoRuns);
+        if (UI.cost) UI.cost.textContent = `${RUN_COST_AC} AC`;
+        if (UI.pro) UI.pro.textContent = proTierLabel();
+        if (UI.xp) UI.xp.textContent = String(xp);
+        if (UI.level) UI.level.textContent = String(lvl);
+        if (UI.best) UI.best.textContent = String(best);
+
+        if (UI.claimPromoBtn){
+          const claimed = isPromoClaimed();
+          if (!claimed) {
+            UI.claimPromoBtn.textContent = `Claim ${PROMO_FREE_RUNS} free runs`;
+            UI.claimPromoBtn.disabled = false;
+          } else {
+            UI.claimPromoBtn.textContent = `Promo: ${promoRuns} runs left`;
+            UI.claimPromoBtn.disabled = true;
+          }
+        }
+
+        // status: ready vs blocked
+        if (!haveAnyCredit()){
+          setStatus('No credits', 'bad');
+        } else if (!session.active){
+          setStatus('Ready', (session.mode === 'ONLINE') ? 'good' : 'warn');
+        }
+      }
+
+      // Session state (off-chain)
+      const session = {
+        active: false,
+        id: null,
+        token: null,
+        bucket: null,     // PROMO | PAID
+        costAc: RUN_COST_AC,
+        startedAt: 0,
+        mode: 'OFFLINE'   // ONLINE when API responds
+      };
+
+      let lastStartAt = 0;
+
+      function offlineSessionId(){
+        return 'off_' + Math.random().toString(16).slice(2) + '_' + Date.now().toString(16);
+      }
+
+      async function apiStartSession(bucket){
+        // Optional backend (not required for UI build).
+        // POST /api/session/start { gameId, bucket, costAc }
+        const body = { gameId: GAME_ID, bucket, costAc: RUN_COST_AC };
+        const res = await fetch('/api/session/start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
         });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        if (!data || !data.sessionId) throw new Error('Bad session response');
+        return data;
       }
 
-      function drawBG(dt) {
-        // Gradient backdrop
-        const g = ctx.createLinearGradient(0,0,0,H);
-        g.addColorStop(0, '#030b1e');
-        g.addColorStop(1, '#000000');
-        ctx.fillStyle = g;
-        ctx.fillRect(0,0,W,H);
+      async function apiSubmitRun(payload){
+        // Optional backend (not required for UI build).
+        // POST /api/run/submit { gameId, sessionId, sessionToken, score, bucket, costAc, clientTs }
+        const res = await fetch('/api/run/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return await res.json();
+      }
 
-        // Nebula haze (subtle depth)
-        const tt = performance.now() * 0.00008;
-        ctx.save();
-        ctx.globalCompositeOperation = 'screen';
-        for (let i=0;i<3;i++) {
-          const cx = W * (0.15 + 0.7 * (0.5 + 0.5*Math.sin(tt + i*1.7)));
-          const cy = H * (0.15 + 0.7 * (0.5 + 0.5*Math.cos(tt*0.9 + i*2.1)));
-          const r = Math.max(W,H) * (0.35 + i*0.08);
-          const gg = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
-          gg.addColorStop(0, 'rgba(88, 101, 242, 0.12)');
-          gg.addColorStop(0.55, 'rgba(34, 211, 238, 0.06)');
-          gg.addColorStop(1, 'rgba(0, 0, 0, 0)');
-          ctx.fillStyle = gg;
-          ctx.fillRect(0,0,W,H);
-        }
-        ctx.restore();
+      async function startRunSession(){
+        if (session.active) return true;
 
-        // Stars
-        const t = performance.now();
-        for (const s of stars) {
-          s.y += s.v * dt * 0.06;
-          if (s.y > H + 10) { s.y = -10; s.x = Math.random()*W; }
-          ctx.globalAlpha = s.a;
-          ctx.fillStyle = '#e5e7eb';
-          ctx.beginPath();
-          ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
-          ctx.fill();
+        if (!haveAnyCredit()){
+          setStatus('No credits', 'bad');
+          render();
+          return false;
         }
 
-        // Trail particles
-        const nowT = performance.now();
-        for (let i = trail.length - 1; i >= 0; i--) {
-          const p = trail[i];
-          const age = nowT - p.t;
-          if (age > p.life) { trail.splice(i,1); continue; }
-          const k = 1 - age / p.life;
-          ctx.globalAlpha = 0.10 + 0.28 * k;
-          ctx.fillStyle = 'rgba(34,211,238,' + (0.20 + 0.55*k) + ')';
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, p.r * (0.6 + 0.9*k), 0, Math.PI*2);
-          ctx.fill();
+        const bucket = pickBucket();
+        const okConsume = consumeAtStart(bucket);
+        if (!okConsume){
+          setStatus('No credits', 'bad');
+          render();
+          return false;
         }
 
-        // Vignette
-        const vg = ctx.createRadialGradient(W/2, H/2, Math.min(W,H)*0.18, W/2, H/2, Math.max(W,H)*0.78);
-        vg.addColorStop(0, 'rgba(0,0,0,0)');
-        vg.addColorStop(1, 'rgba(0,0,0,0.55)');
-        ctx.fillStyle = vg;
-        ctx.globalAlpha = 1;
-        ctx.fillRect(0,0,W,H);
+        session.mode = 'OFFLINE';
+        session.id = offlineSessionId();
+        session.token = 'offline';
+        session.bucket = bucket;
+        session.startedAt = now();
+        session.active = true;
 
-        ctx.globalAlpha = 1;
-      }
-
-      function drawPipe(p) {
-        const x = p.x;
-        const topH = p.gapY;
-        const botY = p.gapY + p.gapH;
-        const botH = H - botY;
-
-        // Body
-        ctx.fillStyle = 'rgba(34,211,238,0.11)';
-        ctx.strokeStyle = 'rgba(34,211,238,0.22)';
-        ctx.lineWidth = 2;
-
-        // Top
-        roundRect(x, 0, p.w, topH, 12);
-        ctx.fill();
-        ctx.stroke();
-
-        // Bottom
-        roundRect(x, botY, p.w, botH, 12);
-        ctx.fill();
-        ctx.stroke();
-      }
-
-      function roundRect(x,y,w,h,r) {
-        const rr = Math.min(r, w*0.5, h*0.5);
-        ctx.beginPath();
-        ctx.moveTo(x+rr, y);
-        ctx.arcTo(x+w, y, x+w, y+h, rr);
-        ctx.arcTo(x+w, y+h, x, y+h, rr);
-        ctx.arcTo(x, y+h, x, y, rr);
-        ctx.arcTo(x, y, x+w, y, rr);
-        ctx.closePath();
-      }
-
-      function drawRocket() {
-        const x = rocket.x, y = rocket.y;
-        // Glow
-        ctx.save();
-        ctx.shadowColor = 'rgba(34,211,238,0.35)';
-        ctx.shadowBlur = 18;
-        ctx.fillStyle = 'rgba(34,211,238,0.18)';
-        ctx.beginPath();
-        ctx.arc(x, y, rocket.r + 7, 0, Math.PI*2);
-        ctx.fill();
-        ctx.restore();
-
-        // Body
-        ctx.fillStyle = 'rgba(229,231,235,0.92)';
-        ctx.strokeStyle = 'rgba(255,255,255,0.10)';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.ellipse(x, y, rocket.r*0.9, rocket.r*0.75, 0, 0, Math.PI*2);
-        ctx.fill();
-        ctx.stroke();
-
-        // Window
-        ctx.fillStyle = 'rgba(34,211,238,0.88)';
-        ctx.beginPath();
-        ctx.arc(x + 6, y - 3, 4.2, 0, Math.PI*2);
-        ctx.fill();
-
-        // Flame
-        const flame = Math.max(0, Math.min(1, (-rocket.vy + 4)/10));
-        ctx.fillStyle = 'rgba(255,221,85,' + (0.35 + flame*0.45) + ')';
-        ctx.beginPath();
-        ctx.moveTo(x - rocket.r, y);
-        ctx.quadraticCurveTo(x - rocket.r - (10 + 10*flame), y - 6, x - rocket.r - 2, y - 3);
-        ctx.quadraticCurveTo(x - rocket.r - (10 + 10*flame), y + 6, x - rocket.r, y);
-        ctx.closePath();
-        ctx.fill();
-      }
-
-      function collide(p) {
-        const rx = rocket.x, ry = rocket.y, rr = rocket.r*0.88;
-        if (ry - rr <= 0 || ry + rr >= H) return true;
-
-        const withinX = (rx + rr > p.x) && (rx - rr < p.x + p.w);
-        if (!withinX) return false;
-
-        const inGap = (ry - rr > p.gapY) && (ry + rr < p.gapY + p.gapH);
-        return !inGap;
-      }
-
-      function tick(ts) {
-        if (!running) return;
-        if (!lastT) lastT = ts;
-        const dt = Math.min(32, ts - lastT);
-        lastT = ts;
-
-        drawBG(dt);
-
-        // Physics
-        const gravity = 0.00185 * H; // scale with viewport
-        rocket.vy += gravity * (dt/1000);
-        rocket.y += rocket.vy * (dt/16.67);
-
-        // Emit trail (visual-only)
-        trail.push({ x: rocket.x - rocket.r - 2, y: rocket.y + (Math.random()*6-3), r: 1.6 + Math.random()*2.2, t: performance.now(), life: 520 });
-        if (trail.length > 160) trail.splice(0, trail.length - 160);
-
-        // Spawn
-        spawnT += dt;
-        const spawnEvery = 1400;
-        if (spawnT >= spawnEvery) {
-          spawnT -= spawnEvery;
-          spawnPipe();
+        if (!API_ENABLED) {
+          try {
+            session.mode = 'OFFLINE';
+            if (UI.mode) {
+              UI.mode.textContent = 'OFFLINE';
+              UI.mode.classList.remove('good','bad');
+              UI.mode.classList.add('warn');
+            }
+          } catch {}
+          setStatus(bucket === 'PROMO' ? 'Promo run' : 'Paid run', 'warn');
+          render();
+          return true;
         }
 
-        // Move pipes
-        const speed = Math.max(2.6, Math.min(4.4, W/260));
-        for (const p of pipes) {
-          p.x -= speed * (dt/16.67);
-          if (!p.passed && p.x + p.w < rocket.x - 2) {
-            p.passed = true;
-            score += 1;
-            UI.hudScore.textContent = 'Score ' + score;
-            try { UI.hudScore.classList.remove('pop'); void UI.hudScore.offsetWidth; UI.hudScore.classList.add('pop'); } catch {}
+        // UI: show CONNECTING while attempting API session open (non-blocking)
+        try {
+          if (UI.mode) {
+            UI.mode.textContent = 'CONNECTING';
+            UI.mode.classList.remove('good','bad');
+            UI.mode.classList.add('warn');
           }
-        }
+        } catch {}
 
-        // Cull
-        while (pipes.length && pipes[0].x + pipes[0].w < -30) pipes.shift();
+        setStatus(bucket === 'PROMO' ? 'Promo run' : 'Paid run', 'warn');
+        render();
 
-        // Draw pipes
-        for (const p of pipes) drawPipe(p);
-        drawRocket();
+        apiStartSession(bucket).then((data) => {
+          try {
+            if (!session.active) return;
+            if (session.bucket !== bucket) return;
+            session.mode = 'ONLINE';
+            if (data && data.sessionId) session.id = String(data.sessionId);
+            if (data && data.sessionToken) session.token = String(data.sessionToken);
 
-        // Collisions
-        for (const p of pipes) {
-          if (collide(p)) {
-            endRun('collision');
-            return;
-          }
-        }
+            if (UI.mode) {
+              UI.mode.textContent = 'ONLINE';
+              UI.mode.classList.remove('warn','bad');
+              UI.mode.classList.add('good');
+            }
+            setStatus(bucket === 'PROMO' ? 'Promo run' : 'Paid run', 'good');
+            render();
+          } catch {}
+        }).catch(() => {
+          try {
+            session.mode = 'OFFLINE';
+            if (UI.mode) {
+              UI.mode.textContent = 'OFFLINE';
+              UI.mode.classList.remove('good','bad');
+              UI.mode.classList.add('warn');
+            }
+            setStatus(bucket === 'PROMO' ? 'Promo run' : 'Paid run', 'warn');
+            render();
+          } catch {}
+        });
 
-        requestAnimationFrame(tick);
+        return true;
       }
 
-      function endRun(reason) {
-        if (!running) return;
-        running = false;
-        gameover = true;
+      function clearSession(){
+        session.active = false;
+        session.id = null;
+        session.token = null;
+        session.bucket = null;
+        session.startedAt = 0;
+        setStatus('Ready', session.mode === 'ONLINE' ? 'good' : 'warn');
+      }
 
-        UI.kStatus.textContent = 'Complete';
-        UI.btnStart.disabled = false;
-        UI.btnStart.textContent = 'Start Next Run';
-        UI.overlay.style.display = 'flex';
-        UI.resultLine.textContent = 'Last run: ' + score + ' · ' + (st.lastRunType || '--') + ' · ' + reason;
+      function updateGameoverRows(bucket, costAc){
+        const panel = UI.gameoverPanel;
+        if (!panel) return;
 
-        const durationMs = Math.max(0, performance.now() - runStart);
+        function ensureRow(key, label, valueId){
+          let row = panel.querySelector(`[data-${key}-row="1"]`);
+          if (!row) {
+            row = document.createElement('div');
+            row.className = 'moonshot-summary-row';
+            row.setAttribute(`data-${key}-row`, '1');
+            row.innerHTML = `
+              <span class="moonshot-summary-label">${label}</span>
+              <span class="moonshot-summary-value" id="${valueId}">—</span>
+            `;
+            const h2 = panel.querySelector('h2');
+            if (h2 && h2.nextSibling) panel.insertBefore(row, h2.nextSibling);
+            else panel.appendChild(row);
+          }
+          return row.querySelector('#' + valueId);
+        }
 
-        // Report result
-        if (activeGrant && activeGrant.runId) {
-          bridge.post('ARCADE:RUN_RESULT', {
-            gameId: GAME_ID,
-            runId: activeGrant.runId,
-            score: score,
-            durationMs: Math.floor(durationMs),
-            clientVersion: VERSION
+        const typeEl = ensureRow('run-type', 'Run Type', 'moonshot-run-type');
+        if (typeEl) typeEl.textContent = (bucket === 'PROMO') ? 'PROMO' : 'PAID';
+
+        const costEl = ensureRow('run-cost', 'Spent', 'moonshot-run-cost');
+        if (costEl) costEl.textContent = `${costAc} AC`;
+      }
+
+      async function readFinalScore(){
+        const started = now();
+        while (now() - started < 250) {
+          const raw = UI.finalScore ? String(UI.finalScore.textContent || '').trim() : '';
+          const n = safeNum(raw, NaN);
+          if (Number.isFinite(n) && n >= 0) return Math.floor(n);
+          await new Promise((r) => setTimeout(r, 16));
+        }
+        const raw2 = UI.finalScore ? String(UI.finalScore.textContent || '').trim() : '0';
+        return Math.max(0, Math.floor(safeNum(raw2, 0)));
+      }
+
+      async function finalizeRunFromUI(){
+        if (!session.active || !session.id) return;
+
+        const bucket = session.bucket || 'PAID';
+        const score = await readFinalScore();
+
+        updateGameoverRows(bucket, RUN_COST_AC);
+
+        // Best score
+        if (score > getBest()) setBest(score);
+
+        // XP/Level
+        const gain = computeXPGain(score, bucket);
+        const prevXP = getXP();
+        const prevLevel = levelFromXP(prevXP);
+        const nextXP = prevXP + gain;
+        setXP(nextXP);
+        const nextLevel = levelFromXP(nextXP);
+        setInt(K.level, nextLevel);
+        if (nextLevel > prevLevel){
+          toast(`Level up · Lvl ${nextLevel}`, 'good');
+        }
+
+        // Run record (local)
+        const ts = now();
+        const run = {
+          gameId: GAME_ID,
+          ts,
+          day: new Date(ts).toISOString().slice(0,10),
+          sessionId: session.id,
+          runType: bucket,
+          costAc: RUN_COST_AC,
+          score,
+          xpGain: gain
+        };
+        recordRun(run);
+
+        if (API_ENABLED) {
+          // Optional submit
+          try {
+            const payload = {
+              gameId: GAME_ID,
+              sessionId: session.id,
+              sessionToken: session.token,
+              bucket,
+              costAc: RUN_COST_AC,
+              score,
+              clientTs: ts,
+              clientBest: getBest()
+            };
+            await apiSubmitRun(payload);
+            toast(`Run accepted · +${gain} XP`, (bucket === 'PAID') ? 'good' : 'warn');
+          } catch {
+            toast(`Run recorded · +${gain} XP`, (bucket === 'PAID') ? 'good' : 'warn');
+          }
+        } else {
+          toast(`Run recorded · +${gain} XP`, (bucket === 'PAID') ? 'good' : 'warn');
+        }
+
+        // Notify dashboard (if embedded).
+        // Disabled by default for a clean offline/static build; enable with ?api=1.
+        if (API_ENABLED) {
+          try {
+            if (window.parent && window.parent !== window) {
+              window.parent.postMessage({
+                type: 'SCORE_SUBMIT',
+                gameId: GAME_ID,
+                score,
+                runType: bucket,
+                run,
+                toast: `Score ${score} · +${gain} XP`
+              }, '*');
+            }
+          } catch {}
+        }
+
+        clearSession();
+        render();
+      }
+
+      function isInteractiveTarget(ev){
+        const t = ev && ev.target ? ev.target : null;
+        if (!t || !(t instanceof Element)) return false;
+        if (t.closest('[data-econ-ui]')) return true;
+        if (t.closest('button, a, input, textarea, select')) return true;
+        return false;
+      }
+
+      async function maybeStartOnInput(ev){
+        if (!ev) return;
+        if (isInteractiveTarget(ev)) return;
+
+        const t = now();
+        if (t - lastStartAt < 380) return; // debounce
+        lastStartAt = t;
+
+        if (!haveAnyCredit()){
+          if (!isPromoClaimed()){
+            toast(`No credits. Claim ${PROMO_FREE_RUNS} free runs.`, 'warn');
+          } else {
+            toast('No credits. Open wallet to buy credits.', 'bad');
+          }
+          return;
+        }
+
+        const ok = await startRunSession();
+        if (!ok){
+          return;
+        }
+
+        // Allow event through to game engine.
+      }
+
+      function observeGameover(){
+        const panel = UI.gameoverPanel;
+        if (!panel) return;
+
+        let wasVisible = panel.classList.contains('visible');
+        const mo = new MutationObserver(() => {
+          const isVisible = panel.classList.contains('visible');
+          if (isVisible && !wasVisible) finalizeRunFromUI();
+          wasVisible = isVisible;
+        });
+        mo.observe(panel, { attributes: true, attributeFilter: ['class'] });
+      }
+
+      function wireButtons(){
+        if (UI.toggleBtn) {
+          UI.toggleBtn.addEventListener('click', function(e){
+            e.preventDefault(); e.stopPropagation();
+            const host = document.getElementById('moonshot-economy-ui');
+            if (!host) return;
+            const collapsed = host.classList.toggle('collapsed');
+            UI.toggleBtn.textContent = collapsed ? '▸' : '▾';
           });
         }
-        activeGrant = null;
+
+        if (UI.claimPromoBtn){
+          UI.claimPromoBtn.addEventListener('click', function(e){
+            e.preventDefault(); e.stopPropagation();
+            claimPromo();
+            render();
+          });
+        }
+
+        if (UI.add500Btn){
+          UI.add500Btn.addEventListener('click', function(e){
+            e.preventDefault(); e.stopPropagation();
+            setPaidAC(getPaidAC() + 500);
+            toast('Demo: +500 AC added.', 'good');
+            render();
+          });
+        }
       }
 
-      function onThrust() {
-        if (!running) return;
-        rocket.vy = Math.max(rocket.vy - 7.5, -14.5);
+      function wireInputInterceptors(){
+        document.addEventListener('pointerdown', maybeStartOnInput, { capture: true, passive: false });
+        document.addEventListener('touchstart', maybeStartOnInput, { capture: true, passive: false });
+        document.addEventListener('keydown', function(ev){
+          const key = (ev && ev.key) ? ev.key : '';
+          if (key !== ' ' && key !== 'Spacebar' && key !== 'Enter') return;
+          const ae = document.activeElement;
+          if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.isContentEditable)) return;
+          maybeStartOnInput(ev);
+        }, { capture: true });
       }
 
-      // Input
-      window.addEventListener('pointerdown', (e)=>{ e.preventDefault(); onThrust(); }, { passive:false });
-      window.addEventListener('keydown', (e)=>{
-        const k = e.key;
-        if (k === ' ' || k === 'Spacebar' || k === 'ArrowUp') {
-          e.preventDefault(); onThrust();
-        }
-      });
-
-      // Bridge handlers
-      window.addEventListener('message', (ev)=>{
-        const m = ev.data;
-        if (!m || typeof m !== 'object') return;
-
-        if (m.type === 'ARCADE:SYNC') {
-          if (m.game && m.game.id === GAME_ID) {
-            st.runCostAC = Number(m.game.runCostAC ?? st.runCostAC);
-            st.promoRuns = Number(m.game.promoRuns ?? st.promoRuns);
-            st.promoGrantAC = Number(m.game.promoGrantAC ?? st.promoGrantAC);
-            st.promoClaimed = !!m.game.promoClaimed;
-            st.promoAC = Number(m.game.promoAC ?? st.promoAC);
+      function autoCollapseEconomyUI(){
+        try {
+          const host = document.getElementById('moonshot-economy-ui');
+          if (!host) return;
+          const small = (window.innerHeight || 800) < 760;
+          if (small) {
+            host.classList.add('collapsed');
+            if (UI.toggleBtn) UI.toggleBtn.textContent = '▸';
           }
-          if (m.player) {
-            st.paidAC = Number(m.player.paidAC ?? st.paidAC);
-            st.best = Number(m.player.bestByGame?.[GAME_ID] ?? st.best);
-            st.address = String(m.player.address ?? st.address);
-          }
-          renderSession();
-        }
+        } catch {}
+      }
 
-        if (m.type === 'ARCADE:RUN_GRANTED' && m.gameId === GAME_ID) {
-          activeGrant = {
-            runId: String(m.runId || ''),
-            runType: String(m.runType || '--'),
-            costAC: Number(m.costAC ?? st.runCostAC),
-            grantedAt: Date.now()
-          };
-          st.lastRunType = activeGrant.runType;
-          UI.kRunType.textContent = activeGrant.runType;
-          UI.hudRun.textContent = 'Run ' + activeGrant.runType;
-          UI.kStatus.textContent = 'Running';
-          UI.overlay.style.display = 'none';
-          UI.btnStart.disabled = true;
-          UI.btnStart.textContent = 'Starting…';
+      function boot(){
+        ensurePromoRowInjected();
+        wireButtons();
 
-          resetRun();
-          running = true;
-          UI.btnStart.textContent = 'Start Run';
-          requestAnimationFrame(tick);
-        }
+    if (EMBEDDED) {
+      // Embedded mode: parent Arcade shell is authoritative. Disable local mutations.
+      const btnPromo = document.getElementById('btnClaimPromo');
+      if (btnPromo) {
+        btnPromo.disabled = true;
+        btnPromo.title = 'Claim promo in Arcade Wallet';
+      }
+      const btnAdd = document.getElementById('btnAdd500');
+      if (btnAdd) {
+        btnAdd.disabled = true;
+        btnAdd.title = 'Disabled in embedded mode';
+      }
 
-        if (m.type === 'ARCADE:RUN_DENIED' && m.gameId === GAME_ID) {
-          UI.kStatus.textContent = 'Denied';
-          UI.btnStart.disabled = false;
-          toast(m.reason || 'Not enough Credits');
-        }
-
-        if (m.type === 'ARCADE:PROMO_CLAIMED' && m.gameId === GAME_ID) {
-          st.promoClaimed = true;
-          if (Number.isFinite(m.promoAC)) st.promoAC = Number(m.promoAC);
-          renderSession();
-          toast('Promo claimed — 5 free runs ready.');
-        }
-
-        if (m.type === 'ARCADE:RUN_RECORDED' && m.gameId === GAME_ID) {
-          if (Number.isFinite(m.best)) st.best = Number(m.best);
-          if (Number.isFinite(m.paidAC)) st.paidAC = Number(m.paidAC);
-          if (Number.isFinite(m.promoAC)) st.promoAC = Number(m.promoAC);
-          renderSession();
-          toast('Run recorded');
+      render();
+      window.addEventListener('message', (ev) => {
+        if (ev?.data?.type === 'ARCADE:SYNC') {
+          try { render(); } catch (_) {}
         }
       });
+      return;
+    }
 
-      // Buttons
-      UI.btnStart.addEventListener('click', ()=>{
-        if (running) return;
-        UI.kStatus.textContent = 'Requesting…';
-        UI.btnStart.disabled = true;
-        bridge.post('ARCADE:REQUEST_RUN', { gameId: GAME_ID });
-        setTimeout(()=>{ if (!running) UI.btnStart.disabled = false; }, 800);
-      });
+        autoCollapseEconomyUI();
+        wireInputInterceptors();
+        observeGameover();
+        // Standalone: make the game immediately playable.
+        // If promo hasn't been claimed yet, grant it silently on first load.
+        if (!isPromoClaimed()) claimPromo(true);
+        render();
 
-      UI.btnPromo.addEventListener('click', ()=>{
-        if (st.promoClaimed) return;
-        bridge.post('ARCADE:REQUEST_PROMO', { gameId: GAME_ID });
-        toast('Promo claim requested (confirm in dashboard)');
-      });
+        if (!haveAnyCredit()){
+          toast('No credits. Claim promo or open wallet to buy.', 'warn');
+        }
+      }
 
-      // Boot
-      renderSession();
-      bridge.post('ARCADE:READY', { gameId: GAME_ID, version: VERSION });
-      toast('Ready');
+      // Export minimal surface for future deep integration if needed
+      window.ArcadeMoonshotEconomy = {
+        startSession: startRunSession,
+        finalizeRun: finalizeRunFromUI,
+        getState: () => ({
+          paidAc: getPaidAC(),
+          promoAc: getPromoAC(),
+          promoRuns: promoRunsRemaining(),
+          xp: getXP(),
+          level: getLevel(),
+          best: getBest(),
+          pro: proTierLabel(),
+          session: { ...session }
+        })
+      };
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', boot);
+      } else {
+        boot();
+      }
     })();
   </script>
+
+
+  <script type="module" src="./moonshot.js"></script>
 </body>
 </html>

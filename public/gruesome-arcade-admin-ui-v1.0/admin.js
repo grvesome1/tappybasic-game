@@ -323,11 +323,11 @@
 
     // Try to persist server-side if endpoint exists.
     try {
-      const r = await fetch('/api/ledger/profile', {
+      const r = await fetch(`/api/ledger/profile?address=${encodeURIComponent(state.address)}`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ nickname, avatarPng: avatarUrl, admin: true, sig: __SIG }),
+        body: JSON.stringify({ patch: { nickname, avatarPng: avatarUrl }, sig: window.__SIG }),
       });
       if (!r.ok) {
         const t = await r.text();

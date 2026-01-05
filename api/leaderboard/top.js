@@ -1,34 +1,20 @@
 // built by gruesøme
 // SIG_ENC_XOR5A_HEX=382f33362e7a38237a3d282f3f29a2373f
 
+import { parseCookies } from '../_lib/util.js';
+import { readSession } from '../_lib/session.js';
 import * as R from '../_lib/redis.js';
 import * as K from '../_lib/keys.js';
-import * as Sec from '../_lib/security.js';
-import * as G from '../_lib/games.js';
-import * as U from '../_lib/user.js';
-import * as ME from '../_lib/metricEngine.js';
-import { getExcludedPayoutAddrs } from '../_lib/payoutExclusion.js';
-
-function intParam(q, k, d) {
-  const v = q && q[k] != null ? Number(q[k]) : NaN;
-  return Number.isFinite(v) ? v : d;
-}
-
-function sParam(q, k, d) {
-  const v = q && q[k] != null ? String(q[k]) : '';
-  return v || d;
-}
+import * as X from '../_lib/exclusions.js';
+import { GAMES } from '../_lib/games.js';
+import { ipFromReq, enforce, rlKey } from '../_lib/rate.js';
+import { bump } from '../_lib/metrics.js';
 
 function ymdUtc() {
-  const d = new Date();
-  const y = d.getUTCFullYear();
-  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(d.getUTCDate()).padStart(2, '0');
-  return String(y) + m + day;
+  return new Date().toISOString().slice(0, 10).replace(/-/g, '');
 }
 
 function weekKeyUtc() {
-  // ISO week approx (UTC). Good enough for leaderboard grouping + weekly epochs.
   const d = new Date();
   const date = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
   const dayNum = date.getUTCDay() || 7;
@@ -40,153 +26,136 @@ function weekKeyUtc() {
   return String(y) + 'W' + w;
 }
 
-function resolveGame(gameId) {
-  if (!gameId) return null;
-  if (typeof G.byId === 'function') return G.byId(gameId);
-  if (G.GAMES && typeof G.GAMES === 'object') return G.GAMES[gameId] || null;
-  return null;
+function parseWithScores(arr) {
+  const out = [];
+  if (!Array.isArray(arr)) return out;
+  for (let i = 0; i < arr.length; i += 2) {
+    const member = String(arr[i] ?? '');
+    const scoreEnc = Number(arr[i + 1] ?? 0);
+    if (!member) continue;
+    out.push({ member, scoreEnc: isFinite(scoreEnc) ? scoreEnc : 0 });
+  }
+  return out;
 }
 
-function resolveMetric(game, metricId) {
-  const list = Array.isArray(game?.metrics) ? game.metrics : [];
-  const fallback = { id: 'score', label: 'Score', dir: 'desc', format: 'int', src: 'score' };
+function normalizeMetrics(cfg) {
+  const list = Array.isArray(cfg?.metrics) ? cfg.metrics : [];
+  if (list.length) return list;
+  return [{ id: 'score', label: 'Score', kind: 'score', dir: 'desc', format: 'int', src: 'score', payoutWeight: 1.0 }];
+}
 
-  if (!list.length) return { meta: fallback, list: [fallback] };
-
+function findMetric(cfg, metricId) {
+  const list = normalizeMetrics(cfg);
   const want = String(metricId || '').trim();
-  const defId = String(game?.defaultMetric || '').trim();
-  const pick =
-    (want && list.find(m => String(m?.id || '') === want)) ||
-    (defId && list.find(m => String(m?.id || '') === defId)) ||
-    list[0] ||
-    fallback;
+  if (!want) return list[0] || null;
+  return list.find((m) => String(m?.id || '') === want) || (list[0] || null);
+}
 
-  return { meta: pick, list };
+function decodeScore(metricCfg, scoreEnc) {
+  const dir = String(metricCfg?.dir || 'desc');
+  const n = Number(scoreEnc || 0);
+  if (!isFinite(n)) return 0;
+  const v = dir === 'asc' ? -n : n;
+  return Math.max(0, Math.floor(v));
 }
 
 export default async function handler(req, res) {
   try {
     if (req.method !== 'GET') return res.status(405).json({ error: 'method_not_allowed' });
+    if (!R.enabled()) return res.status(200).json({ ok: false, error: 'redis_not_configured' });
 
-    const q = req.query || {};
-    const board = sParam(q, 'board', 'skill'); // skill|activity
-    const period = sParam(q, 'period', 'daily'); // daily|weekly|all
-    const eligible = String(sParam(q, 'eligible', '0')) === '1';
-    const limit = Math.max(1, Math.min(200, intParam(q, 'limit', 50)));
+    const ip = ipFromReq(req);
+    await enforce({ key: rlKey('lb:top:ip', ip), limit: 600, windowSec: 60 });
 
-    const address = String((await Sec.getSessionAddress(req)) || '').toLowerCase();
-    const canYou = Sec.isAddress(address);
+    const url = new URL(req.url, 'http://localhost');
+    const board = String(url.searchParams.get('board') || 'skill').trim(); // 'skill' | 'activity'
+    const period = String(url.searchParams.get('period') || 'daily').trim(); // 'daily' | 'weekly' | 'all'
+    const eligible = String(url.searchParams.get('eligible') || '0').trim() === '1';
+    const limit = Math.max(1, Math.min(100, Number(url.searchParams.get('limit') || 20)));
 
-    const excluded = getExcludedPayoutAddrs();
+    const cookies = parseCookies(req);
+    const s = readSession(cookies);
+    const address = s && s.address ? String(s.address) : '';
+    const addrLc = address ? address.toLowerCase() : '';
+
+    const ymd = ymdUtc();
+    const wk = weekKeyUtc();
 
     let key = '';
-    let metricMeta = null;
+    let metric = null;
+    let metricId = '';
+    let gameId = '';
+    let cfg = null;
 
     if (board === 'activity') {
-      const ymd = ymdUtc();
-      const wk = weekKeyUtc();
+      // Global paid activity (AC spent) leaderboards.
+      key = K.actDaily(ymd);
       if (period === 'weekly') key = K.actWeekly(wk);
-      else if (period === 'all') key = K.actAll();
-      else key = K.actDaily(ymd);
+      if (period === 'all') key = K.actAll();
     } else {
-      const gameId = String(sParam(q, 'gameId', '')).trim();
-      if (!gameId) return res.status(400).json({ error: 'missing_gameId' });
+      gameId = String(url.searchParams.get('gameId') || '').trim();
+      if (!gameId || !GAMES[gameId]) return res.status(400).json({ error: 'bad_game' });
+      cfg = GAMES[gameId];
 
-      const game = resolveGame(gameId);
-      if (!game) return res.status(400).json({ error: 'bad_game' });
+      metricId = String(url.searchParams.get('metric') || cfg.defaultMetric || 'score').trim();
+      metric = findMetric(cfg, metricId);
+      metricId = metric ? String(metric.id || 'score') : 'score';
 
-      const metricId = String(sParam(q, 'metric', '')).trim();
-      const resolved = resolveMetric(game, metricId);
-      metricMeta = resolved.meta;
-
-      const ymd = ymdUtc();
-      const wk = weekKeyUtc();
-      const mid = String(metricMeta?.id || 'score').trim() || 'score';
-
-      if (period === 'weekly') key = eligible ? K.lbWeeklyPaidMetric(gameId, mid, wk) : K.lbWeeklyMetric(gameId, mid, wk);
-      else if (period === 'all') key = eligible ? K.lbAllPaidMetric(gameId, mid) : K.lbAllMetric(gameId, mid);
-      else key = eligible ? K.lbDailyPaidMetric(gameId, mid, ymd) : K.lbDailyMetric(gameId, mid, ymd);
-    }
-
-    // Fetch ZSET range (values are always stored "higher-is-better")
-    const range = await R.zrevrangeWithScores(key, 0, limit - 1);
-
-    const entries = [];
-    for (let i = 0; i < range.length; i++) {
-      const it = range[i];
-      const addr = String(it.value || '').toLowerCase();
-      const scoreEnc = Number(it.score || 0);
-
-      let value = scoreEnc;
-      if (board !== 'activity') {
-        value = ME.decode(metricMeta || { id: 'score', dir: 'desc' }, scoreEnc);
+      // Metric-aware keys (preferred). Fall back to legacy keys if needed.
+      if (metric) {
+        key = eligible ? K.lbDailyPaidMetric(gameId, metricId, ymd) : K.lbDailyMetric(gameId, metricId, ymd);
+        if (period === 'weekly') key = eligible ? K.lbWeeklyPaidMetric(gameId, metricId, wk) : K.lbWeeklyMetric(gameId, metricId, wk);
+        if (period === 'all') key = eligible ? K.lbAllPaidMetric(gameId, metricId) : K.lbAllMetric(gameId, metricId);
+      } else {
+        key = eligible ? K.lbDailyPaid(gameId, ymd) : K.lbDaily(gameId, ymd);
+        if (period === 'weekly') key = eligible ? K.lbWeeklyPaid(gameId, wk) : K.lbWeekly(gameId, wk);
+        if (period === 'all') key = eligible ? K.lbAllPaid(gameId) : K.lbAll(gameId);
       }
-
-      entries.push({
-        rank: i + 1,
-        address: addr,
-        score: Math.max(0, Math.floor(Number(value || 0))),
-      });
     }
 
-    // Enrich entries with public identity (nickname/avatar gated by PRO active + SBT locked)
-    const wantAddrs = entries.map(e => e.address);
-    if (canYou) wantAddrs.push(address);
-    const forceShowAddrs = new Set(entries.filter(e => excluded.has(e.address)).map(e => e.address));
-    if (canYou && excluded.has(address)) forceShowAddrs.add(address);
-    const idMap = await U.getPublicIdentityMany(wantAddrs, { forceShowAddrs });
-
-    const entriesOut = entries.map(e => {
-      const id = idMap[e.address] || {};
-      const payoutEligible = !excluded.has(e.address);
-      return {
-        ...e,
-        displayName: id.displayName || U.shortAddr(e.address),
-        nickname: id.nickname || null,
-        avatarPng: id.avatarPng || null,
-        level: (id.level != null) ? id.level : null,
-        payoutEligible,
-        badge: payoutEligible ? null : 'ADMIN',
-      };
-    });
+    const raw = await R.cmd('ZREVRANGE', key, 0, limit - 1, 'WITHSCORES');
+    const items = parseWithScores(raw);
 
     let you = null;
-    if (canYou) {
-      const youEnc = await R.zrevrank(key, address);
-      if (youEnc != null) {
-        let youScoreEnc = await R.zscore(key, address);
-        youScoreEnc = Number(youScoreEnc || 0);
-
-        let youScore = youScoreEnc;
-        if (board !== 'activity') youScore = ME.decode(metricMeta || { id: 'score', dir: 'desc' }, youScoreEnc);
-
-        const id = idMap[address] || {};
-        const payoutEligible = !excluded.has(address);
+    if (addrLc) {
+      const youScoreEnc = await R.cmd('ZSCORE', key, addrLc);
+      if (youScoreEnc != null) {
+        const r = await R.cmd('ZREVRANK', key, addrLc);
         you = {
-          rank: Number(youEnc) + 1,
-          address,
-          score: Math.max(0, Math.floor(Number(youScore || 0))),
-          displayName: id.displayName || U.shortAddr(address),
-          nickname: id.nickname || null,
-          avatarPng: id.avatarPng || null,
-          level: (id.level != null) ? id.level : null,
-          payoutEligible,
-          badge: payoutEligible ? null : 'ADMIN',
+          rank: r == null ? null : Number(r) + 1,
+          scoreEnc: Number(youScoreEnc || 0),
+          score: board === 'activity' ? Math.max(0, Number(youScoreEnc || 0)) : decodeScore(metric, youScoreEnc),
         };
       }
     }
 
+    const entries = items.map((it, idx) => ({
+      rank: idx + 1,
+      address: it.member,
+      scoreEnc: it.scoreEnc,
+      score: board === 'activity' ? Math.max(0, Number(it.scoreEnc || 0)) : decodeScore(metric, it.scoreEnc),
+    }));
+
+    await bump('leaderboard_top', 200);
+
     return res.status(200).json({
       ok: true,
       board,
-      period,
       eligible,
+      gameId: gameId || null,
+      metric: metric ? { id: metricId, label: String(metric.label || metricId), kind: String(metric.kind || ''), dir: String(metric.dir || 'desc'), format: String(metric.format || 'int') } : null,
+      period,
       key,
-      metric: metricMeta,
-      entries: entriesOut,
+      entries,
       you,
     });
   } catch (e) {
+    if (e && e.code === 'RATE_LIMIT') {
+      return res.status(429).json({ error: 'rate_limited', limit: e.limit, windowSec: e.windowSec });
+    }
+    try {
+      await bump('leaderboard_top', 500);
+    } catch {}
     return res.status(500).json({ error: 'server_error' });
   }
 }

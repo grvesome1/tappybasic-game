@@ -1,0 +1,172 @@
+Gruesøme’s Arcade — Leaderboard Metrics Glossary
+Version: v1.1
+built by gruesøme
+SIG_ENC_XOR5A_HEX=382f33362e7a38237a3d282f3f29a2373f
+
+Purpose
+- Keep metrics generic across ALL game categories.
+- Each game declares which metrics it supports in arcade-games.json.
+- Each metric declares direction + unit + clamps.
+- The Arcade can rotate which metric is “ranked” for skill payouts per board.
+
+--------------------------------------------------------------------
+Metric Fields
+--------------------------------------------------------------------
+id        : string (stable identifier)
+label     : string (human name)
+direction : "desc" (higher is better) or "asc" (lower is better)
+unit      : points | ms | bp | count | ac | ratio
+clamp     : optional { min, max } to reject absurd values
+
+--------------------------------------------------------------------
+Core Metrics (generic)
+--------------------------------------------------------------------
+1) score
+- direction: desc
+- unit: points
+- Use: classic scoring games.
+
+2) durationMs
+- direction: desc (survival) OR asc (speedrun) depending on game profile
+- unit: ms
+- Use: “how long you survived” or “how fast you cleared”.
+
+3) timeMs
+- direction: asc
+- unit: ms
+- Use: speedrun completion time.
+
+4) runs
+- direction: desc
+- unit: count
+- Use: volume / participation boards (usually Activity, not Skill).
+
+5) levelReached
+- direction: desc
+- unit: count
+- Use: platformers, RPG, progression games.
+
+--------------------------------------------------------------------
+Combat / Action Metrics
+--------------------------------------------------------------------
+6) kills
+- direction: desc
+- unit: count
+- Use: shooters, action, defense.
+
+7) damageDealt
+- direction: desc
+- unit: points
+- Use: combat score alternative.
+
+8) damageTaken
+- direction: asc
+- unit: points
+- Use: “clean play” (lower damage is better).
+
+9) accuracyBp
+- direction: desc
+- unit: bp (0..10000)
+- Use: shooting, rhythm, precision mechanics.
+- Note: basis points avoids floating precision.
+
+10) headshots
+- direction: desc
+- unit: count
+- Use: shooters.
+
+11) comboMax
+- direction: desc
+- unit: count
+- Use: rhythm, action combo systems.
+
+12) perfectRuns
+- direction: desc
+- unit: count
+- Use: flawless clears.
+
+--------------------------------------------------------------------
+Defense / Survival / Tower Defense Metrics
+--------------------------------------------------------------------
+13) waves
+- direction: desc
+- unit: count
+- Use: “Storm the House”, survival, tower defense.
+
+14) baseHpRemainingBp
+- direction: desc
+- unit: bp
+- Use: defense objective health remaining (0..10000).
+
+15) objectivesCompleted
+- direction: desc
+- unit: count
+- Use: mission-based games.
+
+--------------------------------------------------------------------
+Racing / Sports Metrics
+--------------------------------------------------------------------
+16) laps
+- direction: desc
+- unit: count
+- Use: racing modes.
+
+17) bestLapMs
+- direction: asc
+- unit: ms
+- Use: racing.
+
+18) distance
+- direction: desc
+- unit: count
+- Use: endless runners.
+
+--------------------------------------------------------------------
+Economy / Web3-aware Metrics (for in-run spend games)
+--------------------------------------------------------------------
+19) inRunSpendAC
+- direction: asc (for “low spend wins”) OR desc (for “most spend” boards)
+- unit: ac
+- Use: Credits spent inside the run.
+- Guardrail: rankedSpendCapAC in catalog.
+
+20) efficiency
+- direction: desc
+- unit: ratio
+- Meaning: primary performance per spent AC.
+- Example formulas:
+  - waves / max(1, inRunSpendAC)
+  - score / max(1, inRunSpendAC)
+
+21) valueDestroyed
+- direction: desc
+- unit: points
+- Use: strategy/econ games: damage vs cost.
+
+22) resourceBalance
+- direction: desc
+- unit: points
+- Use: “end-of-run balance”.
+
+--------------------------------------------------------------------
+Social / Community Metrics (optional)
+--------------------------------------------------------------------
+23) votesReceived
+- direction: desc
+- unit: count
+- Use: user-generated content modes.
+
+24) referrals
+- direction: desc
+- unit: count
+- Use: growth programs.
+
+--------------------------------------------------------------------
+Recommendations
+--------------------------------------------------------------------
+- Every game should expose 2–6 metrics max (keep it legible).
+- For economy-dynamic games: always include inRunSpendAC + efficiency.
+- For speedruns: include timeMs (asc) + accuracyBp (desc) if relevant.
+- For defense games: waves (desc) + efficiency (desc) is a solid baseline.
+
+END

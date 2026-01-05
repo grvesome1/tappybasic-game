@@ -1,0 +1,140 @@
+<!-- built by gruesøme -->
+<!-- sig(enc:xor-0x5A,utf8,hex)=382f33362e7a38237a3d282f3f29a2373f -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Arcade Activity Orb Monitor</title>
+
+  <!-- Note: this page is intentionally standalone (no SPA dependencies). -->
+  <link rel="stylesheet" href="./integration/activity-orb.css" />
+</head>
+<body style="margin:0; background:#050713; color:rgba(255,255,255,0.86); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, 'Apple Color Emoji', 'Segoe UI Emoji';">
+
+  <div id="scene" class="ga-orb-root">
+    <div class="ga-orb-overlay">
+
+      <div class="ga-orb-hud">
+        <h1>Arcade Activity Orb Monitor</h1>
+        <div class="ga-orb-row">
+          <button class="ga-orb-btn" id="btnAdmin">Admin: OFF</button>
+          <button class="ga-orb-btn" id="btnPulse">Pulse</button>
+          <button class="ga-orb-btn" id="btnMock">Mock Snapshot</button>
+          <a class="ga-orb-btn" href="/" target="_blank" rel="noopener">Open Arcade</a>
+        </div>
+        <p id="hudStatus">Initializing…</p>
+      </div>
+
+      <div class="ga-orb-admin" id="adminPanel">
+        <h2>Admin Tools</h2>
+
+        <div class="ga-orb-grid">
+          <div class="ga-orb-field">
+            <div class="ga-orb-label">Ring speed</div>
+            <input id="rngRing" type="range" min="0" max="300" value="100" />
+            <div class="ga-orb-kv" id="valRing"></div>
+          </div>
+
+          <div class="ga-orb-field">
+            <div class="ga-orb-label">Orbit speed</div>
+            <input id="rngOrbit" type="range" min="0" max="200" value="55" />
+            <div class="ga-orb-kv" id="valOrbit"></div>
+          </div>
+
+          <div class="ga-orb-field">
+            <div class="ga-orb-label">Fog density</div>
+            <input id="rngFog" type="range" min="0" max="90" value="28" />
+            <div class="ga-orb-kv" id="valFog"></div>
+          </div>
+
+          <div class="ga-orb-field">
+            <div class="ga-orb-label">Graph intensity</div>
+            <input id="rngGraph" type="range" min="0" max="200" value="100" />
+            <div class="ga-orb-kv" id="valGraph"></div>
+          </div>
+        </div>
+
+        <div class="ga-orb-bottom">
+          <button class="ga-orb-btn" id="btnExportCfg">Export config</button>
+          <button class="ga-orb-btn" id="btnImportCfg">Import config</button>
+          <button class="ga-orb-btn" id="btnResetCfg">Reset</button>
+          <button class="ga-orb-btn" id="btnAuditJson">Audit JSON</button>
+          <button class="ga-orb-btn" id="btnAuditCsv">Audit CSV</button>
+          <button class="ga-orb-btn" id="btnAuditClear">Clear audit</button>
+        </div>
+
+        <div class="ga-orb-log" id="auditLog"></div>
+
+        <div class="ga-orb-small" style="margin-top:10px;">
+          Admin snapshot is polled from <code>/api/admin/snapshot</code> (requires admin session). If you’re not admin, this panel will show a 403.
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script type="module">
+    import { initActivityOrbBackground } from './integration/activity-orb.js';
+
+    const orb = await initActivityOrbBackground({
+      host: '#scene',
+      adminEnabled: false,
+      // Uses your Iteration 4.3 adapter if present; falls back to direct fetch.
+      adminAdapterUrl: '/gruesome-arcade-3d-map-adapter-v1.0/ga3d-admin-adapter.js'
+    });
+
+    // Expose for debugging.
+    window.__GA_ORB__ = orb;
+
+    // Wire the standalone buttons (optional).
+    const $ = (id) => document.getElementById(id);
+    const hud = $('hudStatus');
+
+    $('btnAdmin')?.addEventListener('click', async () => {
+      const on = orb.admin.toggle();
+      $('btnAdmin').textContent = on ? 'Admin: ON' : 'Admin: OFF';
+      hud.textContent = on ? 'Admin mode enabled (polling snapshot)…' : 'Admin mode disabled.';
+    });
+
+    $('btnPulse')?.addEventListener('click', () => {
+      orb.activity.bumpMetric('ui:pulse', 1);
+      hud.textContent = 'Pulse injected.';
+    });
+
+    $('btnMock')?.addEventListener('click', () => {
+      orb.admin.injectSnapshot({
+        now: Date.now(),
+        daily: { ymd: '2026-01-05', potCents: 123456, settled: false },
+        weekly: { yw: '2026-W02', potCents: 789012, settled: false },
+        activity: { todayScore: 4200, weekScore: 18000 },
+        exclusions: { payoutExcludedCount: 1, addresses: ['0xADMIN...'] },
+        catalogHealth: { ok: true, games: 14, metrics: 38, alerts: [] }
+      }, 'mock');
+      hud.textContent = 'Mock snapshot injected.';
+    });
+
+    // Optional: connect sliders to orb config.
+    orb.admin.bindStandaloneControls({
+      ring: { input: $('rngRing'), label: $('valRing') },
+      orbit: { input: $('rngOrbit'), label: $('valOrbit') },
+      fog: { input: $('rngFog'), label: $('valFog') },
+      graph: { input: $('rngGraph'), label: $('valGraph') },
+      buttons: {
+        exportCfg: $('btnExportCfg'),
+        importCfg: $('btnImportCfg'),
+        resetCfg: $('btnResetCfg'),
+        auditJson: $('btnAuditJson'),
+        auditCsv: $('btnAuditCsv'),
+        auditClear: $('btnAuditClear'),
+      },
+      auditHost: $('auditLog'),
+      adminPanel: $('adminPanel'),
+      hudStatus: hud,
+      adminButton: $('btnAdmin'),
+    });
+
+    hud.textContent = 'Ready. Toggle Admin to poll /api/admin/snapshot.';
+  </script>
+</body>
+</html>

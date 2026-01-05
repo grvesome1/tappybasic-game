@@ -6,7 +6,7 @@ import { readSession } from '../_lib/session.js';
 import { checkPoh } from '../_lib/poh.js';
 import * as R from '../_lib/redis.js';
 import * as K from '../_lib/keys.js';
-import { isPayoutExcluded } from '../_lib/payoutExclusion.js';
+import * as X from '../_lib/exclusions.js';
 
 function ymdUtc(d = new Date()) {
   return d.toISOString().slice(0, 10).replace(/-/g, '');
@@ -83,7 +83,6 @@ export default async function handler(req, res) {
     const authenticated = !!(s && s.address);
     const address = authenticated ? String(s.address) : '';
     const addrLc = address ? address.toLowerCase() : '';
-    const payoutExcluded = authenticated ? isPayoutExcluded(addrLc) : false;
 
     let pohVerified = false;
     if (authenticated && !s.demo) {
@@ -183,9 +182,6 @@ export default async function handler(req, res) {
       authenticated,
       address,
       pohVerified,
-
-      // Transparency
-      payoutExcluded,
 
       // Activity
       todayActScore,
