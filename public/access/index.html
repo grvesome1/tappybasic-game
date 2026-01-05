@@ -3005,6 +3005,88 @@ Search terms: dead internet theory • rational privacy in crypto`;
       blockExplorerUrls: ['https://lineascan.build']
     };
 
+    // WalletConnect v2 (QR) — universal wallet fallback.
+    // NOTE: Replace with your WalletConnect Cloud projectId.
+    const WALLETCONNECT_PROJECT_ID = 'REPLACE_ME_WALLETCONNECT_PROJECT_ID';
+    const WALLETCONNECT_PROVIDER_UMD = 'https://unpkg.com/@walletconnect/ethereum-provider@2.12.2/dist/index.umd.js';
+
+    const WC = {
+      provider: null,
+      initPromise: null,
+      eventsBound: false
+    };
+
+    function loadScriptOnce(src){
+      return new Promise((resolve, reject) => {
+        try {
+          const already = Array.from(document.scripts || []).some(s => (s && s.src) ? String(s.src) === String(src) : false);
+          if (already) return resolve(true);
+          const el = document.createElement('script');
+          el.src = src;
+          el.async = true;
+          el.onload = () => resolve(true);
+          el.onerror = () => reject(new Error('Failed to load ' + src));
+          document.head.appendChild(el);
+        } catch (e) {
+          reject(e);
+        }
+      });
+    }
+
+    async function ensureWalletConnectProvider(){
+      if (WC.provider) return WC.provider;
+      if (WC.initPromise) return WC.initPromise;
+
+      WC.initPromise = (async () => {
+        const pid = String(WALLETCONNECT_PROJECT_ID || '').trim();
+        if (!pid || pid.startsWith('REPLACE_ME')) {
+          throw new Error('WalletConnect projectId is not configured. Set WALLETCONNECT_PROJECT_ID in /public/access/index.html');
+        }
+
+        await loadScriptOnce(WALLETCONNECT_PROVIDER_UMD);
+
+        const mod = (window && window['@walletconnect/ethereum-provider']) ? window['@walletconnect/ethereum-provider'] : null;
+        const EthereumProvider = mod?.EthereumProvider || mod?.default?.EthereumProvider || mod?.default;
+        if (!EthereumProvider?.init) throw new Error('WalletConnect provider missing (EthereumProvider.init not found).');
+
+        const chainNum = parseInt(LINEA.chainId, 16);
+        const provider = await EthereumProvider.init({
+          projectId: pid,
+          chains: [chainNum],
+          rpcMap: { [chainNum]: String(LINEA.rpcUrls?.[0] || '') },
+          showQrModal: true
+        });
+
+        WC.provider = provider;
+        WC.initPromise = null;
+
+        // Bind provider events once the provider exists.
+        try {
+          if (!WC.eventsBound && provider?.on) {
+            WC.eventsBound = true;
+            provider.on('accountsChanged', (accounts) => {
+              walletAccount = accounts?.[0] || null;
+              refreshWalletState().catch(() => void 0);
+            });
+            provider.on('chainChanged', () => {
+              refreshWalletState().catch(() => void 0);
+            });
+            provider.on('disconnect', () => {
+              walletAccount = null;
+              refreshWalletState().catch(() => void 0);
+            });
+          }
+        } catch { /* ignore */ }
+
+        return provider;
+      })().catch((e) => {
+        WC.initPromise = null;
+        throw e;
+      });
+
+      return WC.initPromise;
+    }
+
     const shortAddr = (a) => (a && a.length > 10) ? `${a.slice(0, 6)}…${a.slice(-4)}` : (a || '');
 
     let walletAccount = null;
@@ -3019,7 +3101,11 @@ Search terms: dead internet theory • rational privacy in crypto`;
     }
 
     function getEth(){
-      return window.ethereum || null;
+      return window.ethereum || WC.provider || null;
+    }
+
+    async function getEthAsync(){
+      return window.ethereum || (await ensureWalletConnectProvider());
     }
 
     async function getChainId(){
@@ -3032,11 +3118,21 @@ Search terms: dead internet theory • rational privacy in crypto`;
       }
     }
 
+    async function getChainIdAsync(){
+      const eth = await getEthAsync();
+      if (!eth?.request) return null;
+      try {
+        return await eth.request({ method: 'eth_chainId' });
+      } catch {
+        return null;
+      }
+    }
+
     async function switchToLinea(){
-      const eth = getEth();
+      const eth = await getEthAsync();
       if (!eth?.request) throw new Error('No EIP-1193 wallet detected.');
 
-      const current = await getChainId();
+      const current = await getChainIdAsync();
       if (current && current.toLowerCase() === LINEA.chainId) return;
 
       try {
@@ -3056,12 +3152,8 @@ Search terms: dead internet theory • rational privacy in crypto`;
     }
 
     async function connectWallet(){
-      const eth = getEth();
-      if (!eth?.request) {
-        // Keep it simple: navigate to MetaMask download if no wallet is present.
-        window.location.href = 'https://metamask.io/download/';
-        return false;
-      }
+      const eth = await getEthAsync();
+      if (!eth?.request) return false;
 
       setWalletText('Switching…');
       await switchToLinea();
@@ -3388,7 +3480,7 @@ Search terms: dead internet theory • rational privacy in crypto`;
       audioHub.playSfx('wallet_press');
       walletBusy = true;
       try {
-        const chainId = await getChainId();
+        const chainId = await getChainIdAsync();
         if (chainId && chainId.toLowerCase() === LINEA.chainId) {
           const ok = await connectWallet();
           if (ok) beginConnectToPohSequence();
@@ -3401,7 +3493,13 @@ Search terms: dead internet theory • rational privacy in crypto`;
         console.error(e);
         // Keep UI clean: revert to a safe label
         setWalletConnected(false);
-        setWalletText('Connect Wallet');
+        const msg = (e && e.message) ? String(e.message) : '';
+        if (msg && msg.toLowerCase().includes('walletconnect')) {
+          setWalletText('WalletConnect config');
+          showBootError('WalletConnect is not configured.\n\nSet WALLETCONNECT_PROJECT_ID in /public/access/index.html');
+        } else {
+          setWalletText('Connect Wallet');
+        }
       } finally {
         walletBusy = false;
       }
@@ -3465,6 +3563,13 @@ Search terms: dead internet theory • rational privacy in crypto`;
       };
       try {
         window.dispatchEvent(new CustomEvent('gruesomeArcade:enter', { detail }));
+      } catch { /* ignore */ }
+
+      // Notify the parent dashboard so it can persist local session state.
+      try {
+        if (window.parent && window.parent !== window) {
+          window.parent.postMessage({ type: 'GRUESOME_ACCESS_ENTER', detail }, window.location.origin);
+        }
       } catch { /* ignore */ }
 
       const next = safeNextUrl();
