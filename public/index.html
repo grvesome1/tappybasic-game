@@ -508,7 +508,7 @@
 
         <!-- Avatar Studio (embedded) -->
         <div class="overlay" id="avatarStudioModal" aria-label="PRO member NFT mint" role="dialog" aria-hidden="true">
-          <div class="modal" style="width:min(1400px, calc(100% - 24px));">
+          <div class="modal" style="width:min(1400px, calc(100% - 24px));height:min(900px, calc(100vh - 24px));height:min(900px, calc(100dvh - 24px));">
             <div class="modalHead">
               <div class="t">PRO member NFT mint</div>
               <button class="closeX" id="btnAvatarStudioClose" type="button">Close</button>
@@ -2765,7 +2765,7 @@
 
     const STUDIO = {
       channel: 'GRUESOME_ARCADE_V1',
-      frameUrl: '/avatar_studio/index.html',
+      frameUrl: '/avatar_studio/',
       requestSeq: 0,
       ready: false,
       pendingMint: null,
@@ -2804,9 +2804,6 @@
         if (isAvatarStudioOpen()) return false;
         if (getBool(K.avatarMinted)) return false;
 
-        const hasUserPreview = !!(String(lsGet(K.avatarPreviewPng) || '').trim());
-        if (hasUserPreview) return false;
-
         // If they already have a draft, don't override it with marketing previews.
         const hasDraft = (() => {
           try {
@@ -2843,7 +2840,7 @@
       T_AVATAR_PROMO = setInterval(() => {
         if (!shouldRotateAvatarPromoPreview()) return stopAvatarPromoRotation();
         requestAvatarPromoPreview();
-      }, 5000);
+      }, 3000);
     }
 
     function studioSend(type, payload) {

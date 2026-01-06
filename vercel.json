@@ -68,6 +68,14 @@
       "destination": "/api/$1"
     },
     {
+      "source": "/avatar_studio",
+      "destination": "/avatar_studio/index.html"
+    },
+    {
+      "source": "/avatar_studio/(.*)",
+      "destination": "/avatar_studio/$1"
+    },
+    {
       "source": "/games/(.*)",
       "destination": "/games/$1"
     },
