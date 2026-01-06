@@ -4308,7 +4308,9 @@
         },
         onRequestRun: async (req) => {
           try {
-            const res = await runCoordinator.requestRun(req);
+            const g = gameById(req.gameId);
+            const desiredRunType = (g && g.usesCreditsInRun === false) ? 'free' : String(req.desiredRunType || 'paid');
+            const res = await runCoordinator.requestRun({ gameId: req.gameId, desiredRunType });
             if (res && res.granted) gameController.send(standardBridgeMessageTypes.RUN_GRANTED, res.payload);
             else gameController.send(standardBridgeMessageTypes.RUN_DENIED, res.payload);
             try { updateEmbedDebug(); } catch {}

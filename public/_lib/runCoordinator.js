@@ -34,7 +34,9 @@ export class RunCoordinator {
 
     try {
       const sim = !!(h.isSimulateMode && h.isSimulateMode());
-      if (!sim) {
+      // Free runs should be playable without wallet/POH; parent remains authoritative.
+      const isFree = (desiredRunType === 'free');
+      if (!sim && !isFree) {
         const connected = !!(h.isWalletConnected && h.isWalletConnected());
         if (!connected) return { granted: false, payload: { gameId, reason: 'not_connected' } };
 

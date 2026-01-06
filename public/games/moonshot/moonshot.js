@@ -49,8 +49,15 @@ if (__EMBEDDED) {
       __RUN.pendingFlap = false;
       __RUN.pendingStart = false;
       try {
-        const reason = String(payload?.reason || 'Run denied');
-        setCenterMessage(reason, true);
+        const code = String(payload?.reason || 'run_denied');
+        const msg = (
+          code === 'not_connected' ? 'Connect wallet (or enable Simulate Arcade) to start.' :
+          code === 'poh_required' ? 'POH verification required to start.' :
+          code === 'no_funds' ? 'Not enough Credits to start.' :
+          code === 'run_in_progress' ? 'Finish the current run first.' :
+          (code || 'Run denied')
+        );
+        setCenterMessage(msg, true);
       } catch {}
       return;
     }
