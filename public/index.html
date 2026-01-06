@@ -740,6 +740,12 @@
     // SIG_ENC_XOR5A_HEX=382f33362e7a38237a3d282f3f29a2373f
 
     import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
+    import {
+      createGameFrameController,
+      standardBridgeMessageTypes,
+      validateMessageOrigin
+    } from '/_lib/arcadeGameEmbedAdapter.js';
+    import { RunCoordinator } from '/_lib/runCoordinator.js';
 
     // ---------- 3D BACKDROP (subtle, UI-first) ----------
     const sceneHost = document.getElementById('scene');
@@ -2046,11 +2052,31 @@
         if (typeof gameFrame !== 'undefined' && gameFrame) {
           const src = String(gameFrame.getAttribute('src') || '');
           if (name !== 'play') {
-            if (src && src !== 'about:blank') gameFrame.setAttribute('src', 'about:blank');
+            if (gameController) {
+              gameController.unmount();
+            } else {
+              if (src && src !== 'about:blank') gameFrame.setAttribute('src', 'about:blank');
+            }
           } else {
-            if (!src || src === 'about:blank') {
-              const next = (currentGame && currentGame.embedUrl) ? String(currentGame.embedUrl) : '/games/moonshot/';
-              gameFrame.setAttribute('src', next);
+            if (gameController) {
+              const g = currentGame || gameById(currentGameId);
+              if (g) {
+                gameController.mount({
+                  id: g.id,
+                  title: g.name,
+                  url: g.embedUrl,
+                  defaultMetric: g.defaultMetric,
+                  metrics: (Array.isArray(g.metrics) ? g.metrics.map(m => String(m.id)) : []),
+                  runTypePolicy: g.runTypePolicy,
+                  sandboxPolicy: g.sandboxPolicy,
+                  allowList: g.allowList
+                });
+              }
+            } else {
+              if (!src || src === 'about:blank') {
+                const next = (currentGame && currentGame.embedUrl) ? String(currentGame.embedUrl) : '/games/moonshot/';
+                gameFrame.setAttribute('src', next);
+              }
             }
           }
         }
@@ -2411,13 +2437,66 @@
       } catch (e) {
         CATALOG = FALLBACK_CATALOG;
       }
-      GAMES = Array.isArray(CATALOG?.games) ? CATALOG.games : [];
-      if (!GAMES.length) GAMES = FALLBACK_CATALOG.games || [];
+      function normalizeMetric(m) {
+        if (!m || typeof m !== 'object') return null;
+        const id = String(m.id || m.metricId || m.key || '').trim();
+        if (!id) return null;
+        return {
+          id,
+          label: (m.label != null) ? String(m.label) : id,
+          kind: (m.kind != null) ? String(m.kind) : undefined,
+          direction: (m.direction != null) ? String(m.direction) : (m.dir != null ? String(m.dir) : undefined),
+          unit: (m.unit != null) ? String(m.unit) : undefined,
+          eligible: (m.eligible === false) ? false : true,
+          payoutEligible: (m.payoutEligible === false) ? false : true,
+          minDurationMs: (m.minDurationMs != null) ? Number(m.minDurationMs) : undefined,
+          scoreMax: (m.scoreMax != null) ? Number(m.scoreMax) : undefined
+        };
+      }
+
+      function normalizeGameEntry(g) {
+        if (!g || typeof g !== 'object') return null;
+        const id = String(g.id || g.gameId || '').trim();
+        if (!id) return null;
+
+        const runCostAC = Number(g.runCostAC || 0);
+        const metrics = Array.isArray(g.metrics) ? g.metrics.map(normalizeMetric).filter(Boolean) : [];
+        const defaultMetric = String(g.defaultMetric || g.defaultMetricId || (metrics[0] ? metrics[0].id : 'score') || 'score');
+
+        const embedUrl = String(g.embedUrl || g.url || g.path || (`/games/${id}/`));
+
+        const runTypePolicy = (g.runTypePolicy != null)
+          ? String(g.runTypePolicy)
+          : (runCostAC > 0 ? 'paid' : 'free');
+
+        const sandboxPolicy = (g.sandboxPolicy != null) ? String(g.sandboxPolicy) : 'strict';
+
+        const allowList = Array.isArray(g.allowList) ? g.allowList.map(String) : undefined;
+
+        return {
+          ...g,
+          id,
+          name: String(g.name || g.title || id),
+          tagline: (g.tagline != null) ? String(g.tagline) : '',
+          status: String(g.status || 'live'),
+          embedUrl,
+          runCostAC,
+          defaultMetric,
+          metrics,
+          runTypePolicy,
+          sandboxPolicy,
+          allowList
+        };
+      }
+
+      GAMES = Array.isArray(CATALOG?.games) ? CATALOG.games.map(normalizeGameEntry).filter(Boolean) : [];
+      if (!GAMES.length) GAMES = (FALLBACK_CATALOG.games || []).map(normalizeGameEntry).filter(Boolean);
       return CATALOG;
     }
 
     function gameById(id) {
-      return (GAMES || []).find(g => g.id === id) || null;
+      const gid = String(id || '');
+      return (GAMES || []).find(g => g.id === gid || String(g.gameId || '') === gid) || null;
     }
 
     function clampGameId(id) {
@@ -2529,7 +2608,22 @@
       lsSet(K.selectedGame, currentGameId);
 
       frameReady = false;
-      try { if (gameFrame) gameFrame.src = currentGame.embedUrl; } catch {}
+      try {
+        if (currentGame && gameController) {
+          gameController.mount({
+            id: currentGame.id,
+            title: currentGame.name,
+            url: currentGame.embedUrl,
+            defaultMetric: currentGame.defaultMetric,
+            metrics: (Array.isArray(currentGame.metrics) ? currentGame.metrics.map(m => String(m.id)) : []),
+            runTypePolicy: currentGame.runTypePolicy,
+            sandboxPolicy: currentGame.sandboxPolicy,
+            allowList: currentGame.allowList
+          });
+        } else if (gameFrame && currentGame) {
+          gameFrame.src = currentGame.embedUrl;
+        }
+      } catch {}
       suppressGameFrameScrollbars();
 
       renderGameTiles();
@@ -3897,34 +3991,53 @@
       statTx24.textContent = String(tx24hCount());
     }
 
-    // ----- ArcadeBridge (iframe comms) -----
+    // ----- Universal Game Embed Adapter + RunCoordinator -----
     const activeRun = { runId:'', gameId:'', runType:'', startedAt:0, costAC:0 };
+    let gameController = null;
+    let runCoordinator = null;
+
+    let lastBridgeMessage = null;
+    let lastBridgeError = null;
+    let lastMetricsSubmission = null;
+
+    function isDevMode() {
+      try {
+        return (
+          location.hostname === 'localhost' ||
+          location.hostname === '127.0.0.1' ||
+          location.search.includes('dev=1')
+        );
+      } catch {
+        return false;
+      }
+    }
+
+    function isSimulateArcade() {
+      try { return isDevMode() && getBool('ga.simulateArcade'); } catch { return false; }
+    }
+
+    function expectedGameOrigin() {
+      try {
+        if (!currentGame || !currentGame.embedUrl) return '';
+        return new URL(String(currentGame.embedUrl), window.location.origin).origin;
+      } catch {
+        return '';
+      }
+    }
 
     function sendToGame(type, payload) {
+      try {
+        if (gameController) return gameController.send(String(type || ''), payload || {});
+      } catch {}
       try { gameFrame?.contentWindow?.postMessage(Object.assign({ type }, payload||{}), '*'); } catch {}
+      return false;
     }
 
     function syncToGame() {
-      const g = currentGame;
-      if (!g) return;
-      sendToGame('ARCADE:SYNC', {
-        game: {
-          id: g.id,
-          runCostAC: Number(g.runCostAC||0),
-          promoRuns: Number(g.promoRuns||0),
-          promoGrantAC: Number(g.promoGrantAC||0),
-          promoClaimed: getBool(K.promoClaimed(g.id)),
-          promoAC: getInt(K.promoBal(g.id), 0)
-        },
-        player: {
-          address: lsGet(K.address) || '',
-          paidAC: getInt(K.paid, 0),
-          xp: getInt(K.xp, 0),
-          level: getInt(K.level, 1),
-          pro: proLabel(),
-          bestByGame: bestByGame()
-        }
-      });
+      try {
+        if (gameController) return gameController.sync();
+      } catch {}
+      return false;
     }
 
     function addOffchain(label) {
@@ -3938,11 +4051,11 @@
       });
     }
 
-    async function grantRun(gameId) {
+    async function requestRunImpl({ gameId, desiredRunType }) {
       const g = gameById(gameId);
-      if (!g) return;
+      if (!g) return { granted: false, payload: { gameId, reason: 'unknown_game' } };
 
-      if (activeRun.runId) { toast('Finish the current run first.'); return; }
+      if (activeRun.runId) return { granted: false, payload: { gameId, reason: 'run_in_progress' } };
 
       // Prefer server-authoritative run start (deducts promo/paid Credits in Redis).
       try {
@@ -3950,7 +4063,7 @@
         if (r && r.runId) {
           activeRun.runId = r.runId;
           activeRun.gameId = gameId;
-          activeRun.runType = r.runType || 'free';
+          activeRun.runType = r.runType || String(desiredRunType || 'free') || 'free';
           activeRun.startedAt = r.startedAt || new Date().toISOString();
           activeRun.costAC = Number(r.costAC||0);
 
@@ -3960,15 +4073,18 @@
           addFeed(`Run started: ${g.name} (${activeRun.runType}) · -${fmtCredits(activeRun.costAC)}`);
           renderTopChips(); syncToGame();
 
-          sendToGame('ARCADE:RUN_GRANTED', {
-            gameId,
-            runId: activeRun.runId,
-            runType: activeRun.runType,
-            costAC: activeRun.costAC,
-            promoAC: getInt(K.promoBal(gameId),0),
-            paidAC: getInt(K.paid,0)
-          });
-          return;
+          return {
+            granted: true,
+            payload: {
+              gameId,
+              runId: activeRun.runId,
+              runType: activeRun.runType,
+              cost: { paidAC: 0, promoAC: 0 },
+              costAC: activeRun.costAC,
+              promoAC: getInt(K.promoBal(gameId),0),
+              paidAC: getInt(K.paid,0)
+            }
+          };
         }
       } catch (e) {
         // fall through to offline/local flow
@@ -3976,22 +4092,36 @@
 
       // Offline/local fallback (keeps play working if APIs are unavailable).
       const cost = Number(g.runCostAC||0);
-      const promoBal = getInt(K.promoBal(gameId), 0);
-      let runType = 'free';
+      const promoBal0 = getInt(K.promoBal(gameId), 0);
+      const paid0 = getInt(K.paid, 0);
 
-      if (cost > 0) {
-        if (promoBal >= cost) {
-          runType = 'promo';
-          setInt(K.promoBal(gameId), promoBal - cost);
-        } else {
-          const paid = getInt(K.paid, 0);
-          if (paid < cost) {
-            toast('Not enough Credits', 'Buy more Credits or claim promo if available.');
-            return;
+      let runType = 'free';
+      let usedPromo = 0;
+      let usedPaid = 0;
+
+      const policy = String(g.runTypePolicy || (cost > 0 ? 'paid' : 'free'));
+
+      if (policy === 'free') {
+        runType = 'free';
+      } else if (policy === 'promoOnly') {
+        if (cost > 0 && promoBal0 < cost) return { granted: false, payload: { gameId, reason: 'no_funds' } };
+        runType = 'promo';
+        usedPromo = Math.max(0, cost);
+        setInt(K.promoBal(gameId), Math.max(0, promoBal0 - usedPromo));
+      } else {
+        // default: paid (promo-first, then paid)
+        if (cost > 0) {
+          if (promoBal0 >= cost) {
+            runType = 'promo';
+            usedPromo = cost;
+            setInt(K.promoBal(gameId), promoBal0 - cost);
+          } else {
+            if (paid0 < cost) return { granted: false, payload: { gameId, reason: 'no_funds' } };
+            runType = 'paid';
+            usedPaid = cost;
+            setInt(K.paid, paid0 - cost);
+            setInt(K.paidSpent, getInt(K.paidSpent,0) + cost);
           }
-          runType = 'paid';
-          setInt(K.paid, paid - cost);
-          setInt(K.paidSpent, getInt(K.paidSpent,0) + cost);
         }
       }
 
@@ -4005,22 +4135,52 @@
       addFeed(`Run started (offline): ${g.name} (${runType}) · -${fmtCredits(cost)}`);
       renderTopChips(); syncToGame();
 
-      sendToGame('ARCADE:RUN_GRANTED', {
-        gameId,
-        runId,
-        runType,
-        costAC: cost,
-        promoAC: getInt(K.promoBal(gameId),0),
-        paidAC: getInt(K.paid,0)
-      });
+      return {
+        granted: true,
+        payload: {
+          gameId,
+          runId,
+          runType,
+          cost: { paidAC: usedPaid, promoAC: usedPromo },
+          costAC: cost,
+          promoAC: getInt(K.promoBal(gameId),0),
+          paidAC: getInt(K.paid,0)
+        }
+      };
     }
 
-async function recordRunResult(gameId, runId, score, durationMs) {
+    async function grantRun(gameId) {
+      const r = await requestRunImpl({ gameId, desiredRunType: 'paid' });
+      if (!r.granted) {
+        if (r?.payload?.reason === 'no_funds') toast('Not enough Credits', 'Buy more Credits or claim promo if available.');
+        else if (r?.payload?.reason === 'run_in_progress') toast('Finish the current run first.');
+        return;
+      }
+      sendToGame(standardBridgeMessageTypes.RUN_GRANTED, r.payload);
+    }
+
+    async function recordRunResultV2({ gameId, runId, durationMs, metrics, metricId, metricValue }) {
       const g = gameById(gameId);
       if (!g) return;
 
-      const s = Math.max(0, Math.floor(Number(score||0)));
       const dur = Math.max(0, Math.floor(Number(durationMs||0)));
+
+      let primaryMetricId = String(metricId || g.defaultMetric || 'score');
+      let primaryMetricValue = Number(metricValue);
+
+      if (!Number.isFinite(primaryMetricValue)) {
+        try {
+          if (metrics && typeof metrics === 'object') {
+            const v1 = metrics[primaryMetricId];
+            const v2 = metrics['score'];
+            const pick = (v1 != null) ? v1 : v2;
+            primaryMetricValue = Number(pick);
+          }
+        } catch {}
+      }
+      if (!Number.isFinite(primaryMetricValue)) primaryMetricValue = 0;
+
+      const s = Math.max(0, Math.floor(primaryMetricValue));
 
       let xpEarned = 0;
       let bestLocal = Math.max(getInt(K.best(gameId),0), s);
@@ -4028,7 +4188,7 @@ async function recordRunResult(gameId, runId, score, durationMs) {
       // Prefer server-authoritative submit (updates XP/level/best + Redis leaderboards).
       let usedServer = false;
       try{
-        const r = await serverRunSubmit({ gameId, runId, score: s, durationMs: dur });
+        const r = await serverRunSubmit({ gameId, runId, score: s, durationMs: dur, metricId: primaryMetricId, metricValue: s, metrics: metrics || undefined });
         if (r && r.state){
           applyServerState(r.state);
           xpEarned = Number(r.xpEarned||0);
@@ -4055,11 +4215,23 @@ async function recordRunResult(gameId, runId, score, durationMs) {
         costAC: Number(activeRun.costAC||0),
         xp: xpEarned,
         bestAfter: Math.max(getInt(K.best(gameId),0), bestLocal),
-        synced: usedServer
+        synced: usedServer,
+        metricId: primaryMetricId,
+        metrics: metrics || null
       });
       setRuns(gameId, runs.slice(0, 20));
 
-      addFeed(`Run complete: ${g.name} · score ${s} · +${xpEarned} XP`);
+      lastMetricsSubmission = {
+        ts: new Date().toISOString(),
+        gameId,
+        runId,
+        metricId: primaryMetricId,
+        metricValue: s,
+        durationMs: dur,
+        usedServer
+      };
+
+      addFeed(`Run complete: ${g.name} · ${primaryMetricId} ${s} · +${xpEarned} XP`);
       renderAll();
       syncToGame();
 
@@ -4078,6 +4250,171 @@ async function recordRunResult(gameId, runId, score, durationMs) {
       activeRun.runType = '';
       activeRun.costAC = 0;
       activeRun.startedAt = '';
+
+      return { ok: true };
+    }
+
+    async function completeRunImpl({ gameId, runId, durationMs, metrics, metricId, metricValue }) {
+      return await recordRunResultV2({ gameId, runId, durationMs, metrics, metricId, metricValue });
+    }
+
+    async function recordRunResult(gameId, runId, score, durationMs) {
+      const g = gameById(gameId);
+      const metricId = (g && g.defaultMetric) ? String(g.defaultMetric) : 'score';
+      return await recordRunResultV2({ gameId, runId, durationMs, metrics: { [metricId]: Number(score||0) }, metricId, metricValue: Number(score||0) });
+    }
+
+    function ensureGameAdapterOnce() {
+      if (gameController && runCoordinator) return;
+      if (!gameFrame) return;
+
+      runCoordinator = new RunCoordinator({
+        isSimulateMode: () => isSimulateArcade(),
+        isWalletConnected: () => !!lsGet(K.address),
+        isPohRequired: () => getBool('ga.requirePoh'),
+        isPohVerified: () => getBool(K.poh),
+        requestRunImpl,
+        completeRunImpl
+      });
+
+      gameController = createGameFrameController({
+        iframe: gameFrame,
+        game: { id: currentGameId, title: 'game', url: '/games/moonshot/' },
+        getSyncPayload: () => {
+          const sim = isSimulateArcade();
+          const address = sim ? '0xDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEF' : (lsGet(K.address) || '');
+          const paid = sim ? 9999 : getInt(K.paid, 0);
+          const promo = sim ? 9999 : getInt(K.promoBal(currentGameId), 0);
+          return {
+            address,
+            credits: { paid, promo },
+            membership: proLabel() || null,
+            avatar: null
+          };
+        },
+        onReady: () => {
+          frameReady = true;
+          syncToGame();
+          try { updateEmbedDebug(); } catch {}
+        },
+        onRequestRun: async (req) => {
+          try {
+            const res = await runCoordinator.requestRun(req);
+            if (res && res.granted) gameController.send(standardBridgeMessageTypes.RUN_GRANTED, res.payload);
+            else gameController.send(standardBridgeMessageTypes.RUN_DENIED, res.payload);
+            try { updateEmbedDebug(); } catch {}
+          } catch (e) {
+            gameController.send(standardBridgeMessageTypes.RUN_DENIED, { gameId: req.gameId, reason: 'error' });
+          }
+        },
+        onRunResult: async (res) => {
+          // Back-compat: if the game reports legacy score, treat as metricValue.
+          const gid = String(res.gameId || currentGameId || '');
+          const rid = String(res.runId || activeRun.runId || ('run_' + Math.random().toString(16).slice(2) + '_' + Date.now().toString(36)));
+
+          let metricId = String(res.metricId || (currentGame && currentGame.defaultMetric) || 'score');
+          let metricValue = res.metricValue;
+          if (metricValue == null && res.legacyScore != null) metricValue = res.legacyScore;
+
+          await runCoordinator.completeRun({
+            gameId: gid,
+            runId: rid,
+            durationMs: Number(res.durationMs || 0),
+            metrics: res.metrics || null,
+            metricId,
+            metricValue
+          });
+          try { updateEmbedDebug(); } catch {}
+        },
+        onError: (err) => {
+          lastBridgeError = err;
+          try { updateEmbedDebug(); } catch {}
+        }
+      });
+
+      // Configure controller immediately for the currently selected game.
+      try {
+        const g = currentGame || gameById(currentGameId);
+        if (g) {
+          gameController.mount({
+            id: g.id,
+            title: g.name,
+            url: g.embedUrl,
+            defaultMetric: g.defaultMetric,
+            metrics: (Array.isArray(g.metrics) ? g.metrics.map(m => String(m.id)) : []),
+            runTypePolicy: g.runTypePolicy,
+            sandboxPolicy: g.sandboxPolicy,
+            allowList: g.allowList
+          });
+        }
+      } catch {}
+
+      try { updateEmbedDebug(); } catch {}
+    }
+
+    let embedDebugEl = null;
+    function ensureEmbedDebugPanel() {
+      if (!isDevMode()) return;
+      if (embedDebugEl) return;
+      const portal = document.getElementById('portal');
+      if (!portal) return;
+
+      embedDebugEl = document.createElement('div');
+      embedDebugEl.id = 'gaEmbedDebug';
+      embedDebugEl.style.position = 'absolute';
+      embedDebugEl.style.right = '10px';
+      embedDebugEl.style.bottom = '10px';
+      embedDebugEl.style.maxWidth = '420px';
+      embedDebugEl.style.zIndex = '40';
+      embedDebugEl.style.background = 'rgba(2,6,23,0.72)';
+      embedDebugEl.style.border = '1px solid rgba(255,255,255,0.10)';
+      embedDebugEl.style.borderRadius = '16px';
+      embedDebugEl.style.backdropFilter = 'blur(10px)';
+      embedDebugEl.style.padding = '10px 12px';
+      embedDebugEl.style.fontSize = '11px';
+      embedDebugEl.style.color = 'rgba(229,231,235,0.86)';
+
+      embedDebugEl.innerHTML = `
+        <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:8px;">
+          <div style="font-weight:900;letter-spacing:0.12em;text-transform:uppercase;">Embed Debug</div>
+          <label style="display:flex;align-items:center;gap:8px;letter-spacing:0.08em;text-transform:uppercase;">
+            <input id="gaSimToggle" type="checkbox" style="transform:translateY(1px);" />
+            Simulate Arcade
+          </label>
+        </div>
+        <div class="muted" style="margin-bottom:6px;">Shows last bridge message/error and run state.</div>
+        <pre id="gaEmbedDebugPre" style="margin:0;white-space:pre-wrap;word-break:break-word;color:rgba(229,231,235,0.80);"></pre>
+      `;
+      portal.appendChild(embedDebugEl);
+
+      const t = embedDebugEl.querySelector('#gaSimToggle');
+      if (t) {
+        t.checked = isSimulateArcade();
+        t.addEventListener('change', () => {
+          setBool('ga.simulateArcade', !!t.checked);
+          syncToGame();
+          updateEmbedDebug();
+        });
+      }
+    }
+
+    function updateEmbedDebug() {
+      ensureEmbedDebugPanel();
+      if (!embedDebugEl) return;
+      const pre = embedDebugEl.querySelector('#gaEmbedDebugPre');
+      if (!pre) return;
+      const st = gameController ? gameController.getState() : null;
+      const out = {
+        view: String(document.body?.dataset?.view || ''),
+        simulate: isSimulateArcade(),
+        expectedOrigin: expectedGameOrigin(),
+        controller: st,
+        activeRun,
+        lastMessage: lastBridgeMessage,
+        lastError: lastBridgeError,
+        lastMetricsSubmission
+      };
+      pre.textContent = JSON.stringify(out, null, 2);
     }
 
     // ----- Game iframe bridge (postMessage)
@@ -4096,10 +4433,36 @@ async function recordRunResult(gameId, runId, score, durationMs) {
       const isLegacyScore = (type === 'SCORE_SUBMIT');
       if (!isArcade && !isLegacyScore) return;
 
+      ensureGameAdapterOnce();
+
       // Only trust messages from the active game iframe (defense-in-depth).
       try {
         if (gameFrame && gameFrame.contentWindow && ev.source !== gameFrame.contentWindow) return;
       } catch {}
+
+      // Strict origin validation for legacy messages as well.
+      const expected = expectedGameOrigin();
+      if (expected && !validateMessageOrigin(ev.origin, [expected])) {
+        lastBridgeError = { code: 'origin_rejected', details: { got: ev.origin, expected } };
+        try { updateEmbedDebug(); } catch {}
+        return;
+      }
+
+      lastBridgeMessage = { ts: new Date().toISOString(), type, origin: ev.origin };
+      try { updateEmbedDebug(); } catch {}
+
+      // Route standard ARCADE:* messages through the centralized adapter.
+      // Keep legacy promo request handled by the existing code path.
+      if (isArcade && type !== 'ARCADE:REQUEST_PROMO' && gameController) {
+        try {
+          const handled = gameController.handleMessageEvent(ev);
+          if (handled) return;
+        } catch (e) {
+          lastBridgeError = { code: 'adapter_error', details: String(e && e.message || e) };
+          try { updateEmbedDebug(); } catch {}
+          return;
+        }
+      }
 
       const payload = data.payload || {};
 

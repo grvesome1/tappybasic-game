@@ -17,6 +17,13 @@
       "tagline": "Precision flight • dodge debris • climb the stars",
       "embedUrl": "/games/moonshot/",
       "status": "live",
+      "runTypePolicy": "paid",
+      "sandboxPolicy": "strict",
+      "allowList": [
+        "ARCADE:READY",
+        "ARCADE:REQUEST_RUN",
+        "ARCADE:RUN_RESULT"
+      ],
       "runCostAC": 10,
       "promoRuns": 5,
       "promoGrantAC": 50,
@@ -60,6 +67,13 @@
       "tagline": "Classic defense • rebuilt for the onchain arcade",
       "embedUrl": "/games/stormblockchain/",
       "status": "coming_soon",
+      "runTypePolicy": "free",
+      "sandboxPolicy": "strict",
+      "allowList": [
+        "ARCADE:READY",
+        "ARCADE:REQUEST_RUN",
+        "ARCADE:RUN_RESULT"
+      ],
       "runCostAC": 0,
       "promoRuns": 0,
       "promoGrantAC": 0,
@@ -102,6 +116,13 @@
       "title": "Storm the House 2 (Remaster)",
       "path": "/games/stormhouse2/index.html",
       "payoutEligible": true,
+      "runTypePolicy": "paid",
+      "sandboxPolicy": "strict",
+      "allowList": [
+        "ARCADE:READY",
+        "ARCADE:REQUEST_RUN",
+        "ARCADE:RUN_RESULT"
+      ],
       "runCostAC": 1,
       "gameType": "defense",
       "usesCreditsInRun": true,
