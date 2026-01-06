@@ -67,10 +67,14 @@ function sandboxForPolicy(policy) {
     ].join(' ');
   }
 
-  // strict
+  // strict (must preserve non-null origin for postMessage validation)
   return [
     'allow-scripts',
-    'allow-same-origin'
+    'allow-same-origin',
+    'allow-forms',
+    'allow-pointer-lock',
+    'allow-popups',
+    'allow-popups-to-escape-sandbox'
   ].join(' ');
 }
 

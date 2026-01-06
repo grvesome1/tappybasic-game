@@ -6,6 +6,16 @@
   <title>Moonshot</title>
   <!-- built by gruesøme -->
   <!-- SIG_ENC_XOR5A_HEX=382f33362e7a38237a3d282f3f29a2373f -->
+  <!-- sig(b64)=YnVpbHQgYnkgZ3J1ZXPDuG1l -->
+  <!--
+    Smoke test:
+    - Standalone: open /games/moonshot/index.html directly; gameplay starts immediately.
+    - Embedded (Arcade): open / (dashboard) and select Moonshot:
+      - Game posts ARCADE:READY.
+      - First start input triggers ARCADE:REQUEST_RUN; gameplay does NOT start until ARCADE:RUN_GRANTED.
+      - If ARCADE:RUN_DENIED, a centered message is shown and gameplay does not start.
+      - On game over, posts ARCADE:RUN_RESULT with metrics {score,durationMs,waves,comboMax}.
+  -->
   <style>
     :root {
       color-scheme: dark;

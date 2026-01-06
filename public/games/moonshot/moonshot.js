@@ -41,6 +41,19 @@ if (__EMBEDDED) {
       window.__ARCADE_SYNC = payload || {};
       return;
     }
+    if (type === 'ARCADE:RUN_DENIED') {
+      // Parent is authoritative. Do not start.
+      __RUN.active = false;
+      __RUN.runId = '';
+      __RUN.startMs = 0;
+      __RUN.pendingFlap = false;
+      __RUN.pendingStart = false;
+      try {
+        const reason = String(payload?.reason || 'Run denied');
+        setCenterMessage(reason, true);
+      } catch {}
+      return;
+    }
     if (type === 'ARCADE:RUN_GRANTED') {
       const rid = String(payload?.runId || '');
       if (!rid) return;
@@ -2550,8 +2563,15 @@ function gameOver() {
     __ARCADE.post('ARCADE:RUN_RESULT', {
       gameId: 'moonshot',
       runId: __RUN.runId,
-      score: game.score,
       durationMs,
+      metrics: {
+        score: Number(game.score || 0),
+        durationMs,
+        waves: 0,
+        comboMax: Number(game.bestCombo || 0)
+      },
+      metricId: 'score',
+      metricValue: Number(game.score || 0)
     });
   } else {
     if (window.MoonshotWalletState?.address) submitMoonshotScore(window.MoonshotWalletState.address, game.score);

@@ -13,9 +13,11 @@
   "games": [
     {
       "id": "moonshot",
+      "title": "Moonshot",
       "name": "Moonshot",
       "tagline": "Precision flight • dodge debris • climb the stars",
-      "embedUrl": "/games/moonshot/",
+      "url": "/games/moonshot/index.html",
+      "embedUrl": "/games/moonshot/index.html",
       "status": "live",
       "runTypePolicy": "paid",
       "sandboxPolicy": "strict",
@@ -28,9 +30,10 @@
       "promoRuns": 5,
       "promoGrantAC": 50,
       "payoutEligible": true,
+      "usesCreditsInRun": false,
       "scoreMax": 5000,
       "minDurationMs": 800,
-      "type": "arcade-flight",
+      "type": "skill",
       "defaultMetric": "score",
       "metrics": [
         {
@@ -43,14 +46,14 @@
             "min": 0,
             "max": 5000
           },
-          "unit": "pts",
+          "unit": "points",
           "eligible": true
         },
         {
-          "id": "time",
-          "label": "Fastest Time",
-          "kind": "lower",
-          "direction": "asc",
+          "id": "durationMs",
+          "label": "Duration",
+          "kind": "higher",
+          "direction": "desc",
           "format": "ms",
           "clamp": {
             "min": 0,
@@ -58,6 +61,32 @@
           },
           "unit": "ms",
           "eligible": true
+        },
+        {
+          "id": "comboMax",
+          "label": "Max Combo",
+          "kind": "higher",
+          "direction": "desc",
+          "format": "int",
+          "clamp": {
+            "min": 0,
+            "max": 999
+          },
+          "unit": "count",
+          "eligible": true
+        },
+        {
+          "id": "waves",
+          "label": "Waves",
+          "kind": "higher",
+          "direction": "desc",
+          "format": "int",
+          "clamp": {
+            "min": 0,
+            "max": 999999
+          },
+          "unit": "count",
+          "eligible": false
         }
       ]
     },
@@ -205,6 +234,7 @@
   "meta": {
     "schema": "gruesome-arcade.catalog.v1",
     "signaturePlain": "built by gruesøme",
+    "signatureB64": "YnVpbHQgYnkgZ3J1ZXPDuG1l",
     "signatureEnc": "SIG_ENC_XOR5A_HEX=382f33362e7a38237a3d282f3f29a2373f",
     "version": "2.8",
     "updatedAtUtc": "2025-12-29T00:00:00Z"
