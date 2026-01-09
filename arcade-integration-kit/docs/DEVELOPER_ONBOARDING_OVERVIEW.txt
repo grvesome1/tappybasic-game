@@ -1,0 +1,79 @@
+built by gruesøme
+sig (xor5a): 0x382f33362e7a38237a3d282f3f29a2373f
+
+DEVELOPER ONBOARDING OVERVIEW (REPO-VERIFIED)
+============================================
+
+What this repo contains
+-----------------------
+- Solidity contracts (payments router, treasury custody, epoch vaults, PRO/membership)
+- SSOT deployment manifests (JSON) and a schema
+- Hardhat scripts for deploy/verify and day-2 operations
+- TypeScript packages:
+  - arcade-contracts-sdk (manifest + ABI consumption)
+  - arcade-backend-kit (quote building/signing helpers)
+
+Anything that depends on deployed addresses/config is marked: VERIFY ON-CHAIN.
+
+Repo map
+--------
+- contracts/      Solidity contracts
+- deployments/    SSOT manifests + schema
+- scripts/        deploy/verify/admin/epoch/treasury utilities
+- docs/           integration and API specs
+- packages/       SDK + backend helper packages
+
+Networks (as represented in manifests)
+--------------------------------------
+- Linea Sepolia: chainId 59141
+- Linea Mainnet: chainId 59144
+
+Safe quickstart (no deploys)
+----------------------------
+Run locally with no secrets:
+- npm ci
+- npm run typecheck
+- npm run compile
+- npm run manifests:validate
+- npm run eip712:vectors:validate
+- npm run smoke:offline
+
+Manifests and “SSOT”
+--------------------
+- deployments/manifest.schema.json defines the manifest shape.
+- deployments/arcade.lineaSepolia.json and deployments/arcade.lineaMainnet.json exist.
+- deployments/latest.json exists.
+
+Important: in the current repo state these manifests contain placeholder/zero addresses.
+Treat them as templates until a real deploy populates addresses/roles.
+
+EIP-712 quotes (backend -> frontend -> router)
+----------------------------------------------
+Repo-defined facts:
+- Domain name: GruesomeArcade PaymentsRouter
+- Domain version: 2.4
+- Quote fields include: buyer, sku, kind, payToken, amountIn, usdCents, credits, tier, expiresAt, nonce, ref, dataHash
+
+Typical flow:
+1) Backend constructs Quote + signs typed data.
+2) Frontend submits Quote + signature to the router.
+3) Router enforces buyer == msg.sender, expiry, replay protection, and signer validity.
+   (VERIFY ON-CHAIN: router address, quote signer address, domain verifyingContract)
+
+Accepted payments (VERIFY ON-CHAIN)
+-----------------------------------
+- ERC-20 acceptance is driven by router state (token list + allowlist flag).
+- Native ETH is treated as accepted via payToken = address(0).
+- scripts/exportUiConfig.ts reads the deployed router and writes a UI config JSON.
+
+Epoch payouts (Merkle)
+----------------------
+- scripts exist to build a Merkle tree and publish epochs.
+- VERIFY ON-CHAIN: vault addresses, token balances, and publish permissions.
+
+Common integration checks (fast)
+--------------------------------
+- ChainId matches your target network.
+- EIP-712 verifyingContract matches the deployed router address. (VERIFY ON-CHAIN)
+- Quote signer configured on-chain matches the backend signing key. (VERIFY ON-CHAIN)
+- Token allowlist matches what UI/backend expect. (VERIFY ON-CHAIN)

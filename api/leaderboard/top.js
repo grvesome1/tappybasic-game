@@ -1,8 +1,7 @@
 // built by gruesøme
 // SIG_ENC_XOR5A_HEX=382f33362e7a38237a3d282f3f29a2373f
 
-import { parseCookies } from '../_lib/util.js';
-import { readSession } from '../_lib/session.js';
+import { getSession } from '../_lib/session.js';
 import * as R from '../_lib/redis.js';
 import * as K from '../_lib/keys.js';
 import * as X from '../_lib/exclusions.js';
@@ -73,8 +72,7 @@ export default async function handler(req, res) {
     const eligible = String(url.searchParams.get('eligible') || '0').trim() === '1';
     const limit = Math.max(1, Math.min(100, Number(url.searchParams.get('limit') || 20)));
 
-    const cookies = parseCookies(req);
-    const s = readSession(cookies);
+    const s = await getSession(req);
     const address = s && s.address ? String(s.address) : '';
     const addrLc = address ? address.toLowerCase() : '';
 

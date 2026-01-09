@@ -1645,7 +1645,9 @@ canvas{display:block;width:100%;height:100%}
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     // Keep canvas CSS sizing controlled by CSS (100% of #app) so the
     // full-screen -> header shrink animation stays visually seamless.
-    renderer.setSize(window.innerWidth, window.innerHeight, false);
+    const __initW = Math.max(1, Math.floor(window.innerWidth || 0));
+    const __initH = Math.max(1, Math.floor(window.innerHeight || 0));
+    renderer.setSize(__initW, __initH, false);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.05;
@@ -2734,8 +2736,10 @@ canvas{display:block;width:100%;height:100%}
     // UI removed: no on-screen FPS / toggles.
 
     function resize() {
-      const w = isHeaderMode ? HEADER_W : window.innerWidth;
-      const h = isHeaderMode ? HEADER_H : window.innerHeight;
+      const wRaw = isHeaderMode ? HEADER_W : window.innerWidth;
+      const hRaw = isHeaderMode ? HEADER_H : window.innerHeight;
+      const w = Math.max(1, Math.floor(wRaw || 0));
+      const h = Math.max(1, Math.floor(hRaw || 0));
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
       renderer.setSize(w, h, false);
@@ -2997,18 +3001,86 @@ Search terms: dead internet theory • rational privacy in crypto`;
     }
 
 
-    const LINEA = {
-      chainId: '0xe708', // 59144
-      chainName: 'Linea',
+    // Runtime config (server-authoritative).
+    // Default chain is Linea Sepolia (59141) to match staging/testnet.
+    let LINEA = {
+      chainId: '0xe705', // 59141
+      chainName: 'Linea Sepolia',
       nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
-      rpcUrls: ['https://rpc.linea.build'],
-      blockExplorerUrls: ['https://lineascan.build']
+      rpcUrls: ['https://rpc.sepolia.linea.build'],
+      blockExplorerUrls: ['https://sepolia.lineascan.build']
     };
 
     // WalletConnect v2 (QR) — universal wallet fallback.
-    // NOTE: Replace with your WalletConnect Cloud projectId.
-    const WALLETCONNECT_PROJECT_ID = 'REPLACE_ME_WALLETCONNECT_PROJECT_ID';
-    const WALLETCONNECT_PROVIDER_UMD = 'https://unpkg.com/@walletconnect/ethereum-provider@2.12.2/dist/index.umd.js';
+    let WALLETCONNECT_PROJECT_ID = '';
+    let WALLETCONNECT_PROVIDER_UMD = 'https://unpkg.com/@walletconnect/ethereum-provider@2.12.2/dist/index.umd.js';
+
+    let __CFG = null;
+    let __CFG_PROMISE = null;
+
+    async function loadRuntimeConfig(){
+      if (__CFG) return __CFG;
+      if (__CFG_PROMISE) return __CFG_PROMISE;
+      __CFG_PROMISE = (async () => {
+        try {
+          const res = await fetch('/api/config', { method: 'GET', cache: 'no-store', credentials: 'omit' });
+          const data = await res.json().catch(() => null);
+          if (data && data.ok) {
+            const c = data.chain || {};
+            if (c.chainIdHex && c.rpcUrls && c.rpcUrls.length) {
+              LINEA = {
+                chainId: String(c.chainIdHex),
+                chainName: String(c.chainName || LINEA.chainName),
+                nativeCurrency: c.nativeCurrency || LINEA.nativeCurrency,
+                rpcUrls: Array.isArray(c.rpcUrls) ? c.rpcUrls.map(String) : LINEA.rpcUrls,
+                blockExplorerUrls: Array.isArray(c.blockExplorerUrls) ? c.blockExplorerUrls.map(String) : LINEA.blockExplorerUrls,
+              };
+            }
+            const wc = data.walletconnect || {};
+            if (typeof wc.projectId === 'string') WALLETCONNECT_PROJECT_ID = wc.projectId.trim();
+            if (typeof wc.providerUmd === 'string' && wc.providerUmd) WALLETCONNECT_PROVIDER_UMD = wc.providerUmd;
+            __CFG = data;
+          }
+        } catch { /* ignore */ }
+        __CFG_PROMISE = null;
+        return __CFG;
+      })();
+      return __CFG_PROMISE;
+    }
+
+    // postMessage reliability: wait for dashboard to say it's ready.
+    let DASHBOARD_READY = false;
+    const PARENT_QUEUE = [];
+
+    function postToDashboard(msg){
+      try {
+        if (!window.parent || window.parent === window) return;
+        if (!DASHBOARD_READY) {
+          PARENT_QUEUE.push(msg);
+          return;
+        }
+        window.parent.postMessage(msg, '*');
+      } catch { /* ignore */ }
+    }
+
+    function flushToDashboard(){
+      try {
+        while (PARENT_QUEUE.length) {
+          const m = PARENT_QUEUE.shift();
+          try { window.parent.postMessage(m, '*'); } catch { /* ignore */ }
+        }
+      } catch { /* ignore */ }
+    }
+
+    window.addEventListener('message', (ev) => {
+      const m = ev && ev.data;
+      if (!m || typeof m !== 'object') return;
+      if (m.type === 'GRUESOME_DASHBOARD_READY') {
+        DASHBOARD_READY = true;
+        flushToDashboard();
+        postToDashboard({ type: 'GRUESOME_ACCESS_ACK', ts: Date.now() });
+      }
+    });
 
     const WC = {
       provider: null,
@@ -3038,9 +3110,42 @@ Search terms: dead internet theory • rational privacy in crypto`;
       if (WC.initPromise) return WC.initPromise;
 
       WC.initPromise = (async () => {
+        await loadRuntimeConfig();
         const pid = String(WALLETCONNECT_PROJECT_ID || '').trim();
         if (!pid || pid.startsWith('REPLACE_ME')) {
-          throw new Error('WalletConnect projectId is not configured. Set WALLETCONNECT_PROJECT_ID in /public/access/index.html');
+          throw new Error('WalletConnect projectId is not configured. Set WALLETCONNECT_PROJECT_ID in Vercel env (and expose via /api/config).');
+        }
+
+        // Preflight WalletConnect relay so failures are obvious.
+        try {
+          const t0 = performance.now();
+          await new Promise((resolve, reject) => {
+            let done = false;
+            const ws = new WebSocket('wss://relay.walletconnect.com');
+            const t = window.setTimeout(() => {
+              if (done) return;
+              done = true;
+              try { ws.close(); } catch {}
+              reject(new Error('relay_timeout'));
+            }, 2500);
+            ws.onopen = () => {
+              if (done) return;
+              done = true;
+              window.clearTimeout(t);
+              try { ws.close(); } catch {}
+              resolve(true);
+            };
+            ws.onerror = () => {
+              if (done) return;
+              done = true;
+              window.clearTimeout(t);
+              try { ws.close(); } catch {}
+              reject(new Error('relay_error'));
+            };
+          });
+          console.log('[GATE][WC] relay ok', Math.round(performance.now() - t0) + 'ms');
+        } catch (e) {
+          console.warn('[GATE][WC] relay check failed', e && e.message ? e.message : e);
         }
 
         await loadScriptOnce(WALLETCONNECT_PROVIDER_UMD);
@@ -3152,11 +3257,19 @@ Search terms: dead internet theory • rational privacy in crypto`;
     }
 
     async function connectWallet(){
+      await loadRuntimeConfig();
       const eth = await getEthAsync();
       if (!eth?.request) return false;
 
-      setWalletText('Switching…');
-      await switchToLinea();
+      // WalletConnect sessions are created during connect; chain switching before a
+      // session exists can fail. We initialise WC with Linea already, so skip
+      // switch logic for the WalletConnect provider and just request accounts.
+      const isInjected = !!window.ethereum && eth === window.ethereum;
+
+      if (isInjected) {
+        setWalletText('Switching…');
+        await switchToLinea();
+      }
 
       setWalletText('Connecting…');
       const accounts = await eth.request({ method: 'eth_requestAccounts' });
@@ -3170,6 +3283,19 @@ Search terms: dead internet theory • rational privacy in crypto`;
 
       setWalletConnected(true);
       setWalletText(shortAddr(walletAccount));
+
+      // Expose wallet state immediately (before PoH) so the parent dashboard can
+      // reflect "connected / PoH pending".
+      try {
+        window.__GRUESOME_ARCADE__ = window.__GRUESOME_ARCADE__ || {};
+        window.__GRUESOME_ARCADE__.wallet = { address: walletAccount, chainId: LINEA.chainId };
+        sessionStorage.setItem('gruesomeArcade.wallet', JSON.stringify(window.__GRUESOME_ARCADE__.wallet));
+      } catch { /* ignore */ }
+
+      postToDashboard({
+        type: 'GRUESOME_ACCESS_WALLET',
+        detail: { wallet: { address: walletAccount, chainId: LINEA.chainId } }
+      });
 
       return true;
     }
@@ -3384,8 +3510,18 @@ Search terms: dead internet theory • rational privacy in crypto`;
         pohBtn.disabled = false;
 
         window.__GRUESOME_ARCADE__ = window.__GRUESOME_ARCADE__ || {};
+        window.__GRUESOME_ARCADE__.wallet = { address: addr, chainId: LINEA.chainId };
         window.__GRUESOME_ARCADE__.poh = { verified: false, signature: null };
         if (explicitFalse) writePohCache(addr, { verified: false, signature: null });
+
+        // Notify the parent only when the result is authoritative (explicit false).
+        if (explicitFalse) postToDashboard({
+          type: 'GRUESOME_ACCESS_POH',
+          detail: {
+            wallet: window.__GRUESOME_ARCADE__.wallet,
+            poh: window.__GRUESOME_ARCADE__.poh
+          }
+        });
         return;
       }
 
@@ -3426,10 +3562,56 @@ Search terms: dead internet theory • rational privacy in crypto`;
       setPohHint('PoH verified. Welcome.');
       pohBtn.disabled = false;
 
+      // Auto-advance to ENTER without any additional user clicks.
+      // IMPORTANT: do this before any wallet signature flow so the gate
+      // cannot get stuck waiting for an unresolved personal_sign prompt.
+      scheduleEnterGate();
+
       // Expose results for the next page(s) to consume.
       window.__GRUESOME_ARCADE__ = window.__GRUESOME_ARCADE__ || {};
       window.__GRUESOME_ARCADE__.wallet = { address: addr, chainId: LINEA.chainId };
       window.__GRUESOME_ARCADE__.poh = { verified: true, signature };
+
+      // Establish an HttpOnly server session for /api/* routes (nonce + signature).
+      // Best-effort + NON-BLOCKING: never let signature prompts stall the gate.
+      void (async () => {
+        try {
+          const n = await fetch(`/api/session/nonce?address=${encodeURIComponent(addr)}`, {
+            method: 'GET',
+            cache: 'no-store',
+            credentials: 'include'
+          }).then(r => r.json());
+
+          if (n && n.ok && n.message) {
+            const eth = await getEthAsync();
+            const msg = String(n.message);
+            let sig = null;
+            try {
+              sig = await eth.request({ method: 'personal_sign', params: [msg, addr] });
+            } catch {
+              // Some wallets use reversed params.
+              sig = await eth.request({ method: 'personal_sign', params: [addr, msg] });
+            }
+            await fetch('/api/session/verify', {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({ address: addr, message: msg, signature: sig })
+            });
+          }
+        } catch (e) {
+          console.warn('[GATE][SESSION] verify failed', (e && e.message) ? e.message : e);
+        }
+      })();
+
+      // Notify the parent dashboard immediately (strict-sandbox safe).
+      postToDashboard({
+        type: 'GRUESOME_ACCESS_POH',
+        detail: {
+          wallet: window.__GRUESOME_ARCADE__.wallet,
+          poh: window.__GRUESOME_ARCADE__.poh
+        }
+      });
 
       try {
         sessionStorage.setItem('gruesomeArcade.wallet', JSON.stringify(window.__GRUESOME_ARCADE__.wallet));
@@ -3438,9 +3620,7 @@ Search terms: dead internet theory • rational privacy in crypto`;
 
       writePohCache(addr, { verified: true, signature });
 
-      // Auto-advance to ENTER without any additional user clicks.
-      // (The user still has to press ENTER to proceed.)
-      scheduleEnterGate();
+      // (scheduleEnterGate already started above)
     }
 
     async function refreshWalletState(){
@@ -3480,14 +3660,21 @@ Search terms: dead internet theory • rational privacy in crypto`;
       audioHub.playSfx('wallet_press');
       walletBusy = true;
       try {
-        const chainId = await getChainIdAsync();
-        if (chainId && chainId.toLowerCase() === LINEA.chainId) {
+        // If no injected wallet is present (common in Incognito), use WalletConnect.
+        // For WalletConnect the first action must be a connect request (QR modal).
+        if (!window.ethereum) {
           const ok = await connectWallet();
           if (ok) beginConnectToPohSequence();
         } else {
-          setWalletText('Switching…');
-          await switchToLinea();
-          await refreshWalletState();
+          const chainId = await getChainIdAsync();
+          if (chainId && chainId.toLowerCase() === LINEA.chainId) {
+            const ok = await connectWallet();
+            if (ok) beginConnectToPohSequence();
+          } else {
+            setWalletText('Switching…');
+            await switchToLinea();
+            await refreshWalletState();
+          }
         }
       } catch (e) {
         console.error(e);
@@ -3566,11 +3753,7 @@ Search terms: dead internet theory • rational privacy in crypto`;
       } catch { /* ignore */ }
 
       // Notify the parent dashboard so it can persist local session state.
-      try {
-        if (window.parent && window.parent !== window) {
-          window.parent.postMessage({ type: 'GRUESOME_ACCESS_ENTER', detail }, window.location.origin);
-        }
-      } catch { /* ignore */ }
+      postToDashboard({ type: 'GRUESOME_ACCESS_ENTER', detail });
 
       const next = safeNextUrl();
       if (next) {
@@ -3684,7 +3867,6 @@ Search terms: dead internet theory • rational privacy in crypto`;
       try { composer && composer.dispose && composer.dispose(); } catch {}
       try { scene && scene.traverse && scene.traverse(disposeObject3D); } catch {}
       try { renderer && renderer.dispose && renderer.dispose(); } catch {}
-      try { renderer && renderer.forceContextLoss && renderer.forceContextLoss(); } catch {}
     }
 
     window.addEventListener('visibilitychange', () => {

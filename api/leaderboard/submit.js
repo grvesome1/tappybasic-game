@@ -1,4 +1,4 @@
-import { Redis } from '@upstash/redis';
+import * as R from '../_lib/redis.js';
 
 export default async function handler(req, res) {
   try {
@@ -6,21 +6,13 @@ export default async function handler(req, res) {
       return res.status(405).json({ error: 'method-not-allowed' });
     }
 
-    const url =
-      process.env.KV_REST_API_URL ||
-      process.env.UPSTASH_REDIS_REST_URL;
-    const token =
-      process.env.KV_REST_API_TOKEN ||
-      process.env.UPSTASH_REDIS_REST_TOKEN;
-
-    if (!url || !token) {
+    if (!R.enabled()) {
+      const info = R.envInfo();
       return res.status(500).json({
         error: 'redis-config-missing',
-        details: 'KV_REST_API_URL/TOKEN or UPSTASH_REDIS_REST_URL/TOKEN not set',
+        details: info.notes || 'KV REST env not configured for write (KV_REST_API_URL+TOKEN or UPSTASH_REDIS_REST_URL+TOKEN).',
       });
     }
-
-    const redis = new Redis({ url, token });
 
     const { wallet, score, initials, tbags } = req.body || {};
 
@@ -38,6 +30,7 @@ export default async function handler(req, res) {
         .slice(0, 3)
         .toUpperCase() || '';
 
+    const redis = R.client();
     const board = (await redis.get('leaderboard')) || [];
     // Ensure we always work with a sane array of entries
     const arr = Array.isArray(board)

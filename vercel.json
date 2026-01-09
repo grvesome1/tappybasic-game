@@ -53,6 +53,40 @@
       ]
     },
     {
+      "source": "/games/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET,OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "*"
+        }
+      ]
+    },
+    {
+      "source": "/vendor/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET,OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "*"
+        }
+      ]
+    },
+    {
       "source": "/api/(.*)",
       "headers": [
         {
@@ -74,6 +108,14 @@
     {
       "source": "/avatar_studio/(.*)",
       "destination": "/avatar_studio/$1"
+    },
+    {
+      "source": "/games/moonshot",
+      "destination": "/games/moonshot/index.html"
+    },
+    {
+      "source": "/games/moonshot/",
+      "destination": "/games/moonshot/index.html"
     },
     {
       "source": "/games/(.*)",

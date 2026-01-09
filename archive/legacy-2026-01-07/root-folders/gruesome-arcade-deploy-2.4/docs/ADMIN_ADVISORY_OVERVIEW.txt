@@ -1,0 +1,60 @@
+built by gruesøme
+sig (xor5a): 0x382f33362e7a38237a3d282f3f29a2373f
+
+ADMIN ADVISORY OVERVIEW (REPO-VERIFIED)
+======================================
+
+Audience
+--------
+Operators/admins responsible for deploying, configuring, and running the Arcade integration kit.
+
+This doc stays intentionally conservative:
+- Splits/routing are configurable; do not publish exact percentages unless verified on-chain.
+
+Operational primitives (what you control)
+-----------------------------------------
+VERIFY ON-CHAIN:
+- Quote signer address (backend signing authority)
+- Accepted ERC-20 token allowlist
+- Routing/splits per kind
+- Ownership/role handoff (final admin / multisig)
+- Treasury custody and any automation/keeper configuration
+
+Manifests as SSOT (after deploy)
+--------------------------------
+- This repo includes a manifest schema and per-network manifests.
+- Current repo manifests contain placeholder/zero addresses and template timestamps.
+- After real deployment, treat the populated per-network manifest as SSOT for:
+  - contract addresses
+  - chainId + explorer metadata
+  - EIP-712 domain fields
+  - recorded role addresses
+
+Key management (high priority)
+------------------------------
+- Keep the quote signer private key in hardened secrets storage.
+- Use short quote expiries to minimize risk from leaked quotes.
+- Prefer multisig ownership for admin privileges.
+- Plan a signer-rotation procedure (requires on-chain update; VERIFY ON-CHAIN).
+
+Admin workflows (scripts exist in this repo)
+--------------------------------------------
+- Deploy + verify (Hardhat scripts)
+- Export UI config / accepted payments (reads router state; VERIFY ON-CHAIN)
+- Configure per-kind routing/splits (VERIFY ON-CHAIN)
+- Epoch publishing (Merkle build + publish; VERIFY ON-CHAIN balances and permissions)
+
+VERIFY ON-CHAIN BEFORE PUBLISHING ANY “LIVE” CLAIMS
+---------------------------------------------------
+- Deployed contract addresses (router/vaults/pro/promo)
+- EIP-712 verifyingContract equals deployed router address
+- Quote signer address configured on the router
+- Accepted tokens list and allowlist flags
+- Current routing/splits by kind
+- Ownership/role handoff completed
+
+Positive incident-response pointers
+-----------------------------------
+- Signature issues: re-check chainId + verifyingContract + signer alignment (VERIFY ON-CHAIN).
+- Token issues: disable token allowlist entry (VERIFY ON-CHAIN) and re-export UI config.
+- Payout issues: pause new epoch publishing, validate Merkle inputs, confirm vault balances (VERIFY ON-CHAIN).

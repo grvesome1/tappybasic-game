@@ -1,15 +1,30 @@
 {
-  "name": "tappy-rocket-web3",
+  "name": "gruesomes-arcade",
   "version": "1.4.0",
-  "description": "$TBAG's Tappy Rocket - Web3 Game on Linea",
+  "description": "gruesøme's arcade dashboard + games",
   "author": "gruesøme",
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "dev": "npx serve public",
+    "dev": "npm run dev:vercel",
+    "dev:static": "npx serve public -l 4173",
+    "dev:vercel": "npx vercel dev --listen 3001 --yes",
     "deploy": "vercel --prod",
-    "preview": "vercel dev",
-    "validate:metrics": "node tools/validate-arcade-catalog-metrics.mjs"
+    "preview": "npx vercel dev --listen 3001 --yes",
+    "doctor": "node tools/doctor.mjs",
+    "smoke": "node tools/smoke.mjs",
+    "validate:metrics": "node tools/validate-arcade-catalog-metrics.mjs",
+    "kv-check": "node tools/kv-check.mjs",
+
+    "kit:install": "npm --prefix arcade-integration-kit ci",
+    "kit:typecheck": "npm --prefix arcade-integration-kit run typecheck",
+    "kit:manifests:validate": "npm --prefix arcade-integration-kit run manifests:validate",
+    "kit:watermarks:validate": "npm --prefix arcade-integration-kit run watermarks:validate",
+    "kit:compile": "npm --prefix arcade-integration-kit run compile",
+    "kit:abis:export": "npm --prefix arcade-integration-kit run abis:export",
+    "kit:eip712:vectors:validate": "npm --prefix arcade-integration-kit run eip712:vectors:validate",
+    "kit:smoke:offline": "npm --prefix arcade-integration-kit run smoke:offline",
+    "kit:validate": "npm --prefix arcade-integration-kit run typecheck && npm --prefix arcade-integration-kit run manifests:validate && npm --prefix arcade-integration-kit run watermarks:validate && npm --prefix arcade-integration-kit run compile && npm --prefix arcade-integration-kit run abis:export && npm --prefix arcade-integration-kit run eip712:vectors:validate && npm --prefix arcade-integration-kit run smoke:offline"
   },
   "keywords": [
     "web3",
@@ -24,6 +39,8 @@
   },
   "dependencies": {
     "@upstash/redis": "^1.35.7",
-    "@vercel/kv": "^3.0.0"
+    "@vercel/kv": "^3.0.0",
+    "ethers": "^6.13.4",
+    "redis": "^4.7.1"
   }
 }

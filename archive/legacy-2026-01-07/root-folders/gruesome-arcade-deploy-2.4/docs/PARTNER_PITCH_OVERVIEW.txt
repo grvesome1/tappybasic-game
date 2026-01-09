@@ -1,0 +1,52 @@
+built by gruesøme
+sig (xor5a): 0x382f33362e7a38237a3d282f3f29a2373f
+
+PARTNER PITCH OVERVIEW (REPO-VERIFIED)
+=====================================
+
+What this is
+------------
+This workspace is an integration kit for Gruesøme Arcade’s on-chain payments + payout plumbing:
+- A universal on-chain payments router that verifies backend-signed EIP-712 quotes
+- Treasury custody for non-stablecoin receipts
+- Epoch-based payouts via Merkle-claim vaults
+- Scripts + TypeScript packages to deploy, validate manifests, and integrate safely
+
+Anything that depends on deployed contract state is marked: VERIFY ON-CHAIN.
+
+What partners get (high level)
+------------------------------
+- One consistent on-chain receipt model across SKUs (router executes purchases and emits canonical receipts)
+- Configurable routing by SKU kind (splits/recipients are admin-managed; VERIFY ON-CHAIN for live values)
+- Multi-asset payments with stablecoin-based solvency (direct stablecoin funding vs treasury custody; VERIFY ON-CHAIN)
+- Scalable payouts (Merkle epoch publishing + many claims)
+- Operational tooling included (deploy/verify scripts, UI config export, accepted payments listing, epoch ops)
+
+What’s concrete and verifiable in this repo today
+-------------------------------------------------
+- SSOT manifest schema exists (deployments/manifest.schema.json)
+- Per-network manifest files exist (deployments/arcade.lineaSepolia.json, deployments/arcade.lineaMainnet.json)
+- The EIP-712 Quote “shape” is specified (domain name/version and field list)
+- Scripts exist to export UI config and discover accepted payments from a deployed router
+
+Important current-state note
+----------------------------
+The manifests in this repo currently contain placeholder/zero addresses and template timestamps.
+Do not treat them as “already deployed” until they are populated by a real deployment.
+
+Purchase flow (partner mental model)
+------------------------------------
+1) Frontend requests a signed quote from the backend.
+2) Frontend submits quote + signature to the router.
+3) Router verifies signature/buyer/expiry/replay-protection. (VERIFY ON-CHAIN for signer + router address)
+4) Router routes funds and emits a receipt. (VERIFY ON-CHAIN for routing/splits/token allowlist)
+5) Backend indexes receipts for fulfillment and settlement.
+
+VERIFY ON-CHAIN BEFORE PUBLISHING (addresses/tokens/percentages)
+---------------------------------------------------------------
+Before publishing partner-facing “live deployment” details:
+- Router address (EIP-712 verifyingContract)
+- Quote signer address configured on the router
+- Accepted token allowlist and current accepted tokens
+- Current routing/splits per kind
+- Ownership/role handoff status

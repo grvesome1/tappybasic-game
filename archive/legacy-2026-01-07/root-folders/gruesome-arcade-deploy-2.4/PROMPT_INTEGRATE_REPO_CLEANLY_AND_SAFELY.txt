@@ -1,0 +1,86 @@
+PROMPT — TAKE OVER + INTEGRATE CLEANLY (NO DEPLOYS)
+==================================================
+
+Date: 2026-01-07
+
+You are on the Arcade machine with access to:
+- Main Arcade repo root (gruesomes.arcade)
+- This integration-kit repo folder copied locally (no secrets)
+
+Goal
+----
+Vendor this integration-kit into the Arcade repo safely/minimally and produce a single pasteback bundle that enables a grounded “follow-up patch list”.
+
+Hard rules
+----------
+- Do NOT deploy contracts.
+- Do NOT paste private keys, RPC URLs, or .env contents.
+- Do NOT copy/commit .env files into either repo.
+- If the Arcade repo has a watermark/signature policy, detect it first and follow it for any new files.
+
+Step 0 — Confirm transfer is clean
+----------------------------------
+In the integration-kit folder:
+- Confirm no `node_modules/`, `artifacts/`, `cache/`, `dist/`, `.env` were transferred.
+
+PowerShell:
+  Get-ChildItem -Force | Select-Object Name
+  Get-ChildItem -Force .env,.env.* 2>$null | Select-Object Name
+
+Step 1 — Local verification (integration-kit repo; no secrets)
+--------------------------------------------------------------
+From integration-kit repo root:
+  npm ci
+  npm run watermarks:validate
+  npm run manifests:validate
+  npm run typecheck
+  npm run compile
+  npm run eip712:vectors:validate
+  npm run smoke:offline
+
+If anything fails, paste only the error text (no env values).
+
+Step 2 — Vendor into Arcade repo (non-destructive first)
+--------------------------------------------------------
+Dry run:
+  npm run migrate:vendor -- --target "C:\\path\\to\\gruesomes.arcade"
+
+Write:
+  npm run migrate:vendor -- --target "C:\\path\\to\\gruesomes.arcade" --no-dry-run
+
+Expected output folder:
+  <arcade repo>\\arcade-integration-kit\\
+
+Step 3 — Collect Arcade repo facts (pre/post migration)
+-------------------------------------------------------
+In Arcade repo root (gruesomes.arcade):
+  Get-ChildItem -Force | Select-Object Name
+  Get-ChildItem -Force pnpm-lock.yaml,yarn.lock,package-lock.json 2>$null | Select-Object Name
+  Get-ChildItem .github\\workflows -Filter *.yml -Force 2>$null | Select-Object Name
+  Get-Content package.json -Raw
+
+Post-migration evidence:
+  Get-Content .\\arcade-integration-kit\\MIGRATION_REPORT.md -Raw
+
+Watermark/signature discovery (paths only):
+  Get-ChildItem -Recurse -Force -ErrorAction SilentlyContinue |
+    Where-Object { $_.Name -match 'watermark|signature|xor|built' } |
+    Select-Object -First 20 FullName
+
+Step 4 — Pasteback bundle (single message)
+------------------------------------------
+Fill in PASTE_BACK_TEMPLATE.txt and paste it back in full.
+
+Stop condition
+--------------
+Stop once you have:
+- Migrator outputs (dry + write)
+- MIGRATION_REPORT.md contents
+- Arcade repo facts (lockfile, workflows, package.json)
+- Watermark/signature discovery paths
+
+Explicit scope statement
+------------------------
+Include: “contracts/testnet deploy is out of scope and untouched.”
+
+END PROMPT

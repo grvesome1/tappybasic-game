@@ -67,14 +67,11 @@ function sandboxForPolicy(policy) {
     ].join(' ');
   }
 
-  // strict (must preserve non-null origin for postMessage validation)
+  // strict: keep sandbox minimal (no same-origin, no popups)
   return [
     'allow-scripts',
-    'allow-same-origin',
     'allow-forms',
-    'allow-pointer-lock',
-    'allow-popups',
-    'allow-popups-to-escape-sandbox'
+    'allow-pointer-lock'
   ].join(' ');
 }
 
@@ -212,15 +209,15 @@ export function createGameFrameController(options) {
     if (!t) return false;
 
     const origin = currentTargetOrigin();
-    if (!origin) {
-      emitError('send_missing_target_origin', { type: t });
-      return false;
-    }
+    const policy = safeStr(game?.sandboxPolicy) || 'strict';
+    // In strict sandbox mode the iframe has an opaque origin (event.origin === 'null'),
+    // so parent -> iframe messaging must use '*' to avoid targetOrigin mismatches.
+    const targetOrigin = (policy === 'strict') ? '*' : (origin || '*');
 
     const msg = { type: t, payload: isObj(payload) ? payload : (payload ?? {}) };
 
     try {
-      iframe.contentWindow?.postMessage(msg, origin);
+      iframe.contentWindow?.postMessage(msg, targetOrigin);
       return true;
     } catch (e) {
       emitError('send_failed', { type: t, error: safeStr(e?.message) });
@@ -264,10 +261,12 @@ export function createGameFrameController(options) {
       return true;
     }
 
-    // Strict origin validation.
+    // Origin validation (policy-based).
     const expected = currentTargetOrigin();
-    if (!validateMessageOrigin(ev.origin, [expected])) {
-      emitError('origin_rejected', { got: ev.origin, expected });
+    const policy = safeStr(game?.sandboxPolicy) || 'strict';
+    const allowedOrigins = (policy === 'relaxed') ? [expected] : [expected, 'null'];
+    if (!validateMessageOrigin(ev.origin, allowedOrigins)) {
+      emitError('origin_rejected', { got: ev.origin, expected, policy });
       return true;
     }
 

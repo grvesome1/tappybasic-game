@@ -85,7 +85,18 @@ if (__EMBEDDED) {
 function requestArcadeRun() {
   if (!__EMBEDDED) return true;
   if (__RUN.active) return true;
-  __ARCADE.post('ARCADE:REQUEST_RUN', { gameId: 'moonshot' });
+
+  let desiredRunType = '';
+  try {
+    const sync = (window.__ARCADE_SYNC && typeof window.__ARCADE_SYNC === 'object') ? window.__ARCADE_SYNC : {};
+    desiredRunType = String(sync.desiredRunType || sync.runType || '').trim();
+    if (!desiredRunType && sync.usesCreditsInRun === false) desiredRunType = 'free';
+  } catch {
+    desiredRunType = '';
+  }
+  if (!desiredRunType) desiredRunType = 'paid';
+
+  __ARCADE.post('ARCADE:REQUEST_RUN', { gameId: 'moonshot', desiredRunType });
   return false;
 }
 

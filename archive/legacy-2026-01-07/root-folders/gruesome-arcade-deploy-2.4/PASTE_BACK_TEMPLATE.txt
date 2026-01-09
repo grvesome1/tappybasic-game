@@ -1,0 +1,82 @@
+PASTE BACK TEMPLATE
+===================
+
+Fill in the outputs from the other machine below. Don't redact anything except secrets/private keys (none of the requested outputs should contain them).
+
+================================================================================
+1) INTEGRATION-KIT OUTPUT (on the Arcade machine)
+================================================================================
+
+--- A1 output: npm run -s migrate:vendor -- --help ---
+[PASTE OUTPUT HERE]
+
+
+--- A2 output: npm ci + npm run migrate:vendor -- --target "..." ---
+[PASTE OUTPUT HERE]
+
+
+--- A3 output: npm run migrate:vendor -- --target "..." --no-dry-run ---
+[PASTE OUTPUT HERE]
+
+
+================================================================================
+2) ARCADE REPO FACTS (gruesomes.arcade)
+================================================================================
+
+--- B1 output: root listing ---
+[PASTE OUTPUT HERE]
+
+
+--- B2 output: which lockfile exists (if any) ---
+[PASTE OUTPUT HERE]
+
+
+--- B3 output: workflow .yml filenames (or "none") ---
+[PASTE OUTPUT HERE]
+
+
+--- B4 output: full package.json (raw) ---
+[PASTE OUTPUT HERE]
+
+
+================================================================================
+2b) POST-MIGRATION EVIDENCE (gruesomes.arcade)
+================================================================================
+
+--- B5 output: full arcade-integration-kit/MIGRATION_REPORT.md (raw) ---
+[PASTE OUTPUT HERE]
+
+
+--- B6 output: first 20 "watermark/signature/xor/built" path matches ---
+[PASTE OUTPUT HERE]
+
+
+================================================================================
+3) CONTRACTS REPO EVIDENCE (ONLY if separate repo)
+================================================================================
+
+--- C1 output: root listing + hardhat/foundry detection line ---
+[PASTE OUTPUT HERE]
+
+
+--- C2 output: hardhat.config.(ts|js) (raw; no secrets) ---
+[PASTE OUTPUT HERE]
+
+
+--- C3 output: last ~50 lines of compile ---
+[PASTE OUTPUT HERE]
+
+
+--- C4 output: deploy log including network, chainId, deployer, contract addresses, tx hashes ---
+[PASTE OUTPUT HERE]
+
+
+--- C5 output: verify command you ran + success confirmation (no private keys) ---
+[PASTE OUTPUT HERE]
+
+
+================================================================================
+END OF TEMPLATE
+================================================================================
+
+Once filled in, paste this entire document back. I'll generate the minimal follow-up patch list(s) without guessing.

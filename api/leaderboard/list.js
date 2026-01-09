@@ -1,22 +1,16 @@
-import { Redis } from '@upstash/redis';
+import * as R from '../_lib/redis.js';
 
 export default async function handler(req, res) {
   try {
-    const url =
-      process.env.KV_REST_API_URL ||
-      process.env.UPSTASH_REDIS_REST_URL;
-    const token =
-      process.env.KV_REST_API_TOKEN ||
-      process.env.UPSTASH_REDIS_REST_TOKEN;
-
-    if (!url || !token) {
+    if (!R.enabledReadOnlyOk()) {
+      const info = R.envInfo();
       return res.status(500).json({
         error: 'redis-config-missing',
-        details: 'KV_REST_API_URL/TOKEN or UPSTASH_REDIS_REST_URL/TOKEN not set',
+        details: info.notes || 'KV REST env not configured (KV_REST_API_URL + token).',
       });
     }
 
-    const redis = new Redis({ url, token });
+    const redis = R.client({ allowReadOnly: true });
 
     const board = (await redis.get('leaderboard')) || [];
     // Ensure it's an array

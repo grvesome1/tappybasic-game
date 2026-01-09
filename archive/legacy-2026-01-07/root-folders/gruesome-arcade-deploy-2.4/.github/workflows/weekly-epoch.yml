@@ -1,0 +1,53 @@
+# built by gruesøme
+# sig (xor5a): 0x382f33362e7a38237a3d282f3f29a2373f
+
+name: weekly-epoch-publish
+
+on:
+  schedule:
+    # Every Monday at 00:30 UTC
+    - cron: '30 0 * * 1'
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install
+        run: npm ci
+
+      - name: Build Merkle (placeholder)
+        run: |
+          npm run epoch:build -- data/weekly_payouts.json
+        env:
+          PAYOUTS_JSON_PATH: data/weekly_payouts.json
+          OUT_JSON_PATH: data/epoch_latest.json
+
+      - name: Ensure Liquidity
+        run: |
+          npm run treasury:ensure-liquidity:linea-sepolia -- data/epoch_latest.json
+        env:
+          LINEA_SEPOLIA_RPC_URL: ${{ secrets.LINEA_SEPOLIA_RPC_URL }}
+          TREASURY_KEEPER_PRIVATE_KEY: ${{ secrets.TREASURY_KEEPER_PRIVATE_KEY }}
+          QUOTER_ADDRESS: ${{ secrets.QUOTER_ADDRESS }}
+          SWAP_SLIPPAGE_BPS: "300"
+          SWAP_DEADLINE_SECONDS: "900"
+          EPOCH_VAULT_KIND: weekly
+          EPOCH_DISTRIBUTION_JSON: data/epoch_latest.json
+
+      - name: Publish Epoch
+        run: |
+          npm run epoch:publish:linea-sepolia -- data/epoch_latest.json
+        env:
+          LINEA_SEPOLIA_RPC_URL: ${{ secrets.LINEA_SEPOLIA_RPC_URL }}
+          ORACLE_PRIVATE_KEY: ${{ secrets.ORACLE_PRIVATE_KEY }}
+          EPOCH_VAULT_KIND: weekly
+          EPOCH_DISTRIBUTION_JSON: data/epoch_latest.json

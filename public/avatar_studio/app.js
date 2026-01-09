@@ -30,8 +30,17 @@ function sameOriginMessage(ev){
 
 function postToParent(type, payload){
   if (!EMBED.enabled) return false;
+  const msg = { channel: EMBED.channel, type, requestId: String(++EMBED.requestSeq), payload: payload || {} };
+
+  // Prefer same-origin targetOrigin for safety, but fall back to '*' when
+  // embedded under a strict sandbox (opaque origin 'null') to avoid throwing.
   try {
-    window.parent.postMessage({ channel: EMBED.channel, type, requestId: String(++EMBED.requestSeq), payload: payload || {} }, window.location.origin);
+    window.parent.postMessage(msg, window.location.origin);
+    return true;
+  } catch {}
+
+  try {
+    window.parent.postMessage(msg, '*');
     return true;
   } catch {
     return false;

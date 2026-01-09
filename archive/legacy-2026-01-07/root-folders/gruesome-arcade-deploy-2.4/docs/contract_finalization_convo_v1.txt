@@ -1,0 +1,137 @@
+User: we are going to finalize then deploy and verify these contracts on Linea sepolia testnet. look them over. also daily credits pot is suppose to have a 7% ops 10% treasury the rest goes to skill and activity payouts. read me does not define this in kind sections. clarify that it is somewhere.
+
+GitHub Copilot: I’m going to have a sub-agent scan the Solidity contracts + docs to (1) spot any deployment/verification gotchas for Linea Sepolia and (2) find where the 7% ops / 10% treasury / remainder payouts split is defined (or confirm it’s missing).
+
+Review contracts & docs
+
+Searched codebase for "daily credits pot ops treasury 7% 10% split basis points bps payout distribute", 10 results
+
+Searched for regex `daily|credit|pot|ops|treasury|7%|10%|bps|basis|split|payout|distribut` (`**/*.{sol,md}`), 20 results
+
+Searched for regex `EIP712|domain|chainid|block\.chainid|DOMAIN_SEPARATOR|_domainSeparatorV4` (`**/*.{sol,md}`), 20 results
+
+Searched for regex `constructor\(|initialize\(|init\b|proxy|ERC1967|TransparentUpgradeableProxy|UUPS|Clones|minimal proxy` (`**/*.sol`), 10 results
+
+Searched for regex `Ownable|AccessControl|grantRole|DEFAULT_ADMIN_ROLE|transferOwnership|owner\(` (`**/*.sol`), 20 results
+
+Read [](file:///c%3A/Users/gruesome/Desktop/gruesome-arcade-contracts-v2.1/gruesome-arcade-contracts-v2.1/ArcadePaymentsRouterV2.sol#220-220), lines 220 to 380
+
+Read [](file:///c%3A/Users/gruesome/Desktop/gruesome-arcade-contracts-v2.1/gruesome-arcade-contracts-v2.1/ArcadePaymentsRouterV2.sol#380-380), lines 380 to 547
+
+Read [](file:///c%3A/Users/gruesome/Desktop/gruesome-arcade-contracts-v2.1/gruesome-arcade-contracts-v2.1/ArcadePaymentsRouterV2.sol#547-547), lines 547 to 547
+
+Read [](file:///c%3A/Users/gruesome/Desktop/gruesome-arcade-contracts-v2.1/gruesome-arcade-contracts-v2.1/README.md)
+
+Read [](file:///c%3A/Users/gruesome/Desktop/gruesome-arcade-contracts-v2.1/gruesome-arcade-contracts-v2.1/ArcadeEpochVault.sol#1-1), lines 1 to 120
+
+Searched for regex `Default Splits|700 bps|7905 bps|1395 bps|2500 bps` (`**/README.md`), 6 results
+
+Searched for text `contract Ownable` (`**/*.sol`), 3 results
+
+Searched for text `function _executePayment` (`**/ArcadePaymentsRouterV2.sol`), 1 result
+
+Searched for regex `_verifyAndConsumeQuote|_setKindSplits\(KIND_CREDITS|kindSplits\[q\.kind\]` (`**/ArcadePaymentsRouterV2.sol`), 4 results
+
+Searched for regex `function _setKindSplits\(|BPS_SUM|SPLIT_MISSING` (`**/ArcadePaymentsRouterV2.sol`), 3 results
+
+Searched for regex `paymentsRouter|setPaymentsRouter|mintFromRouter|renewFromRouter|lifetimeCutoff|block\.timestamp` (`**/ArcadeProAvatarV2.sol`), 20 results
+
+Searched for regex `constructor\(` (`**/ArcadePaymentsRouterV2.sol`), 3 results
+
+Searched for regex `constructor\(` (`**/ArcadeProAvatarV2.sol`), 2 results
+
+Searched for regex `constructor\(` (`**/ArcadeTreasuryVault.sol`), 2 results
+
+Searched for regex `constructor\(` (`**/ArcadeEpochVault.sol`), 1 result
+
+Searched for regex `constructor\(` (`**/ArcadePromo.sol`), 1 result
+
+Searched for regex `directOpsToken\[q\.payToken\]|treasuryVault\)|safeTransferFrom\(msg\.sender, treasuryVault|directPotFunding|bool direct` (`**/ArcadePaymentsRouterV2.sol`), 8 results
+
+## Plan: Linea Sepolia Finalize + Deploy
+
+Confirm the payout economics match the intended spec, then produce a deterministic deploy/verify checklist for Linea Sepolia that won’t break EIP-712 signing or contract wiring. The biggest gap right now is that “credits” are split on-chain as 7% ops, 79.05% daily pot, 13.95% weekly pot, 0% treasury, and the docs/examples include Linea mainnet chainId values—both can cause confusion or outright signature failures on Sepolia.
+
+### Steps 5
+1. Audit current on-chain splits in ArcadePaymentsRouterV2.sol (`kindSplits`, `KIND_CREDITS`, `setKindSplits`, `_setKindSplits`) and confirm whether “10% treasury” should be enforced on-chain or described as off-chain policy.
+2. Align docs to reality: update README sections describing “credits” routing and explicitly distinguish “router routing” vs “epoch payout composition” (daily pot → skill/activity) in README.md.
+3. Fix Linea Sepolia EIP-712 signing assumptions in backend docs: ensure typed-data `chainId` and `verifyingContract` match Sepolia + deployed router address in BACKEND_QUOTE_ENDPOINT_SPEC.md and EIP712_QUOTE_TYPES.md.
+4. Draft a deployment order + wiring checklist with exact constructor args and post-deploy calls: router ↔ pro avatar wiring in ArcadeProAvatarV2.sol (`setPaymentsRouter`) and ArcadePaymentsRouterV2.sol (`setProAvatar`, token allowlist, SKU kinds).
+5. Pre-verify compile/verification constraints: document the duplicate `Ownable` contract-name collision across ArcadePaymentsRouterV2.sol, ArcadeProAvatarV2.sol, ArcadeTreasuryVault.sol, and pin the OpenZeppelin major version expected by ArcadeEpochVault.sol / ArcadePromo.sol to avoid “verified bytecode mismatch”.
+
+### Further Considerations 3
+1. For “7% ops / 10% treasury / rest payouts”: do you want this enforced by router `kindSplits[KIND_CREDITS]` (on-chain), or is “10% treasury” a downstream/off-chain accounting rule after funds hit `dailyPot`?
+2. Should “dailyPot” and/or “weeklyPot” be the same address as ArcadeEpochVault.sol, or are they separate EOAs/multisigs that later fund the vault?
+3. Which token is “mUSD” on Linea Sepolia (address + decimals)? Backend quoting assumes 6 decimals in the spec; if that’s wrong, quotes will be wrong even if signatures verify.
+
+User: do someonline research to help us, this is a complex system. also describe concisely to me everything that you see here
+
+GitHub Copilot: I’m going to (1) pull a concise “what’s in this repo” summary from a sub-agent, and (2) fetch Linea/Linea Sepolia network + verification docs so we don’t get tripped up by chainId/EIP-712/verification details.
+
+Deep repo summary
+
+Read [](file:///c%3A/Users/gruesome/Desktop/gruesome-arcade-contracts-v2.1)
+
+Read [](file:///c%3A/Users/gruesome/Desktop/gruesome-arcade-contracts-v2.1/)
+
+Read [](file:///c%3A/Users/gruesome/Desktop)
+
+Searched for files matching `**/*.sol`, 6 matches
+
+Searched for files matching `**/*.md`, 4 matches
+
+Using "Fetch Web Page"
+
+Fetched 5 resources
+
+Deep repo summary
+
+Read [](file:///c%3A/Users/gruesome/Desktop/gruesome-arcade-contracts-v2.1)
+
+Searched for files matching `**/*.sol`, 6 matches
+
+Searched for files matching `**/*.md`, 4 matches
+
+Read [](file:///c%3A/Users/gruesome/Desktop/gruesome-arcade-contracts-v2.1/gruesome-arcade-contracts-v2.1/README.md)
+
+Read [](file:///c%3A/Users/gruesome/Desktop/gruesome-arcade-contracts-v2.1/gruesome-arcade-contracts-v2.1/BACKEND_QUOTE_ENDPOINT_SPEC.md)
+
+Read [](file:///c%3A/Users/gruesome/Desktop/gruesome-arcade-contracts-v2.1/gruesome-arcade-contracts-v2.1/EIP712_QUOTE_TYPES.md)
+
+Read [](file:///c%3A/Users/gruesome/Desktop/gruesome-arcade-contracts-v2.1/gruesome-arcade-contracts-v2.1/SKU_LIST.md)
+
+Read [](file:///c%3A/Users/gruesome/Desktop/gruesome-arcade-contracts-v2.1/gruesome-arcade-contracts-v2.1/ArcadePaymentsRouterV2.sol#1-1), lines 1 to 320
+
+Searched for regex `function execute|function buy|PaymentExecuted|QUOTE_TYPEHASH|usedQuote|quoteId|_hashTypedDataV4` (`**/ArcadePaymentsRouterV2.sol`), 33 results
+
+Read [](file:///c%3A/Users/gruesome/Desktop/gruesome-arcade-contracts-v2.1/gruesome-arcade-contracts-v2.1/ArcadePaymentsRouterV2.sol#320-320), lines 320 to 547
+
+Read [](file:///c%3A/Users/gruesome/Desktop/gruesome-arcade-contracts-v2.1/gruesome-arcade-contracts-v2.1/ArcadeEpochVault.sol)
+
+Read [](file:///c%3A/Users/gruesome/Desktop/gruesome-arcade-contracts-v2.1/gruesome-arcade-contracts-v2.1/ArcadeTreasuryVault.sol)
+
+Read [](file:///c%3A/Users/gruesome/Desktop/gruesome-arcade-contracts-v2.1/gruesome-arcade-contracts-v2.1/ArcadeProAvatarV2.sol)
+
+Read [](file:///c%3A/Users/gruesome/Desktop/gruesome-arcade-contracts-v2.1/gruesome-arcade-contracts-v2.1/ArcadePromo.sol)
+
+Read [](file:///c%3A/Users/gruesome/Desktop/gruesome-arcade-contracts-v2.1/gruesome-arcade-contracts-v2.1/MockERC20.sol)
+
+Searched for regex `EIP712\("|EIP712_NAME|EIP712_VERSION|GruesomeArcade PaymentsRouter|EPOCH_TYPEHASH|Quote\(` (`**/*.{sol,md}`), 13 results
+
+Searched for regex `pause|paused|Pausable|ReentrancyGuard|upgrade|proxy|initializer|UUPS|transparent` (`**/*.sol`), 45 results
+
+## Plan: Linea Sepolia Deploy + Verify
+
+This repo is a payments + entitlements system built around an EIP-712 quote-signed router. The core pieces are: a purchase router that verifies backend quotes and routes funds (ArcadePaymentsRouterV2.sol); a custody vault for non‑mUSD/ETH (ArcadeTreasuryVault.sol); a PRO avatar NFT with router-gated mint/renew (ArcadeProAvatarV2.sol); an epoch Merkle payout vault with oracle-signed publishing (ArcadeEpochVault.sol); and an event-only promo receipt (ArcadePromo.sol). Docs define the quote types/spec and SKU catalog (BACKEND_QUOTE_ENDPOINT_SPEC.md, EIP712_QUOTE_TYPES.md, SKU_LIST.md, README.md). Linea Sepolia is chainId 59141, with explorers https://sepolia.lineascan.build and https://explorer.sepolia.linea.build (ChainList); note the backend spec examples currently use 59144 (Linea mainnet) which will break EIP-712 verification on Sepolia.
+
+### Steps 5
+1. Decide where “7% ops / 10% treasury / rest payouts” is enforced: on-chain via router `kindSplits[KIND_CREDITS]`, or off-chain policy after `dailyPot` receipt.
+2. Reconcile the actual credits routing vs intended split: credits currently default to 7% ops, 79.05% dailyPot, 13.95% weeklyPot, 0% treasury in ArcadePaymentsRouterV2.sol (`kindSplits`, `setKindSplits`); either update the config plan or explicitly document the difference.
+3. Update backend signing assumptions for Sepolia: set `chainId=59141` and `verifyingContract=<router address>` in typed data per EIP712_QUOTE_TYPES.md and the endpoint response format in BACKEND_QUOTE_ENDPOINT_SPEC.md.
+4. Produce a deployment + wiring checklist: deploy treasury → pro avatar → epoch vault → router; then call `setPaymentsRouter` on pro avatar and `setProAvatar` + allowlists/SKU kinds on router (see ArcadeProAvatarV2.sol, ArcadePaymentsRouterV2.sol).
+5. Plan verification strategy: pin OpenZeppelin major to match imports in ArcadeEpochVault.sol/ArcadePromo.sol (OZ 4-style paths), and account for duplicate `Ownable` contract-name collisions across ArcadePaymentsRouterV2.sol, ArcadeProAvatarV2.sol, ArcadeTreasuryVault.sol when compiling/verifying.
+
+### Further Considerations 3
+1. “Daily pot split” (skill/activity/etc.) is not enforced on-chain; it’s an off-chain epoch composition that later pays via ArcadeEpochVault.sol.
+2. Non‑mUSD payments route to treasury (and ETH always 100% treasury); pots are only directly funded on-chain for mUSD—confirm this matches expectations in README.md.
+3. Confirm the Sepolia “mUSD” token address + decimals; the router trusts `amountIn` and does not validate decimals, so backend quoting must match the actual token.

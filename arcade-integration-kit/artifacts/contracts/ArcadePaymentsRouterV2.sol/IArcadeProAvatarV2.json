@@ -1,0 +1,77 @@
+{
+  "_format": "hh3-artifact-1",
+  "contractName": "IArcadeProAvatarV2",
+  "sourceName": "contracts/ArcadePaymentsRouterV2.sol",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "to",
+          "type": "address"
+        },
+        {
+          "internalType": "uint8",
+          "name": "tier",
+          "type": "uint8"
+        },
+        {
+          "internalType": "string",
+          "name": "tokenURI",
+          "type": "string"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "dnaHash",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "string",
+          "name": "nickname",
+          "type": "string"
+        }
+      ],
+      "name": "mintFromRouter",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "tokenId",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        },
+        {
+          "internalType": "uint8",
+          "name": "tier",
+          "type": "uint8"
+        }
+      ],
+      "name": "renewFromRouter",
+      "outputs": [
+        {
+          "internalType": "uint64",
+          "name": "newExpiresAt",
+          "type": "uint64"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x",
+  "deployedBytecode": "0x",
+  "linkReferences": {},
+  "deployedLinkReferences": {},
+  "immutableReferences": {},
+  "inputSourceName": "project/contracts/ArcadePaymentsRouterV2.sol",
+  "buildInfoId": "solc-0_8_20-52a20af19a9f24cef443eedca0d9249a4937011f"
+}

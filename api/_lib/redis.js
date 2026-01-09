@@ -1,24 +1,123 @@
 import { Redis } from '@upstash/redis';
+import { createClient as createTcpRedisClient } from 'redis';
 
-let _redis = null;
+let _redisWrite = null;
+let _redisRead = null;
+let _redisTcp = null;
+let _redisTcpConnectPromise = null;
 
-function getConfig() {
-  const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
-  return { url, token };
+function resolveConfig({ allowReadOnly = false } = {}) {
+  const restUrl = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL || '';
+  const writeToken = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN || '';
+  const readOnlyToken = process.env.KV_REST_API_READ_ONLY_TOKEN || '';
+  const tcpUrl = process.env.KV_URL || process.env.REDIS_URL || '';
+
+  const url = String(restUrl || '').trim();
+  const tcp = String(tcpUrl || '').trim();
+  const token = String(writeToken || '').trim() || (allowReadOnly ? String(readOnlyToken || '').trim() : '');
+  const readOnly = !String(writeToken || '').trim() && !!(allowReadOnly && String(readOnlyToken || '').trim());
+
+  const canReadRest = !!(url && (String(writeToken || '').trim() || (allowReadOnly && String(readOnlyToken || '').trim())));
+  const canWriteRest = !!(url && String(writeToken || '').trim());
+  const canReadTcp = !!tcp;
+  const canWriteTcp = !!tcp;
+
+  return {
+    url: url || null,
+    token: token || null,
+    tcpUrl: tcp || null,
+    readOnly,
+    canRead: canReadRest || canReadTcp,
+    canWrite: canWriteRest || canWriteTcp,
+    canReadRest,
+    canWriteRest,
+    canReadTcp,
+    canWriteTcp,
+  };
 }
 
+export function envInfo() {
+  const cfg = resolveConfig({ allowReadOnly: true });
+  const hasRestUrl = !!(process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL);
+  const hasWriteToken = !!(process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN);
+  const hasReadOnlyToken = !!process.env.KV_REST_API_READ_ONLY_TOKEN;
+  const hasTcpUrl = !!(process.env.KV_URL || process.env.REDIS_URL);
+
+  let kind = 'none';
+  if (cfg.canReadRest) kind = 'upstash-rest';
+  else if (cfg.canReadTcp) kind = 'redis-tcp-url';
+
+  return {
+    kind,
+    hasRestUrl,
+    hasWriteToken,
+    hasReadOnlyToken,
+    hasTcpUrl,
+    canRead: cfg.canRead,
+    canWrite: cfg.canWrite,
+    readOnly: cfg.readOnly,
+    notes:
+      hasTcpUrl && !cfg.canReadRest
+        ? 'KV_URL/REDIS_URL detected (TCP). REST vars (KV_REST_API_* or UPSTASH_REDIS_REST_*) not set; falling back to TCP.'
+        : null,
+  };
+}
+
+// enabled() remains "write-enabled" (sessions and most mutations require writes).
 export function enabled() {
-  const { url, token } = getConfig();
-  return !!(url && token);
+  return resolveConfig({ allowReadOnly: false }).canWrite;
 }
 
-export function client() {
-  if (_redis) return _redis;
-  const { url, token } = getConfig();
-  if (!url || !token) return null;
-  _redis = new Redis({ url, token });
-  return _redis;
+export function enabledReadOnlyOk() {
+  return resolveConfig({ allowReadOnly: true }).canRead;
+}
+
+async function ensureTcpConnected() {
+  if (_redisTcp && _redisTcpConnectPromise) return _redisTcpConnectPromise;
+  if (!_redisTcp) return null;
+  if (_redisTcp.isOpen) {
+    _redisTcpConnectPromise = Promise.resolve();
+    return _redisTcpConnectPromise;
+  }
+
+  _redisTcpConnectPromise = _redisTcp.connect();
+  try {
+    await _redisTcpConnectPromise;
+  } catch (e) {
+    _redisTcpConnectPromise = null;
+    throw e;
+  }
+  return _redisTcpConnectPromise;
+}
+
+export function client({ allowReadOnly = false } = {}) {
+  const cfg = resolveConfig({ allowReadOnly });
+
+  // Prefer REST when configured.
+  if (cfg.url && cfg.token) {
+    if (!cfg.readOnly) {
+      if (_redisWrite) return _redisWrite;
+      _redisWrite = new Redis({ url: cfg.url, token: cfg.token });
+      return _redisWrite;
+    }
+
+    if (_redisRead) return _redisRead;
+    _redisRead = new Redis({ url: cfg.url, token: cfg.token });
+    return _redisRead;
+  }
+
+  // Fallback: TCP Redis URL.
+  if (cfg.tcpUrl) {
+    if (_redisTcp) return _redisTcp;
+    _redisTcp = createTcpRedisClient({ url: cfg.tcpUrl });
+    // Ensure errors don't crash silently in long-lived dev.
+    _redisTcp.on('error', () => {});
+    // Start connection eagerly; cmd()/pipeline() will await if needed.
+    ensureTcpConnected().catch(() => {});
+    return _redisTcp;
+  }
+
+  return null;
 }
 
 function lowerCmd(op) {
@@ -32,9 +131,49 @@ function stripWithScores(args) {
 }
 
 export async function cmd(op, ...args) {
-  const r = client();
+  const r = client({ allowReadOnly: true });
   if (!r) throw new Error('redis_not_configured');
+
+  // If this is a TCP client, ensure connection before issuing commands.
+  const isTcp = typeof r.sendCommand === 'function' && typeof r.isOpen === 'boolean';
+  if (isTcp) await ensureTcpConnected();
+
   const up = String(op || '').toUpperCase();
+
+  // For TCP clients, enforce read-only if we only have REST read-only config.
+  // (TCP URLs don't have a separate read-only token concept here.)
+  const cfg = resolveConfig({ allowReadOnly: true });
+  const enforceReadOnly = cfg.canReadRest && !cfg.canWriteRest && !cfg.canWriteTcp;
+  if (enforceReadOnly) {
+    const writeOps = new Set(['SET', 'DEL', 'EXPIRE', 'HSET', 'LPUSH', 'LTRIM', 'SADD', 'ZADD', 'ZINCRBY']);
+    if (writeOps.has(up)) throw new Error('redis_read_only');
+  }
+
+  if (isTcp) {
+    // Keep behaviors consistent with REST mode:
+    // - HSET accepts pairs
+    // - ZREVRANGE always returns WITHSCORES flat array
+    // - Unknown commands fall back to raw sendCommand
+    const asStr = (v) => String(v ?? '');
+
+    if (up === 'HSET') {
+      const key = asStr(args[0]);
+      const rest = args.slice(1);
+      const flat = [];
+      for (let i = 0; i + 1 < rest.length; i += 2) flat.push(asStr(rest[i]), asStr(rest[i + 1]));
+      return r.sendCommand(['HSET', key, ...flat]);
+    }
+
+    if (up === 'ZREVRANGE') {
+      const a = stripWithScores(args);
+      const key = asStr(a[0]);
+      const start = asStr(a[1] ?? 0);
+      const stop = asStr(a[2] ?? 0);
+      return r.sendCommand(['ZREVRANGE', key, start, stop, 'WITHSCORES']);
+    }
+
+    return r.sendCommand([up, ...args.map(asStr)]);
+  }
 
   // Prefer specialized methods for reliability.
   if (up === 'GET') return r.get(String(args[0] || ''));

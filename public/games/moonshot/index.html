@@ -1231,6 +1231,15 @@
 
       const GAME_ID = 'moonshot';
 
+      const EMBEDDED = (() => {
+        try { return window.parent && window.parent !== window; } catch { return true; }
+      })();
+
+      let __ARCADE_SYNC = null;
+      function getSync() {
+        return (__ARCADE_SYNC && typeof __ARCADE_SYNC === 'object') ? __ARCADE_SYNC : null;
+      }
+
       // Locked economy numbers (v1.5)
       const AC_USD = 0.01;
       const RUN_COST_AC = 10;                // Moonshot run cost
@@ -1858,7 +1867,11 @@
       render();
       window.addEventListener('message', (ev) => {
         if (ev?.data?.type === 'ARCADE:SYNC') {
-          try { render(); } catch (_) {}
+          try {
+            const payload = ev?.data?.payload;
+            __ARCADE_SYNC = (payload && typeof payload === 'object') ? payload : null;
+            render();
+          } catch (_) {}
         }
       });
       return;

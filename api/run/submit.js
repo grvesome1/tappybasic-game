@@ -1,8 +1,8 @@
 // built by gruesøme
 // SIG_ENC_XOR5A_HEX=382f33362e7a38237a3d282f3f29a2373f
 
-import { parseCookies, readJson } from '../_lib/util.js';
-import { readSession } from '../_lib/session.js';
+import { readJson } from '../_lib/util.js';
+import { getSession } from '../_lib/session.js';
 import * as R from '../_lib/redis.js';
 import * as K from '../_lib/keys.js';
 import * as U from '../_lib/user.js';
@@ -139,8 +139,7 @@ export default async function handler(req, res) {
     const ip = ipFromReq(req);
     await enforce({ key: rlKey('run:submit:ip', ip), limit: 240, windowSec: 600 });
 
-    const cookies = parseCookies(req);
-    const s = readSession(cookies);
+    const s = await getSession(req);
     if (!s || !s.address) return res.status(401).json({ error: 'not_authenticated' });
 
     const address = String(s.address);

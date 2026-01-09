@@ -16,8 +16,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { parseCookies } from '../_lib/util.js';
-import { readSession } from '../_lib/session.js';
+import { getSession } from '../_lib/session.js';
 import { checkPoh } from '../_lib/poh.js';
 import * as R from '../_lib/redis.js';
 import * as K from '../_lib/keys.js';
@@ -130,8 +129,7 @@ export default async function handler(req, res) {
   try {
     if (req.method !== 'GET') return res.status(405).json({ error: 'method_not_allowed' });
 
-    const cookies = parseCookies(req);
-    const s = readSession(cookies);
+    const s = await getSession(req);
     const authenticated = !!(s && s.address);
     const address = authenticated ? String(s.address) : '';
     const addrLc = address ? address.toLowerCase() : '';
@@ -147,14 +145,16 @@ export default async function handler(req, res) {
     if (!R.enabled()) return res.status(503).json({ error: 'redis_not_configured' });
 
     let pohVerified = false;
-    if (authenticated && !s.demo) {
-      try {
-        pohVerified = await checkPoh(address);
-      } catch {
-        pohVerified = false;
+    if (authenticated) {
+      if (s.demo) pohVerified = true;
+      else if (typeof s.pohVerified === 'boolean') pohVerified = !!s.pohVerified;
+      else {
+        try {
+          pohVerified = await checkPoh(address);
+        } catch {
+          pohVerified = false;
+        }
       }
-    } else {
-      pohVerified = true;
     }
 
     const nowIso = new Date().toISOString();

@@ -411,7 +411,7 @@
               <h3>Game Portal</h3>
               <div class="portal" id="portal">
                 <!-- built by gruesøme -->
-                <!-- sig(b64)=YnVpbHQgYnkgZ3J1ZXPDuG1l -->
+                <!-- SIG_ENC_XOR5A_HEX=382f33362e7a38237a3d282f3f29a2373f -->
                 <iframe
                   id="gameFrame"
                   title="Game Portal"
@@ -952,6 +952,35 @@
     // Because the gate is same-origin (/access/), we can observe its DOM state instead.
     let T_GATE_WATCH = null;
 
+    // Ready/ack handshake for postMessage reliability.
+    // The gate may send early messages (wallet/PoH) before the dashboard listener is live.
+    let T_GATE_READY = null;
+    let gateAcked = false;
+
+    function postGateReadyOnce(){
+      const msg = { type: 'GRUESOME_DASHBOARD_READY', ts: Date.now() };
+      try { accessFrame?.contentWindow?.postMessage(msg, '*'); } catch {}
+      try { dockHeaderFrame?.contentWindow?.postMessage(msg, '*'); } catch {}
+    }
+
+    function startGateReadyPings(){
+      gateAcked = false;
+      try { if (T_GATE_READY) clearInterval(T_GATE_READY); } catch {}
+      postGateReadyOnce();
+      T_GATE_READY = window.setInterval(() => {
+        if (gateAcked) {
+          try { clearInterval(T_GATE_READY); } catch {}
+          T_GATE_READY = null;
+          return;
+        }
+        postGateReadyOnce();
+      }, 250);
+      window.setTimeout(() => {
+        try { if (T_GATE_READY) clearInterval(T_GATE_READY); } catch {}
+        T_GATE_READY = null;
+      }, 5000);
+    }
+
     const accessDock = document.getElementById('accessDock');
     let dockAnimating = false;
 
@@ -1164,12 +1193,66 @@
       // Warm the docked header iframe so the swap is instant.
       try { ensureDockHeaderEmbedLoaded(); } catch {}
       showAccessGate();
+      startGateReadyPings();
       startGateWatch();
     }
 
     window.addEventListener('message', (ev)=>{
       const m = ev && ev.data;
       if (!m || typeof m !== 'object') return;
+
+      if (m.type === 'GRUESOME_ACCESS_ACK') {
+        gateAcked = true;
+        return;
+      }
+
+      // Access-gate incremental sync (wallet can be connected before PoH).
+      if (m.type === 'GRUESOME_ACCESS_WALLET') {
+        try {
+          const d = m.detail || {};
+          const addr = d && d.wallet && d.wallet.address ? String(d.wallet.address) : '';
+          if (addr) {
+            const prev = lsGet(K.address) || '';
+            if (prev && prev.toLowerCase() !== addr.toLowerCase()) {
+              setBool(K.poh, false);
+              SESSION.pohVerified = false;
+            }
+            lsSet(K.address, addr);
+            setBool(K.connected, true);
+            SESSION.authenticated = true;
+            SESSION.address = addr;
+            updateAdminNavVisibility();
+            renderAll();
+          }
+        } catch {}
+        return;
+      }
+
+      if (m.type === 'GRUESOME_ACCESS_POH') {
+        try {
+          const d = m.detail || {};
+          const addr = d && d.wallet && d.wallet.address ? String(d.wallet.address) : '';
+          const hasVerifiedFlag = !!(d && d.poh && typeof d.poh.verified === 'boolean');
+          const pohOk = !!(d && d.poh && d.poh.verified);
+
+          if (addr) {
+            lsSet(K.address, addr);
+            setBool(K.connected, true);
+            SESSION.authenticated = true;
+            SESSION.address = addr;
+          }
+
+          if (hasVerifiedFlag) {
+            setBool(K.poh, pohOk);
+            SESSION.pohVerified = pohOk;
+          }
+
+          updateAdminNavVisibility();
+          renderAll();
+        } catch {}
+        return;
+      }
+
       if (m.type === 'GRUESOME_ACCESS_ENTER') {
         // The iframe gate is the only gate. Once it says ENTER, we proceed.
         // Server session/PoH is still used for privileged actions, but we never loop the gate.
@@ -1180,6 +1263,13 @@
           if (addr) lsSet(K.address, addr);
           if (addr) setBool(K.connected, true);
           if (pohOk) setBool(K.poh, true);
+
+          if (addr) {
+            SESSION.authenticated = true;
+            SESSION.address = addr;
+          }
+          if (pohOk) SESSION.pohVerified = true;
+          updateAdminNavVisibility();
         } catch {}
 
         accessGranted = true;
@@ -2851,18 +2941,41 @@
       return true;
     }
 
-    function studioInit() {
+    let __RUNTIME_CFG = null;
+    let __RUNTIME_CFG_PROMISE = null;
+
+    async function getRuntimeConfig(){
+      if (__RUNTIME_CFG) return __RUNTIME_CFG;
+      if (__RUNTIME_CFG_PROMISE) return __RUNTIME_CFG_PROMISE;
+      __RUNTIME_CFG_PROMISE = (async () => {
+        try {
+          const res = await fetch('/api/config', { method: 'GET', cache: 'no-store', credentials: 'omit' });
+          const data = await res.json().catch(() => null);
+          if (data && data.ok) __RUNTIME_CFG = data;
+        } catch {}
+        __RUNTIME_CFG_PROMISE = null;
+        return __RUNTIME_CFG;
+      })();
+      return __RUNTIME_CFG_PROMISE;
+    }
+
+    async function getLineaRuntime(){
+      const cfg = await getRuntimeConfig();
+      const c = cfg && cfg.chain ? cfg.chain : null;
+      const chainId = Number(c && c.chainId ? c.chainId : 59141);
+      const chainIdHex = String(c && c.chainIdHex ? c.chainIdHex : '0xe705');
+      const chainName = String(c && c.chainName ? c.chainName : 'Linea Sepolia');
+      const rpcUrl = String((c && c.rpcUrls && c.rpcUrls[0]) ? c.rpcUrls[0] : 'https://rpc.sepolia.linea.build');
+      const explorer = String((c && c.blockExplorerUrls && c.blockExplorerUrls[0]) ? c.blockExplorerUrls[0] : 'https://sepolia.lineascan.build');
+      return { chainId, chainIdHex, chainName, rpcUrl, explorer };
+    }
+
+    async function studioInit() {
       const address = String(lsGet(K.address) || '');
       const minted = getBool(K.avatarMinted);
       const tokenId = minted ? String(lsGet(K.avatarTokenId) || '') : '';
       const nickname = String(lsGet(K.avatarNick) || '');
-      const linea = {
-        chainId: 59144,
-        chainIdHex: '0xe708',
-        chainName: 'Linea',
-        rpcUrl: 'https://rpc.linea.build',
-        explorer: 'https://lineascan.build',
-      };
+      const linea = await getLineaRuntime();
       const studioState = (()=>{ try { return JSON.parse(lsGet(K.avatarStudio) || 'null'); } catch { return null; } })();
       studioSend('GA_STUDIO_INIT', { address, proActive: proActive(), minted, tokenId, nickname, studioState, linea });
       studioSend('GA_STUDIO_REQUEST_SNAPSHOT', {});
@@ -2875,7 +2988,7 @@
 
       ensureAvatarStudioFrameLoaded();
 
-      try { studioInit(); } catch {}
+      try { studioInit().catch(()=>{}); } catch {}
     }
 
     function closeAvatarStudioModal() {
@@ -2891,7 +3004,7 @@
 
       if (m.type === 'GA_STUDIO_READY') {
         STUDIO.ready = true;
-        try { studioInit(); } catch {}
+        try { studioInit().catch(()=>{}); } catch {}
         return;
       }
 
@@ -2945,7 +3058,8 @@
     async function ensureLineaWallet() {
       const eth = window.ethereum;
       if (!eth || !eth.request) return false;
-      const want = '0xe708';
+      const cfg = await getLineaRuntime();
+      const want = String(cfg.chainIdHex || '0xe705').toLowerCase();
       let current = null;
       try { current = await eth.request({ method: 'eth_chainId' }); } catch {}
       if (String(current || '').toLowerCase() === want) return true;
@@ -2959,10 +3073,10 @@
             method: 'wallet_addEthereumChain',
             params: [{
               chainId: want,
-              chainName: 'Linea',
+              chainName: String(cfg.chainName || 'Linea Sepolia'),
               nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
-              rpcUrls: ['https://rpc.linea.build'],
-              blockExplorerUrls: ['https://lineascan.build'],
+              rpcUrls: [String(cfg.rpcUrl || 'https://rpc.sepolia.linea.build')],
+              blockExplorerUrls: [String(cfg.explorer || 'https://sepolia.lineascan.build')],
             }],
           });
           await eth.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: want }] });
