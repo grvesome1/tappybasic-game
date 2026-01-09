@@ -1,5 +1,4 @@
 {
-  "_comment": "Rewrite order matters: keep specific prefixes + asset paths above the SPA fallback. Catch-all must be last to avoid serving /index.html for JS/CSS/assets.",
   "buildCommand": null,
   "outputDirectory": "public",
   "installCommand": null,
@@ -71,6 +70,23 @@
     },
     {
       "source": "/vendor/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET,OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "*"
+        }
+      ]
+    },
+    {
+      "source": "/assets/(.*)",
       "headers": [
         {
           "key": "Access-Control-Allow-Origin",
