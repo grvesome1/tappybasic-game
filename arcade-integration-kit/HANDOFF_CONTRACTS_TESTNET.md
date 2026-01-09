@@ -3,13 +3,39 @@
 
 # Contracts testnet handoff (public-only)
 
-Date: 2026-01-07
+Date: 2026-01-09
 
 ## Status
-- Deploy: NOT executed on this machine
-- Verify: NOT executed on this machine
+- Deploy: COMPLETED on Linea Sepolia
+- Verify: PENDING (Hardhat 3 verify plugin not yet compatible)
+- Post-deployment wiring: COMPLETED
 
-Reason: deployment requires a funded deployer and RPC URL configured via environment variables; no secrets were used or printed here.
+## Deployed Contracts (Linea Sepolia - chainId 59141)
+
+| Contract | Address |
+|----------|---------|
+| ArcadePaymentsRouterV2 | `0xF22c4c91d88c6C715d3665576b2b6593AFb63Ff2` |
+| ArcadeTreasuryVault | `0xb0CEebad1cbD423907aFBBc6CFF1b5F4b772cB11` |
+| ArcadeEpochVaultDaily | `0x2dFe2dADa92667DE107A4c24569e0c52FF7Dccc2` |
+| ArcadeEpochVaultWeekly | `0xa4E1db4f37EBFFCCE0F59f1B2f75f8F0C1842Ab8` |
+| ArcadeProAvatarV2 | `0x2cA2963fab7D0DD1AB3CB681205F5F12cED9178b` |
+| ArcadePromo | `0x410BdB6D323A6A2262f4437CC02077E01034C950` |
+| MockERC20_mUSD | `0x95B5fC14eEd5DF10A818818B65251aD55Af8CF99` |
+| MockERC20_TBAG | `0x3e046d9058290B07cC662859c1D11f8219fad55F` |
+| MockERC20_RUSTYAI | `0xCFfBAc928b448CA3B148B60701CBf0367016AAd9` |
+
+**Deployer Address:** `0x3100fF9597B87E791E5bB8C0d57C94336A432089`
+
+**Explorer Links:**
+- Router: https://sepolia.lineascan.build/address/0xF22c4c91d88c6C715d3665576b2b6593AFb63Ff2
+- Treasury: https://sepolia.lineascan.build/address/0xb0CEebad1cbD423907aFBBc6CFF1b5F4b772cB11
+
+## Wiring Status
+- PRO Avatar ← Router: ✅ Connected
+- Router ← PRO Avatar: ✅ Connected
+- Tokens allowed (mUSD, TBAG, RUSTYAI): ✅ Configured
+- Treasury payout vaults (Daily, Weekly): ✅ Allowlisted
+- TBAG/RUSTYAI marked as reserve: ✅ Done
 
 ## Framework
 - Hardhat: present (`hardhat.config.ts`)
