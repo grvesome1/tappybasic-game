@@ -144,3 +144,13 @@ export function epochClaimed(ymd) {
 export function epochsList() {
   return `${PREFIX}epochs:list`; // List of settled epoch ids
 }
+
+// --- sessions ---
+export function sess(sid) {
+  return `${PREFIX}sess:${String(sid || '')}`;
+}
+
+// --- session nonces (login challenge) ---
+export function nonce(nid) {
+  return `${PREFIX}nonce:${String(nid || '')}`;
+}

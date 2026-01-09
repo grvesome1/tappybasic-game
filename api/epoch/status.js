@@ -1,12 +1,11 @@
 // built by gruesøme
 // SIG_ENC_XOR5A_HEX=382f33362e7a38237a3d282f3f29a2373f
 
-import { parseCookies } from '../_lib/util.js';
-import { readSession } from '../_lib/session.js';
+import { getSession } from '../_lib/session.js';
 import { checkPoh } from '../_lib/poh.js';
 import * as R from '../_lib/redis.js';
 import * as K from '../_lib/keys.js';
-import { isPayoutExcluded } from '../_lib/payoutExclusion.js';
+import * as X from '../_lib/exclusions.js';
 
 function ymdUtc(d = new Date()) {
   return d.toISOString().slice(0, 10).replace(/-/g, '');
@@ -75,29 +74,60 @@ function parseHgetallStr(arr) {
 export default async function handler(req, res) {
   try {
     if (req.method !== 'GET') return res.status(405).json({ error: 'method_not_allowed' });
-    if (!R.enabled()) return res.status(503).json({ error: 'redis_not_configured' });
-
-    const cookies = parseCookies(req);
-    const s = readSession(cookies);
+    const s = await getSession(req);
 
     const authenticated = !!(s && s.address);
     const address = authenticated ? String(s.address) : '';
     const addrLc = address ? address.toLowerCase() : '';
-    const payoutExcluded = authenticated ? isPayoutExcluded(addrLc) : false;
 
     let pohVerified = false;
-    if (authenticated && !s.demo) {
-      try {
-        pohVerified = await checkPoh(address);
-      } catch {
-        pohVerified = false;
+    if (authenticated) {
+      if (s.demo) pohVerified = true;
+      else if (typeof s.pohVerified === 'boolean') pohVerified = !!s.pohVerified;
+      else {
+        try {
+          pohVerified = await checkPoh(address);
+        } catch {
+          pohVerified = false;
+        }
       }
-    } else if (authenticated) {
-      pohVerified = true;
     }
 
     const today = ymdUtc();
     const curWeek = weekKeyUtc();
+
+    if (!R.enabled()) {
+      return res.status(200).json({
+        ok: true,
+        redisEnabled: false,
+
+        // Daily epoch
+        todayYmd: today,
+        nextEpochAtUtc: nextUtcMidnightIso(),
+        lastSettledYmd: '',
+        lastSummary: null,
+        lastLotteryWinners: [],
+        claimable: null,
+
+        // Weekly epoch
+        currentWeekYw: curWeek,
+        nextWeekAtUtc: nextUtcMondayIso(),
+        lastSettledYw: '',
+        lastWeekSummary: null,
+        weekClaimable: null,
+        curWeekPotCents: 0,
+
+        // Auth
+        authenticated,
+        address,
+        pohVerified,
+
+        // Activity
+        todayActScore: 0,
+        todayTickets: 0,
+        weekActScore: 0,
+      });
+    }
     const lastYmd = await getLastSettledYmd();
     const lastYw = await getLastSettledYw();
 
@@ -162,6 +192,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       ok: true,
+      redisEnabled: true,
 
       // Daily epoch
       todayYmd: today,
@@ -183,9 +214,6 @@ export default async function handler(req, res) {
       authenticated,
       address,
       pohVerified,
-
-      // Transparency
-      payoutExcluded,
 
       // Activity
       todayActScore,

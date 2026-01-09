@@ -1,0 +1,29 @@
+{
+  "date": "2026-01-07",
+  "network": "lineaSepolia",
+  "chainId": 59141,
+  "deployer": null,
+  "contracts": {
+    "ArcadePaymentsRouterV2": null,
+    "ArcadeTreasuryVault": null,
+    "ArcadeEpochVaultDaily": null,
+    "ArcadeEpochVaultWeekly": null,
+    "ArcadeProAvatarV2": null,
+    "ArcadePromo": null
+  },
+  "transactions": {
+    "deploy": {},
+    "verify": {}
+  },
+  "compiler": {
+    "solcVersion": "0.8.20",
+    "optimizerEnabled": true,
+    "optimizerRuns": 200,
+    "viaIR": true
+  },
+  "status": {
+    "deployed": false,
+    "verified": false,
+    "notes": "No testnet deploy/verify was executed on this machine. Fill this file after running deploy on the contracts machine with a funded deployer + RPC URL."
+  }
+}

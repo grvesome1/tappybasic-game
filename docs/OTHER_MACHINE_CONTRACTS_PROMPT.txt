@@ -1,0 +1,171 @@
+CONTRACTS REPO — OTHER MACHINE PROMPT (COPY/PASTE)
+=================================================
+Date: 2026-01-07
+
+Purpose
+-------
+You are on a DIFFERENT MACHINE with access to the separate Contracts repo. Before we bring that repo into the main Arcade workspace, do two things:
+1) Collect non-secret facts and outputs (compile/deploy/verify evidence).
+2) Generate a small “handoff bundle” INSIDE the contracts repo that records what happened (addresses, chain, compiler settings), WITHOUT including any secrets.
+
+Do NOT paste or commit secrets
+----------------------------
+- Never paste private keys, seed phrases, or full .env contents.
+- Never commit .env files.
+- Never echo env var values into chat.
+- If you discover a private key in any file, STOP and remove it from the file BEFORE continuing.
+
+Assumptions
+-----------
+- The repo may use Hardhat (Node) or Foundry.
+- We deploy to testnet separately (Linea Sepolia or your chosen testnet).
+
+What to do
+==========
+
+STEP 0 — Open repo root
+-----------------------
+Open VS Code in the contracts repo root folder.
+
+In PowerShell, run:
+  Get-Location
+  Get-ChildItem -Force | Select-Object Name
+
+PASTE BACK:
+- The output of both commands.
+
+
+STEP 1 — Detect framework
+-------------------------
+In PowerShell, run:
+  Get-ChildItem -Force hardhat.config.*,foundry.toml 2>$null | Select-Object Name
+  Get-ChildItem -Force package.json,pnpm-lock.yaml,yarn.lock,package-lock.json 2>$null | Select-Object Name
+  Get-ChildItem -Force contracts,scripts,script,src 2>$null | Select-Object Name
+
+PASTE BACK:
+- Full output.
+
+
+STEP 2 — Capture config (NO secrets)
+------------------------------------
+If Hardhat exists:
+  # Use whichever exists
+  if (Test-Path .\hardhat.config.ts) { Get-Content .\hardhat.config.ts -Raw }
+  if (Test-Path .\hardhat.config.js) { Get-Content .\hardhat.config.js -Raw }
+
+If Foundry exists:
+  if (Test-Path .\foundry.toml) { Get-Content .\foundry.toml -Raw }
+
+PASTE BACK:
+- The config file contents.
+
+
+STEP 3 — Compile (record summary)
+---------------------------------
+If Hardhat:
+  npm ci
+  npx hardhat compile
+
+If Foundry:
+  forge --version
+  forge build
+
+PASTE BACK:
+- The last ~50 lines of compile output (and any errors).
+
+
+STEP 4 — Deploy to testnet (record public outputs)
+--------------------------------------------------
+Hardhat example (use YOUR repo’s actual script name + network name):
+  # Example only:
+  npx hardhat run scripts/deploy.ts --network lineaSepolia
+
+Foundry example:
+  # Example only:
+  forge script script/Deploy.s.sol:Deploy --rpc-url <YOUR_RPC_ALIAS> --broadcast
+
+IMMEDIATELY RECORD (paste back):
+- Network name and chainId
+- Deployer address
+- Deployed contract address(es)
+- Tx hash(es) and block number(s)
+- Any constructor args used (if any)
+
+
+STEP 5 — Verify (optional but preferred)
+----------------------------------------
+If using Hardhat verify plugin:
+  # Example only:
+  npx hardhat verify --network lineaSepolia <ADDRESS> <CONSTRUCTOR_ARGS>
+
+If verifying via explorer UI:
+- Record the compiler version, optimizer on/off, optimizer runs.
+
+PASTE BACK:
+- The exact verify command used (no secrets)
+- Success confirmation (link or console text)
+- The compiler/optimizer settings used
+
+
+STEP 6 — Create a HANDOFF bundle in the contracts repo
+------------------------------------------------------
+Create these two new files (no secrets):
+
+A) deployments/testnet.json
+- Contains ONLY public data:
+  {
+    "date": "2026-01-07",
+    "network": "<name>",
+    "chainId": <number>,
+    "deployer": "0x...",
+    "contracts": {
+      "<ContractName>": {
+        "address": "0x...",
+        "txHash": "0x...",
+        "blockNumber": <number>
+      }
+    },
+    "compiler": {
+      "solcVersion": "<x.y.z>",
+      "optimizerEnabled": true,
+      "optimizerRuns": 200
+    }
+  }
+
+B) HANDOFF_CONTRACTS_TESTNET.md
+- Short markdown with:
+  - what you deployed
+  - addresses
+  - verify status
+  - exact deploy/verify commands used
+  - where the ABI/artifacts live (paths)
+
+If you are using Hardhat, also confirm the ABI exists here and note it in the handoff:
+- artifacts/contracts/<YourContract>.sol/<YourContract>.json
+
+PASTE BACK:
+- The full contents of deployments/testnet.json
+- The full contents of HANDOFF_CONTRACTS_TESTNET.md
+
+
+STEP 7 — Prep repo for transfer (no node_modules / no secrets)
+--------------------------------------------------------------
+- Ensure node_modules is NOT included in the transfer.
+- Ensure .env files are NOT included.
+
+PowerShell zip (run from repo root):
+  $exclude = @('node_modules', '.env', '.env.*')
+  # If using git, prefer exporting via git archive; otherwise zip the folder manually and verify exclusions.
+
+PASTE BACK:
+- How you plan to transfer it (zip path/name), confirming node_modules and .env are excluded.
+
+
+STOP CONDITION
+==============
+When you’ve pasted back:
+- Step 0–5 outputs (non-secret)
+- The two handoff files contents
+- Confirmation of safe transfer packaging
+
+That’s everything needed before bringing the contracts repo into the main Arcade workspace.

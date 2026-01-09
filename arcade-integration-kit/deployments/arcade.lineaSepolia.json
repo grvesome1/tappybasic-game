@@ -1,0 +1,71 @@
+{
+  "kitVersion": "2.4.1",
+  "manifestVersion": 1,
+  "network": {
+    "name": "lineaSepolia",
+    "chainId": 59141,
+    "rpcUrlKeyName": "LINEA_SEPOLIA_RPC_URL",
+    "explorerBaseUrl": "https://sepolia.lineascan.build",
+    "explorerApiUrl": "https://api-sepolia.lineascan.build/api"
+  },
+  "deployedAt": "2026-01-09T05:00:00.000Z",
+  "gitCommit": null,
+  "deployerAddress": "0x3100fF9597B87E791E5bB8C0d57C94336A432089",
+  "roles": {
+    "multisig": null,
+    "finalAdmin": "0x3100fF9597B87E791E5bB8C0d57C94336A432089",
+    "opsWallet": "0x3100fF9597B87E791E5bB8C0d57C94336A432089",
+    "quoteSigner": "0x3100fF9597B87E791E5bB8C0d57C94336A432089",
+    "oracleSigner": "0x3100fF9597B87E791E5bB8C0d57C94336A432089",
+    "treasuryKeeper": "0x3100fF9597B87E791E5bB8C0d57C94336A432089"
+  },
+  "tokens": {
+    "mUSD": "0x95B5fC14eEd5DF10A818818B65251aD55Af8CF99",
+    "WETH": null,
+    "LINEA": null,
+    "TBAG": "0x3e046d9058290B07cC662859c1D11f8219fad55F",
+    "RUSTYAI": "0xCFfBAc928b448CA3B148B60701CBf0367016AAd9"
+  },
+  "dex": {
+    "swapRouter": null,
+    "quoter": null
+  },
+  "eip712": {
+    "quote": {
+      "domain": {
+        "name": "GruesomeArcade PaymentsRouter",
+        "version": "2.4",
+        "chainId": 59141,
+        "verifyingContract": "0xF22c4c91d88c6C715d3665576b2b6593AFb63Ff2"
+      },
+      "typeHash": null,
+      "fields": [
+        { "name": "buyer", "type": "address" },
+        { "name": "sku", "type": "bytes32" },
+        { "name": "kind", "type": "uint8" },
+        { "name": "payToken", "type": "address" },
+        { "name": "amountIn", "type": "uint256" },
+        { "name": "usdCents", "type": "uint256" },
+        { "name": "credits", "type": "uint256" },
+        { "name": "tier", "type": "uint8" },
+        { "name": "expiresAt", "type": "uint64" },
+        { "name": "nonce", "type": "uint256" },
+        { "name": "ref", "type": "bytes32" },
+        { "name": "dataHash", "type": "bytes32" }
+      ]
+    }
+  },
+  "acceptedPayments": {
+    "native": true,
+    "erc20": []
+  },
+  "contracts": {
+    "ArcadeTreasuryVault": "0xb0CEebad1cbD423907aFBBc6CFF1b5F4b772cB11",
+    "ArcadeEpochVaultDaily": "0x2dFe2dADa92667DE107A4c24569e0c52FF7Dccc2",
+    "ArcadeEpochVaultWeekly": "0xa4E1db4f37EBFFCCE0F59f1B2f75f8F0C1842Ab8",
+    "ArcadePromo": "0x410BdB6D323A6A2262f4437CC02077E01034C950",
+    "ArcadeProAvatarV2": "0x2cA2963fab7D0DD1AB3CB681205F5F12cED9178b",
+    "ArcadePaymentsRouterV2": "0xF22c4c91d88c6C715d3665576b2b6593AFb63Ff2"
+  },
+  "constructorArgs": {}
+}

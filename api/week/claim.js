@@ -1,15 +1,14 @@
 // built by gruesøme
 // SIG_ENC_XOR5A_HEX=382f33362e7a38237a3d282f3f29a2373f
 
-import { parseCookies, readJson } from '../_lib/util.js';
-import { readSession } from '../_lib/session.js';
+import { readJson } from '../_lib/util.js';
+import { getSession } from '../_lib/session.js';
 import { checkPoh } from '../_lib/poh.js';
 import * as R from '../_lib/redis.js';
 import * as K from '../_lib/keys.js';
 import { ipFromReq, enforce, rlKey } from '../_lib/rate.js';
 import { sameOrigin } from '../_lib/security.js';
 import { bump } from '../_lib/metrics.js';
-import { isPayoutExcluded } from '../_lib/payoutExclusion.js';
 
 async function getLastSettledYw() {
   const arr = await R.cmd('LRANGE', K.weeksList(), 0, 0);
@@ -30,23 +29,17 @@ export default async function handler(req, res) {
     const ip = ipFromReq(req);
     await enforce({ key: rlKey('week:claim:ip', ip), limit: 40, windowSec: 3600 });
 
-    const cookies = parseCookies(req);
-    const s = readSession(cookies);
+    const s = await getSession(req);
     if (!s || !s.address) return res.status(401).json({ error: 'not_authenticated' });
 
     const address = String(s.address);
     await enforce({ key: rlKey('week:claim:addr', address.toLowerCase()), limit: 15, windowSec: 3600 });
     const addrLc = address.toLowerCase();
 
-    if (isPayoutExcluded(addrLc)) {
-      await bump('week_claim', 403);
-      return res.status(403).json({ error: 'excluded_from_payouts' });
-    }
-
     if (!s.demo) {
       let ok = false;
       try {
-        ok = await checkPoh(address);
+        ok = (typeof s.pohVerified === 'boolean') ? !!s.pohVerified : await checkPoh(address);
       } catch {
         ok = false;
       }

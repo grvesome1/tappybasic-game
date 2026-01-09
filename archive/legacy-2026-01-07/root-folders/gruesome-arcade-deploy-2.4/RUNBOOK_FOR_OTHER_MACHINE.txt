@@ -1,0 +1,55 @@
+CONCISE RUNBOOK FOR THE OTHER MACHINE (ARCADE REPO ONLY)
+=======================================================
+
+Goal: collect JUST the Arcade repo facts needed to wire the vendored integration-kit correctly.
+
+Important:
+- This other machine is ONLY used to inspect the main Arcade repo (gruesomes.arcade).
+- Do NOT run integration-kit scripts here.
+- Do NOT paste secrets/private keys (none of the requested outputs should contain them).
+
+What you do on the other machine:
+1) Open a terminal in the Arcade repo root (gruesomes.arcade).
+2) Run EXACTLY the commands in Part B below.
+3) Paste back the full outputs for B1, B2, B3, B4, and B6.
+
+---
+
+PART B: ARCADE REPO FACTS (RUN THESE 5 COMMANDS)
+===============================================
+
+# B1: Root listing
+Get-ChildItem -Force | Select-Object Name
+
+# B2: Package manager lockfile detection
+Get-ChildItem -Force pnpm-lock.yaml,yarn.lock,package-lock.json 2>$null | Select-Object Name
+
+# B3: CI workflows inventory
+Get-ChildItem .github\workflows -Filter *.yml -Force 2>$null | Select-Object Name
+
+# B4: Top-level package.json
+Get-Content package.json -Raw
+
+# B6: Watermark/signature policy check (paths only)
+Get-ChildItem -Recurse -Force -ErrorAction SilentlyContinue |
+	Where-Object { $_.Name -match 'watermark|signature|xor|built' } |
+	Select-Object -First 20 FullName
+
+---
+
+WHAT TO PASTE BACK (SINGLE BUNDLE)
+=================================
+
+Paste back a single bundle with these sections (in this exact order):
+
+1) B1 output: root listing
+2) B2 output: which lockfile exists (if any)
+3) B3 output: workflow .yml filenames (or "none")
+4) B4 output: full package.json (raw)
+5) B6 output: first 20 watermark/signature/xor/built path matches
+
+Once you paste that bundle back, I can generate the minimal Arcade repo follow-up patch list without guessing.
+
+Note:
+- Post-migration evidence (like arcade-integration-kit/MIGRATION_REPORT.md) is produced by running the integration prompt
+	in PROMPT_INTEGRATE_REPO_CLEANLY_AND_SAFELY.txt, not by this runbook.

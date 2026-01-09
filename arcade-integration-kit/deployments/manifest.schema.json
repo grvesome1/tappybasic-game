@@ -1,0 +1,151 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gruesome.example/schemas/arcade-deployment-manifest.schema.json",
+  "title": "Arcade Integration Kit Deployment Manifest",
+  "type": "object",
+  "required": ["kitVersion", "manifestVersion", "network", "deployedAt", "deployerAddress", "contracts"],
+  "properties": {
+    "kitVersion": { "type": "string", "description": "Integration kit version (e.g. 2.4.1)." },
+    "manifestVersion": { "type": "integer", "minimum": 1 },
+
+    "network": {
+      "type": "object",
+      "required": ["name", "chainId", "rpcUrlKeyName"],
+      "properties": {
+        "name": { "type": "string" },
+        "chainId": { "type": "integer" },
+        "rpcUrlKeyName": { "type": "string" },
+        "explorerBaseUrl": { "type": ["string", "null"] },
+        "explorerApiUrl": { "type": ["string", "null"] }
+      },
+      "additionalProperties": true
+    },
+
+    "deployedAt": { "type": "string", "description": "ISO timestamp" },
+    "gitCommit": { "type": ["string", "null"] },
+    "deployerAddress": { "type": "string" },
+
+    "roles": {
+      "type": "object",
+      "properties": {
+        "multisig": { "type": ["string", "null"] },
+        "finalAdmin": { "type": "string" },
+        "opsWallet": { "type": "string" },
+        "quoteSigner": { "type": "string" },
+        "oracleSigner": { "type": "string" },
+        "treasuryKeeper": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+
+    "tokens": {
+      "type": "object",
+      "properties": {
+        "mUSD": { "type": "string" },
+        "WETH": { "type": ["string", "null"] },
+        "LINEA": { "type": ["string", "null"] },
+        "TBAG": { "type": ["string", "null"] },
+        "RUSTYAI": { "type": ["string", "null"] }
+      },
+      "additionalProperties": true
+    },
+
+    "dex": {
+      "type": "object",
+      "properties": {
+        "swapRouter": { "type": ["string", "null"] },
+        "quoter": { "type": ["string", "null"] }
+      },
+      "additionalProperties": true
+    },
+
+    "eip712": {
+      "type": "object",
+      "properties": {
+        "quote": {
+          "type": "object",
+          "properties": {
+            "domain": {
+              "type": "object",
+              "required": ["name", "version", "chainId", "verifyingContract"],
+              "properties": {
+                "name": { "type": "string" },
+                "version": { "type": "string" },
+                "chainId": { "type": "integer" },
+                "verifyingContract": { "type": "string" }
+              },
+              "additionalProperties": false
+            },
+            "typeHash": { "type": ["string", "null"] },
+            "fields": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["name", "type"],
+                "properties": { "name": { "type": "string" }, "type": { "type": "string" } },
+                "additionalProperties": false
+              }
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+
+    "acceptedPayments": {
+      "type": "object",
+      "properties": {
+        "native": { "type": "boolean" },
+        "erc20": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["address"],
+            "properties": {
+              "address": { "type": "string" },
+              "symbol": { "type": ["string", "null"] },
+              "decimals": { "type": ["integer", "null"] },
+              "label": { "type": ["string", "null"] }
+            },
+            "additionalProperties": true
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+
+    "contracts": {
+      "type": "object",
+      "required": [
+        "ArcadePaymentsRouterV2",
+        "ArcadeTreasuryVault",
+        "ArcadeEpochVaultDaily",
+        "ArcadeEpochVaultWeekly",
+        "ArcadeProAvatarV2",
+        "ArcadePromo"
+      ],
+      "properties": {
+        "ArcadePaymentsRouterV2": { "type": "string" },
+        "ArcadeTreasuryVault": { "type": "string" },
+        "ArcadeEpochVaultDaily": { "type": "string" },
+        "ArcadeEpochVaultWeekly": { "type": "string" },
+        "ArcadeProAvatarV2": { "type": "string" },
+        "ArcadePromo": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+
+    "constructorArgs": {
+      "type": "object",
+      "additionalProperties": true
+    },
+
+    "_legacy": {
+      "type": "object",
+      "description": "Legacy deployment payload kept for backward compatibility.",
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

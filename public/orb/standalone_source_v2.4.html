@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <!-- built by gruesøme -->
+  <!-- sig(enc:xor-0x5A,utf8,hex)=382f33362e7a38237a3d282f3f29a2373f -->
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Arcade Activity Orb Monitor — v2.4 (Standalone)</title>
+
+  <!-- Enables pointer-events toggle via the .orb-interactive class -->
+  <link rel="stylesheet" href="./integration/activity-orb.css" />
+
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: radial-gradient(1200px 800px at 50% 40%, #0b1030 0%, #050713 52%, #03040a 100%);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      color: rgba(255,255,255,0.86);
+    }
+
+    .hud {
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      z-index: 12;
+      padding: 12px 14px;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 14px;
+      background: rgba(0,0,0,0.30);
+      backdrop-filter: blur(10px);
+      max-width: 560px;
+    }
+
+    .hud h1 {
+      margin: 0 0 6px 0;
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .hud p {
+      margin: 6px 0 0 0;
+      font-size: 12px;
+      color: rgba(255,255,255,0.70);
+      line-height: 1.35;
+    }
+
+    .hud code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+      color: rgba(255,255,255,0.90);
+    }
+
+    .hud .row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+
+    .hud button {
+      border: 1px solid rgba(255,255,255,0.16);
+      background: rgba(255,255,255,0.06);
+      color: rgba(255,255,255,0.86);
+      padding: 8px 10px;
+      border-radius: 12px;
+      cursor: pointer;
+    }
+    .hud button:hover { background: rgba(255,255,255,0.10); }
+    .hud button:active { transform: translateY(1px); }
+  </style>
+</head>
+<body>
+  <div id="scene"></div>
+
+  <div class="hud">
+    <h1>Arcade Activity Orb Monitor · v2.4</h1>
+    <p>
+      Toggle admin: <code>F9</code> or <code>Ctrl+Shift+A</code>.
+      Admin mode turns on drag/zoom and attempts to poll <code>/api/admin/snapshot</code> (credentials included).
+    </p>
+    <p>
+      This standalone file is for local testing / preview. If you run a static server from this folder,
+      the admin adapter path is set to <code>/public/...</code> (because python's static server doesn't remap <code>/public</code> to root like Next.js does).
+    </p>
+
+    <div class="row">
+      <button id="btnAdmin">Toggle admin</button>
+      <button id="btnMock">Inject mock snapshot</button>
+      <button id="btnPulse">Random pulses</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initActivityOrbBackground } from './integration/activity-orb.js';
+
+    const orb = initActivityOrbBackground({
+      host: '#scene',
+      adminEnabled: false,
+
+      // For local preview, load adapter from /public/...
+      adminAdapterUrl: './public/gruesome-arcade-3d-map-adapter-v1.0/ga3d-admin-adapter.js',
+    });
+
+    window.orb = orb;
+
+    document.getElementById('btnAdmin').addEventListener('click', () => orb.admin.toggle());
+
+    document.getElementById('btnMock').addEventListener('click', async () => {
+      // Minimal mock snapshot with a couple guardrail alerts (shape matches the adapter expectations)
+      const mock = {
+        daily: { lastSettledYmd: '2026-01-05', lastSummary: '2026-01-05', lastLotteryWinners: '2026-01-05', claimableForAdmin: { ymd: '2026-01-05', amount: '0' } },
+        weekly: { lastSettledYw: '2026-W02', weeklySummary: '2026-W02', weeklyClaimableForAdmin: { yw: '2026-W02', amount: '0' }, currentWeeklyPot: '123.45' },
+        activity: { todayScore: 842, todayTickets: 27, weekScore: 4120 },
+        exclusions: ['0xAdminWalletExample...'],
+        catalogHealth: {
+          gamesCount: 12,
+          metricsCount: 34,
+          byType: { arcade: 7, puzzle: 3, skill: 2 },
+          alerts: [
+            { code: 'missingSpendCap', severity: 'warn', detail: '2 games missing spend cap' },
+            { code: 'missingDefaultMetric', severity: 'warn', detail: '1 game missing defaultMetric' }
+          ]
+        }
+      };
+
+      try {
+        await orb.admin.injectSnapshot(mock, 'mock');
+      } catch (e) {
+        orb.admin.log('err', `mock inject failed: ${(e && e.message) ? e.message : String(e)}`);
+      }
+    });
+
+    document.getElementById('btnPulse').addEventListener('click', () => {
+      // kick some activity so the orb feels alive
+      for (let i = 0; i < 8; i++) {
+        setTimeout(() => {
+          orb.activity.bumpMetric('run_submit:200', 1);
+          if (Math.random() < 0.25) orb.activity.bumpMetric('run_submit:429', 1);
+          if (Math.random() < 0.08) orb.activity.bumpMetric('run_submit:500', 1);
+          if (Math.random() < 0.16) orb.activity.bumpSkillMetric('drip', 1);
+          if (Math.random() < 0.16) orb.activity.bumpActivityBoard('tickets', 1);
+        }, i * 250);
+      }
+    });
+
+    // a light background heartbeat so it's not totally static
+    setInterval(() => {
+      orb.activity.bumpMetric('run_submit:200', 1);
+      if (Math.random() < 0.10) orb.activity.bumpMetric('run_submit:429', 1);
+    }, 2200);
+  </script>
+</body>
+</html>

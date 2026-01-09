@@ -1,12 +1,11 @@
 // built by gruesøme
 // SIG_ENC_XOR5A_HEX=382f33362e7a38237a3d282f3f29a2373f
 
-import { parseCookies } from '../_lib/util.js';
-import { readSession } from '../_lib/session.js';
+import { getSession } from '../_lib/session.js';
 import { checkPoh } from '../_lib/poh.js';
 import * as R from '../_lib/redis.js';
 import * as K from '../_lib/keys.js';
-import { isPayoutExcluded } from '../_lib/payoutExclusion.js';
+import * as X from '../_lib/exclusions.js';
 
 function weekKeyUtc(d = new Date()) {
   const date = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
@@ -58,28 +57,43 @@ function parseHgetallStr(arr) {
 export default async function handler(req, res) {
   try {
     if (req.method !== 'GET') return res.status(405).json({ error: 'method_not_allowed' });
-    if (!R.enabled()) return res.status(503).json({ error: 'redis_not_configured' });
-
-    const cookies = parseCookies(req);
-    const s = readSession(cookies);
+    const s = await getSession(req);
 
     const authenticated = !!(s && s.address);
     const address = authenticated ? String(s.address) : '';
     const addrLc = address ? address.toLowerCase() : '';
-    const payoutExcluded = authenticated ? isPayoutExcluded(addrLc) : false;
 
     let pohVerified = false;
-    if (authenticated && !s.demo) {
-      try {
-        pohVerified = await checkPoh(address);
-      } catch {
-        pohVerified = false;
+    if (authenticated) {
+      if (s.demo) pohVerified = true;
+      else if (typeof s.pohVerified === 'boolean') pohVerified = !!s.pohVerified;
+      else {
+        try {
+          pohVerified = await checkPoh(address);
+        } catch {
+          pohVerified = false;
+        }
       }
-    } else if (authenticated) {
-      pohVerified = true;
     }
 
     const curWeek = weekKeyUtc();
+
+    if (!R.enabled()) {
+      return res.status(200).json({
+        ok: true,
+        redisEnabled: false,
+        currentWeekYw: curWeek,
+        nextWeekAtUtc: nextUtcMondayIso(),
+        lastSettledYw: '',
+        lastWeekSummary: null,
+        weekClaimable: null,
+        curWeekPotCents: 0,
+        authenticated,
+        address,
+        pohVerified,
+      });
+    }
+
     const lastYw = await getLastSettledYw();
 
     let lastWeekSummary = null;
@@ -106,6 +120,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       ok: true,
+      redisEnabled: true,
       currentWeekYw: curWeek,
       nextWeekAtUtc: nextUtcMondayIso(),
       lastSettledYw: lastYw,
@@ -115,7 +130,6 @@ export default async function handler(req, res) {
       authenticated,
       address,
       pohVerified,
-      payoutExcluded,
     });
   } catch {
     return res.status(500).json({ error: 'server_error' });

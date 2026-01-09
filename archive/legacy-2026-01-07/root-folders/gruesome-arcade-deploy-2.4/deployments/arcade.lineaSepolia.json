@@ -1,0 +1,71 @@
+{
+  "kitVersion": "2.4.1",
+  "manifestVersion": 1,
+  "network": {
+    "name": "lineaSepolia",
+    "chainId": 59141,
+    "rpcUrlKeyName": "LINEA_SEPOLIA_RPC_URL",
+    "explorerBaseUrl": "https://sepolia.lineascan.build",
+    "explorerApiUrl": "https://api-sepolia.lineascan.build/api"
+  },
+  "deployedAt": "1970-01-01T00:00:00.000Z",
+  "gitCommit": null,
+  "deployerAddress": "0x0000000000000000000000000000000000000000",
+  "roles": {
+    "multisig": null,
+    "finalAdmin": "0x0000000000000000000000000000000000000000",
+    "opsWallet": "0x0000000000000000000000000000000000000000",
+    "quoteSigner": "0x0000000000000000000000000000000000000000",
+    "oracleSigner": "0x0000000000000000000000000000000000000000",
+    "treasuryKeeper": "0x0000000000000000000000000000000000000000"
+  },
+  "tokens": {
+    "mUSD": "0x0000000000000000000000000000000000000000",
+    "WETH": null,
+    "LINEA": null,
+    "TBAG": null,
+    "RUSTYAI": null
+  },
+  "dex": {
+    "swapRouter": null,
+    "quoter": null
+  },
+  "eip712": {
+    "quote": {
+      "domain": {
+        "name": "GruesomeArcade PaymentsRouter",
+        "version": "2.4",
+        "chainId": 59141,
+        "verifyingContract": "0x0000000000000000000000000000000000000000"
+      },
+      "typeHash": null,
+      "fields": [
+        { "name": "buyer", "type": "address" },
+        { "name": "sku", "type": "bytes32" },
+        { "name": "kind", "type": "uint8" },
+        { "name": "payToken", "type": "address" },
+        { "name": "amountIn", "type": "uint256" },
+        { "name": "usdCents", "type": "uint256" },
+        { "name": "credits", "type": "uint256" },
+        { "name": "tier", "type": "uint8" },
+        { "name": "expiresAt", "type": "uint64" },
+        { "name": "nonce", "type": "uint256" },
+        { "name": "ref", "type": "bytes32" },
+        { "name": "dataHash", "type": "bytes32" }
+      ]
+    }
+  },
+  "acceptedPayments": {
+    "native": true,
+    "erc20": []
+  },
+  "contracts": {
+    "ArcadeTreasuryVault": "0x0000000000000000000000000000000000000000",
+    "ArcadeEpochVaultDaily": "0x0000000000000000000000000000000000000000",
+    "ArcadeEpochVaultWeekly": "0x0000000000000000000000000000000000000000",
+    "ArcadePromo": "0x0000000000000000000000000000000000000000",
+    "ArcadeProAvatarV2": "0x0000000000000000000000000000000000000000",
+    "ArcadePaymentsRouterV2": "0x0000000000000000000000000000000000000000"
+  },
+  "constructorArgs": {}
+}

@@ -6,6 +6,26 @@ SIG_ENC_XOR5A_HEX=382f33362e7a38237a3d282f3f29a2373f
 This README is the “single source of truth” for how the on-chain contracts + backend epoch logic
 fit together for launch.
 
+## Dev (v1.1)
+- Single source of truth for local full-stack dev: `npm run dev` (runs `vercel dev` on :3001).
+- Quick checks: `npm run doctor` and `npm run smoke`.
+- Required env for sessions:
+	- Redis/KV: `KV_REST_API_URL` + `KV_REST_API_TOKEN` (or `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN`)
+	  - Optional: `KV_REST_API_READ_ONLY_TOKEN` (read-only; sessions still require write)
+	- WalletConnect: `WALLETCONNECT_PROJECT_ID`
+	- Chain (staging default is Linea Sepolia): `LINEA_CHAIN_ID`, `LINEA_RPC_URL`, `LINEA_EXPLORER_URL`
+
+### Integration kit (vendored)
+This repo vendors the deployment/integration package into `arcade-integration-kit/`.
+
+- Install kit deps: `npm run kit:install`
+- Run kit validation gates (no deploys): `npm run kit:validate`
+
+### Redis/KV diagnostics
+- Check Redis/KV connectivity (no secrets printed): `npm run kv-check`
+
+CI for the kit is wired to run inside `arcade-integration-kit/`. The scheduled onchain “epoch publish” workflows from the kit are not enabled here (they require secrets and perform onchain actions).
+
 ## What’s new in v1.3
 - Weekly reserve + weekly claim pipeline (in addition to daily epochs).
 - Multi-metric leaderboards (catalog-defined metrics; game-type-aware scoring).

@@ -1,0 +1,104 @@
+Gruesøme’s Arcade — Launch Reference (Web3 Locks + PRO Avatar + Payouts)
+Version: v1.3
+built by gruesøme
+SIG_ENC_XOR5A_HEX=382f33362e7a38237a3d282f3f29a2373f
+
+This is the operational spec for launch: what exists, what is locked, and how payouts work.
+
+--------------------------------------------------------------------
+1) Membership (PRO) Tiers
+--------------------------------------------------------------------
+Tier 0: Free
+- Can play free/demo modes
+- If game charges run cost: Free must pay the run cost (no free runs unless explicitly allowed)
+
+Tier 1: $2 Monthly
+- PRO status for 30 days
+- Unlocks Avatar Studio + Gen1 base avatar mint
+- Access to achievements that reward small amounts of Credits
+- Eligible for certain promos/airdrops (policy-based)
+
+Tier 2: $25 Monthly
+- Same as Tier 1
+- +10% bonus on payouts (policy-based)
+- Free entry to tournaments
+- Airdrop eligibility
+
+Tier 3: $100 “Lifetime until Jan 30, 2026; after that annual”
+- One-time payment until Jan 30, 2026 00:00 UTC
+- After that date: Tier 3 renewals are annual
+
+--------------------------------------------------------------------
+2) PRO Avatar NFT (Gen1)
+--------------------------------------------------------------------
+Phase A constraints:
+- Single token collection
+- One per wallet
+- Membership status stored in contract state
+- Mint is permanent lock at launch (SBT behavior)
+- Nickname can be set at mint and is visible in wallets + leaderboards + public places while SBT-active
+- Admin can later unlock transfers permanently (Gen1 becomes tradeable collectible)
+
+Important:
+- When transfers are unlocked, membership logic still lives by wallet address (Phase A).
+  Treat the NFT primarily as a collectible unless membership is redesigned to follow ownership.
+
+--------------------------------------------------------------------
+3) Credits (AC) Model
+--------------------------------------------------------------------
+Two balances:
+- Paid Credits (paid AC)
+- Promo Credits (promo AC)
+
+Rules:
+- Skill payouts are based on PAID-ELIGIBLE leaderboards (paid spend required).
+- Promo/free runs can appear on “global” boards but do not earn Skill pool by default.
+- Activity pool is based on paid spend + active days (not raw score).
+
+In-run spend games (economy-dynamic):
+- must set rankedSpendCapAC
+- must report inRunSpendAC
+- should provide an efficiency metric
+
+--------------------------------------------------------------------
+4) Payouts
+--------------------------------------------------------------------
+Daily:
+- Epoch settles at UTC midnight.
+- Claim is user-gas-paid (mUSD claim tx, or Web2 claim depending on deployment).
+
+Weekly:
+- Weekly reserve is funded by a percentage of daily flows.
+- Recommended reserve: 15% of daily.
+- Weekly settlement runs Monday 00:05 UTC.
+- Weekly claims are separate from daily claims.
+
+Pools (daily):
+- 50% Skill (rank-based, paid-eligible only)
+- 35% Activity (paid activity score)
+- 10% PRO boost pool
+- Lottery is funded by 8% of Activity + extra 5% moved from Skill (policy)
+
+--------------------------------------------------------------------
+5) Admin Transparency Policy (critical)
+--------------------------------------------------------------------
+Admin mode:
+- Admin wallet is hardcoded in the frontend AND enforced server-side.
+- Admin identity (nickname/avatar) can be displayed publicly for transparency.
+- Admin wallet does NOT receive payouts.
+- If admin places in a paid-eligible leaderboard slot, payouts roll down to the next eligible player.
+
+Admin data spine:
+- GET /api/admin/snapshot (admin-only)
+- This powers the admin overlay in your 3D metrics map.
+
+--------------------------------------------------------------------
+6) Minimum Launch-Ready Checklist
+--------------------------------------------------------------------
+[ ] Wallet: connect + buy credits + membership + claim daily + claim weekly
+[ ] Leaderboard: multi-metric + paid-eligible views + identity hover
+[ ] Games: run gating + run result posting (Moonshot done; apply to others)
+[ ] Catalog: every game declares defaultMetric + metrics[]
+[ ] Admin: payout excluded + snapshot endpoint working
+
+END

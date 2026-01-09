@@ -1,0 +1,55 @@
+{
+  "name": "gruesome-arcade-deploy-package",
+  "version": "2.4.1",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "description": "Gruesome Arcade (Web2 + Web3) deployment package: contracts + scripts + automation templates.",
+  "license": "MIT",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "deploy:linea-sepolia": "hardhat run scripts/deploy.ts --network lineaSepolia",
+    "deploy:linea": "hardhat run scripts/deploy.ts --network linea",
+    "deploy:linea-mainnet": "hardhat run scripts/deploy.ts --network linea",
+    "verify:linea-sepolia": "hardhat run scripts/verify.ts --network lineaSepolia",
+    "verify:linea": "hardhat run scripts/verify.ts --network linea",
+    "verify:linea-mainnet": "hardhat run scripts/verify.ts --network linea",
+    "sign:quote": "hardhat run scripts/signQuote.ts",
+    "epoch:build": "node --loader ts-node/esm scripts/epoch/buildMerkle.ts",
+    "abis:export": "node --loader ts-node/esm scripts/exportAbis.ts",
+    "manifests:validate": "node --loader ts-node/esm scripts/validateManifests.ts",
+    "watermarks:validate": "node --loader ts-node/esm scripts/validateWatermarks.ts",
+    "eip712:vectors:validate": "ts-node-esm scripts/validateEip712Vectors.ts",
+    "migrate:vendor": "node --loader ts-node/esm scripts/migrateToArcadeRepo.ts",
+    "smoke:offline": "node scripts/smokeOfflineIntegration.mjs",
+    "epoch:publish:linea-sepolia": "hardhat run scripts/epoch/publishEpoch.ts --network lineaSepolia",
+    "epoch:publish:linea": "hardhat run scripts/epoch/publishEpoch.ts --network linea",
+    "epoch:publish:linea-mainnet": "hardhat run scripts/epoch/publishEpoch.ts --network linea",
+    "treasury:ensure-liquidity:linea-sepolia": "hardhat run scripts/treasury/ensureLiquidity.ts --network lineaSepolia",
+    "treasury:ensure-liquidity:linea": "hardhat run scripts/treasury/ensureLiquidity.ts --network linea",
+    "treasury:ensure-liquidity:linea-mainnet": "hardhat run scripts/treasury/ensureLiquidity.ts --network linea",
+    "admin:set-splits:linea-sepolia": "hardhat run scripts/admin/setKindSplits.ts --network lineaSepolia",
+    "admin:set-splits:linea": "hardhat run scripts/admin/setKindSplits.ts --network linea",
+    "admin:set-splits:linea-mainnet": "hardhat run scripts/admin/setKindSplits.ts --network linea",
+
+    "print:accepted-payments": "hardhat run scripts/printAcceptedPayments.ts --network lineaSepolia",
+    "export:ui-config": "hardhat run scripts/exportUiConfig.ts --network lineaSepolia",
+    "lint": "echo \"(todo) add eslint\"",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-ethers": "^4.0.3",
+    "@nomicfoundation/hardhat-verify": "^3.0.8",
+    "@openzeppelin/contracts": "^4.9.6",
+    "ajv": "^8.17.1",
+    "dotenv": "^16.4.5",
+    "hardhat": "^3.1.2",
+    "keccak256": "^1.0.6",
+    "merkletreejs": "^0.3.11",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5"
+  }
+}

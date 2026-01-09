@@ -1,0 +1,215 @@
+/* built by gruesøme */
+/* sig(enc:xor-0x5A,utf8,hex)=382f33362e7a38237a3d282f3f29a2373f */
+
+:root{
+  --ga-orb-panel-bg: rgba(0,0,0,0.42);
+  --ga-orb-panel-br: rgba(255,255,255,0.14);
+  --ga-orb-text: rgba(255,255,255,0.86);
+  --ga-orb-muted: rgba(255,255,255,0.68);
+  --ga-orb-accent: rgba(90,220,255,0.95);
+  --ga-orb-warn: rgba(255,196,90,0.95);
+  --ga-orb-err: rgba(255,80,120,0.95);
+}
+
+.ga-orb-root{
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 520px;
+  overflow: hidden;
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: radial-gradient(1200px 800px at 50% 40%, #0b1030 0%, #050713 52%, #03040a 100%);
+}
+
+.ga-orb-root canvas{
+  display:block;
+  width:100%;
+  height:100%;
+}
+
+/* When embedded behind UI, this class enables pointer events for orbit drag. */
+.ga-orb-root.orb-interactive{
+  pointer-events: auto;
+}
+
+.ga-orb-overlay{
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 20;
+}
+
+.ga-orb-hud{
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--ga-orb-panel-br);
+  border-radius: 14px;
+  background: var(--ga-orb-panel-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  max-width: min(560px, calc(100% - 28px));
+  color: var(--ga-orb-text);
+  pointer-events: auto;
+  user-select: none;
+}
+
+.ga-orb-hud h1{
+  margin: 0 0 6px 0;
+  font-size: 12px;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+}
+
+.ga-orb-hud p{
+  margin: 6px 0 0 0;
+  font-size: 12px;
+  color: var(--ga-orb-muted);
+  line-height: 1.35;
+}
+
+.ga-orb-hud code{
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+  color: rgba(255,255,255,0.92);
+}
+
+.ga-orb-row{
+  display:flex;
+  flex-wrap: wrap;
+  gap:10px;
+  margin-top: 10px;
+}
+
+.ga-orb-btn{
+  border: 1px solid rgba(255,255,255,0.16);
+  background: rgba(255,255,255,0.06);
+  color: var(--ga-orb-text);
+  padding: 8px 10px;
+  border-radius: 12px;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.ga-orb-btn:hover{ background: rgba(255,255,255,0.10); }
+.ga-orb-btn:active{ transform: translateY(1px); }
+
+.ga-orb-admin{
+  position: absolute;
+  right: 14px;
+  top: 14px;
+  width: min(420px, calc(100% - 28px));
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 16px;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: 12px 12px 10px;
+  color: var(--ga-orb-text);
+  pointer-events: auto;
+  display:none;
+}
+
+.ga-orb-root[data-admin="1"] .ga-orb-admin{
+  display:block;
+}
+
+.ga-orb-admin h2{
+  margin: 0 0 10px 0;
+  font-size: 12px;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+}
+
+.ga-orb-grid{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 12px;
+  align-items: start;
+}
+
+.ga-orb-field{
+  display:flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ga-orb-label{
+  font-size: 11px;
+  color: var(--ga-orb-muted);
+}
+
+.ga-orb-field input[type="range"]{
+  width:100%;
+}
+
+.ga-orb-kv{
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+  font-size: 11px;
+  color: rgba(255,255,255,0.82);
+  word-break: break-word;
+}
+
+.ga-orb-log{
+  margin-top: 10px;
+  border-top: 1px solid rgba(255,255,255,0.10);
+  padding-top: 10px;
+  max-height: 210px;
+  overflow:auto;
+}
+
+.ga-orb-log .entry{
+  font-size: 11px;
+  color: rgba(255,255,255,0.78);
+  line-height: 1.35;
+  margin-bottom: 8px;
+}
+
+.ga-orb-log .t{
+  color: rgba(255,255,255,0.52);
+  margin-right: 6px;
+}
+
+.ga-orb-log .lvl{
+  display:inline-block;
+  min-width: 38px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font-size: 10px;
+  margin-right: 6px;
+  opacity: .9;
+}
+
+.ga-orb-log .lvl.warn{ color: var(--ga-orb-warn); }
+.ga-orb-log .lvl.err{ color: var(--ga-orb-err); }
+.ga-orb-log .lvl.ok{ color: var(--ga-orb-accent); }
+
+.ga-orb-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.06);
+  font-size: 11px;
+  color: rgba(255,255,255,0.80);
+}
+
+.ga-orb-badge strong{
+  color: rgba(255,255,255,0.92);
+  font-weight: 700;
+}
+
+.ga-orb-bottom{
+  margin-top: 10px;
+  display:flex;
+  gap:10px;
+  flex-wrap: wrap;
+}
+
+.ga-orb-small{
+  font-size: 11px;
+  color: rgba(255,255,255,0.64);
+}

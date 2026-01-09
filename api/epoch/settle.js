@@ -5,10 +5,10 @@ import crypto from 'node:crypto';
 
 import * as R from '../_lib/redis.js';
 import * as K from '../_lib/keys.js';
+import * as X from '../_lib/exclusions.js';
 import { GAMES, DEFAULTS } from '../_lib/games.js';
 import { bearerToken, isVercelCron, queryParam } from '../_lib/security.js';
 import { bump } from '../_lib/metrics.js';
-import { getExcludedPayoutAddrs } from '../_lib/payoutExclusion.js';
 
 function clamp(n, a, b) {
   n = Number(n);
@@ -332,10 +332,11 @@ export default async function handler(req, res) {
 
     const claims = {};
 
-    const excluded = getExcludedPayoutAddrs();
-
     const skillTopN = clamp(process.env.ECON_SKILL_TOP || 25, 5, 100);
     const pow = clamp(process.env.ECON_RANK_POW || 1.25, 1.05, 1.8);
+
+    const skillFetchExtra = clamp(process.env.ECON_SKILL_FETCH_EXTRA || 100, 0, 500);
+    const actFetchExtra = clamp(process.env.ECON_ACTIVITY_FETCH_EXTRA || 500, 0, 5000);
 
     for (const gid of eligibleGames) {
       const gameSpent = spend[gid] || 0;
@@ -358,40 +359,37 @@ export default async function handler(req, res) {
 
         const metricId = String(m.id || 'score');
         let lbKey = K.lbDailyPaidMetric(gid, metricId, ymd);
-        const fetchN = Math.min(1000, Math.max(skillTopN, skillTopN * 10));
-        let raw = await R.cmd('ZREVRANGE', lbKey, 0, fetchN - 1, 'WITHSCORES');
-        let topAll = parseZWithScores(raw);
-        let top = topAll.filter((e) => !excluded.has(e.member)).slice(0, skillTopN);
+        let raw = await R.cmd('ZREVRANGE', lbKey, 0, (skillTopN + skillFetchExtra) - 1, 'WITHSCORES');
+        let top = parseZWithScores(raw);
 
         // Backward-compatible fallback for the default metric (old leaderboard key)
         const defId = String(gameCfg.defaultMetric || 'score');
         if (!top.length && metricId === defId) {
           lbKey = K.lbDailyPaid(gid, ymd);
-          raw = await R.cmd('ZREVRANGE', lbKey, 0, fetchN - 1, 'WITHSCORES');
-          topAll = parseZWithScores(raw);
-          top = topAll.filter((e) => !excluded.has(e.member)).slice(0, skillTopN);
+          raw = await R.cmd('ZREVRANGE', lbKey, 0, (skillTopN + skillFetchExtra) - 1, 'WITHSCORES');
+          top = parseZWithScores(raw);
         }
 
-        if (!top.length) continue;
+        const topEligible = X.filterExcluded(top, 'member').slice(0, skillTopN);
+        if (!topEligible.length) continue;
 
-        const payouts = distribute(metricPool, top, (_, i) => 1 / Math.pow(i + 1, pow));
+        const payouts = distribute(metricPool, topEligible, (_, i) => 1 / Math.pow(i + 1, pow));
         for (const [addr, cents] of Object.entries(payouts)) addClaim(claims, addr, 'skillCents', cents, { gameId: gid });
       }
     }
 
     const actTopN = clamp(process.env.ECON_ACT_TOP || 2000, 25, 5000);
     const actKey = K.actDaily(ymd);
-    const actRaw = await R.cmd('ZREVRANGE', actKey, 0, actTopN - 1, 'WITHSCORES');
-    const actTop = parseZWithScores(actRaw)
-      .filter((e) => (e.score || 0) > 0)
-      .filter((e) => !excluded.has(e.member));
+    const actRaw = await R.cmd('ZREVRANGE', actKey, 0, (actTopN + actFetchExtra) - 1, 'WITHSCORES');
+    const actTop = parseZWithScores(actRaw).filter((e) => (e.score || 0) > 0);
+    const actTopEligible = X.filterExcluded(actTop, 'member').slice(0, actTopN);
 
-    const actPayouts = distribute(activityPool, actTop, (e) => Math.sqrt(Math.max(0, e.score || 0)));
+    const actPayouts = distribute(activityPool, actTopEligible, (e) => Math.sqrt(Math.max(0, e.score || 0)));
     for (const [addr, cents] of Object.entries(actPayouts)) addClaim(claims, addr, 'activityCents', cents);
 
-    const activeAddrs = actTop.map((x) => x.member);
+    const activeAddrs = actTopEligible.map((x) => x.member);
     const profiles = activeAddrs.length ? await getProfiles(activeAddrs) : {};
-    const proEntries = actTop
+    const proEntries = actTopEligible
       .map((e) => {
         const p = profiles[e.member] || {};
         const st = isProActive(p.proTier, p.proExp);
@@ -404,7 +402,7 @@ export default async function handler(req, res) {
     const proPayouts = distribute(proPool, proEntries, (e) => Math.sqrt(Math.max(0, e.score || 0)) * (e.mult || 1));
     for (const [addr, cents] of Object.entries(proPayouts)) addClaim(claims, addr, 'proCents', cents);
 
-    const participantsAct = actTop.length;
+    const participantsAct = actTopEligible.length;
     const minPrizeCents = clamp(process.env.ECON_LOTTERY_MIN_PRIZE_CENTS || 25, 1, 500);
     const maxWinnersByPot = lotteryPool > 0 ? Math.max(1, Math.floor(lotteryPool / minPrizeCents)) : 0;
 
@@ -422,7 +420,7 @@ export default async function handler(req, res) {
 
     if (winnersCount > 0) {
       const rng = makeRng(lotterySeedMaterial);
-      const picks = pickWeightedUnique(actTop, winnersCount, rng);
+      const picks = pickWeightedUnique(actTopEligible, winnersCount, rng);
       const prizes = prizesFor(lotteryPool, picks.length);
 
       for (let i = 0; i < picks.length; i++) {
